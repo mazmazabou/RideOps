@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>USC DART Operations Console</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header">
+    <h1>USC DART Operations Console</h1>
+    <p>Dispatch + Driver tools for Disabled Access To Road Transportation</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel" id="staff-panel">
+      <h2>Staff &amp; Shifts</h2>
+      <div id="employee-list" class="card"></div>
+      <div class="card">
+        <h3>Weekly Schedule</h3>
+        <div id="schedule-grid"></div>
+      </div>
+      <div class="card">
+        <h3>Add Shift</h3>
+        <form id="shift-form">
+          <label>Employee
+            <select id="shift-employee"></select>
+          </label>
+          <label>Day of Week
+            <select id="shift-day">
+              <option value="0">Monday</option>
+              <option value="1">Tuesday</option>
+              <option value="2">Wednesday</option>
+              <option value="3">Thursday</option>
+              <option value="4">Friday</option>
+            </select>
+          </label>
+          <label>Start Time
+            <select id="shift-start"></select>
+          </label>
+          <label>End Time
+            <select id="shift-end"></select>
+          </label>
+          <button type="submit" class="btn primary">Add Shift</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel" id="rides-panel">
+      <h2>Ride Requests</h2>
+      <div class="card">
+        <h3>Intake Form</h3>
+        <form id="ride-form">
+          <label>Rider Name <input type="text" id="rider-name" required></label>
+          <label>Email <input type="email" id="rider-email" required></label>
+          <label>Phone <input type="tel" id="rider-phone" required></label>
+          <label>Pickup Location <input type="text" id="pickup" required></label>
+          <label>Dropoff Location <input type="text" id="dropoff" required></label>
+          <label>Requested Date/Time <input type="datetime-local" id="requested-time" required></label>
+          <button type="submit" class="btn primary">Submit Request</button>
+        </form>
+      </div>
+      <div class="card" id="pending-list">
+        <h3>Pending Requests</h3>
+        <div class="list" id="pending-items"></div>
+      </div>
+      <div class="card" id="approved-list">
+        <h3>Approved / Scheduled</h3>
+        <div class="list" id="approved-items"></div>
+      </div>
+      <div class="card" id="history-list">
+        <h3>Completed &amp; No-Show History</h3>
+        <div class="list" id="history-items"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="driver-panel">
+      <h2>Driver Console</h2>
+      <div class="card">
+        <label>Select Driver
+          <select id="driver-select"></select>
+        </label>
+        <div id="driver-info"></div>
+      </div>
+      <div class="card" id="driver-rides">
+        <h3>Assigned Rides</h3>
+        <div class="list" id="driver-ride-list"></div>
+      </div>
+      <div class="card">
+        <h3>USC Campus Map</h3>
+        <div class="map-wrapper">
+          <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section class="rules">
+    <h2>Program Rules / Guidelines</h2>
+    <ul>
+      <li>DART is a free service provided by USC Transportation to assist USC students, faculty and staff with mobility issues in getting around campus. Service is available at UPC during the Fall and Spring semesters only, between 8:00am–7:00pm, Monday–Friday.</li>
+      <li>DART vehicles (golf carts) are not city-street legal and cannot leave campus. Service is NOT available to off-campus housing, off-campus parking structures, the USC Village, etc.</li>
+      <li>Riders must be able to independently get in and out of a standard golf cart. Drivers cannot assist with lifting/carrying medical equipment (crutches, wheelchairs, etc.). A wheelchair-accessible golf cart is available upon request.</li>
+      <li>Due to high demand, drivers cannot wait more than five (5) minutes past a scheduled pick-up time. After that grace period, they may leave to continue other assignments.</li>
+      <li>Service is automatically terminated after five (5) consecutive missed pick-ups.</li>
+    </ul>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
