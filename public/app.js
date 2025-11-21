@@ -107,27 +107,162 @@ function generateTimeSlots() {
 }
 
 function renderScheduleGrid() {
-  const grid = document.getElementById('schedule-grid');
-  const timeSlots = generateTimeSlots();
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  let html = '<table class="grid-table"><thead><tr><th>Time</th>';
-  days.forEach((d) => (html += `<th>${d}</th>`));
-  html += '</tr></thead><tbody>';
-  timeSlots.forEach((slot) => {
-    html += `<tr><td>${slot}</td>`;
-    days.forEach((_, idx) => {
-      const onShift = shifts.filter((s) => s.dayOfWeek === idx && s.startTime <= slot && s.endTime >= slot);
-      const names = onShift.map((s) => {
-        const emp = employees.find((e) => e.id === s.employeeId);
-        return emp ? emp.name : 'Unknown';
-      });
-      html += `<td>${names.join('<br>')}</td>`;
-    });
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-  grid.innerHTML = html;
+  renderShiftGrid();
 }
+
+// ----- Daily Schedule View (Shifts + Rides) -----
+function initScheduleDate() {
+  const dateInput = document.getElementById('schedule-date');
+  dateInput.value = new Date().toISOString().split('T')[0];
+  renderDaySchedule();
+}
+
+function changeScheduleDay(delta) {
+  const dateInput = document.getElementById('schedule-date');
+  const current = new Date(dateInput.value);
+  current.setDate(current.getDate() + delta);
+  dateInput.value = current.toISOString().split('T')[0];
+  renderDaySchedule();
+}
+
+function renderDaySchedule() {
+  const container = document.getElementById('day-schedule');
+  const dateInput = document.getElementById('schedule-date');
+  const selectedDate = new Date(dateInput.value);
+  const dayOfWeek = (selectedDate.getDay() + 6) % 7; // Convert to Mon=0
+  const dateStr = dateInput.value;
+
+  const timeSlots = generateTimeSlots();
+  let html = '';
+
+  timeSlots.forEach(slot => {
+    // Find shifts covering this time slot
+    const activeShifts = shifts.filter(s =>
+      s.dayOfWeek === dayOfWeek && s.startTime <= slot && s.endTime > slot
+    );
+
+    // Find rides at this time
+    const slotRides = rides.filter(r => {
+      if (!r.requestedTime?.startsWith(dateStr)) return false;
+      const rideTime = new Date(r.requestedTime);
+      const rideHour = rideTime.getHours();
+      const rideMin = rideTime.getMinutes();
+      const rideSlot = `${String(rideHour).padStart(2,'0')}:${rideMin < 30 ? '00' : '30'}`;
+      return rideSlot === slot && ['pending','approved','scheduled','driver_on_the_way','driver_arrived_grace'].includes(r.status);
+    });
+
+    if (activeShifts.length || slotRides.length) {
+      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots">`;
+      activeShifts.forEach(s => {
+        const emp = employees.find(e => e.id === s.employeeId);
+        html += `<span class="schedule-slot shift">${emp?.name || 'Unknown'}</span>`;
+      });
+      slotRides.forEach(r => {
+        html += `<span class="schedule-slot ride">${r.riderName} (${r.pickupLocation}→${r.dropoffLocation})</span>`;
+      });
+      html += '</div></div>';
+    } else {
+      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots"><span class="small-text">—</span></div></div>`;
+    }
+  });
+
+  container.innerHTML = html;
+}
+
+// ----- Interactive Shift Grid -----
+let shiftGridDragging = false;
+let shiftGridStart = null;
+
+function renderShiftGrid() {
+  const grid = document.getElementById('shift-grid');
+  const timeSlots = generateTimeSlots();
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const empId = document.getElementById('shift-employee').value;
+
+  let html = '<div class="header-cell"></div>';
+  days.forEach(d => html += `<div class="header-cell">${d}</div>`);
+
+  timeSlots.forEach((slot, rowIdx) => {
+    html += `<div class="time-cell">${slot}</div>`;
+    days.forEach((_, dayIdx) => {
+      const hasShift = shifts.some(s => s.employeeId === empId && s.dayOfWeek === dayIdx && s.startTime <= slot && s.endTime > slot);
+      html += `<div class="grid-cell${hasShift ? ' has-shift' : ''}" data-day="${dayIdx}" data-slot="${slot}" data-row="${rowIdx}"></div>`;
+    });
+  });
+
+  grid.innerHTML = html;
+
+  // Add drag listeners
+  grid.querySelectorAll('.grid-cell').forEach(cell => {
+    cell.addEventListener('mousedown', onShiftGridMouseDown);
+    cell.addEventListener('mouseenter', onShiftGridMouseEnter);
+    cell.addEventListener('click', onShiftGridClick);
+  });
+}
+
+function onShiftGridMouseDown(e) {
+  shiftGridDragging = true;
+  shiftGridStart = { day: e.target.dataset.day, row: parseInt(e.target.dataset.row) };
+  e.target.classList.add('selected');
+}
+
+function onShiftGridMouseEnter(e) {
+  if (!shiftGridDragging || !shiftGridStart) return;
+  const grid = document.getElementById('shift-grid');
+  grid.querySelectorAll('.grid-cell.selected').forEach(c => c.classList.remove('selected'));
+
+  const currentRow = parseInt(e.target.dataset.row);
+  const day = shiftGridStart.day;
+  const minRow = Math.min(shiftGridStart.row, currentRow);
+  const maxRow = Math.max(shiftGridStart.row, currentRow);
+
+  grid.querySelectorAll(`.grid-cell[data-day="${day}"]`).forEach(cell => {
+    const row = parseInt(cell.dataset.row);
+    if (row >= minRow && row <= maxRow) cell.classList.add('selected');
+  });
+}
+
+async function onShiftGridClick(e) {
+  if (e.target.classList.contains('has-shift')) {
+    // Remove shift on click
+    const empId = document.getElementById('shift-employee').value;
+    const day = parseInt(e.target.dataset.day);
+    const slot = e.target.dataset.slot;
+    const shiftToRemove = shifts.find(s => s.employeeId === empId && s.dayOfWeek === day && s.startTime <= slot && s.endTime > slot);
+    if (shiftToRemove) {
+      await fetch(`/api/shifts/${shiftToRemove.id}`, { method: 'DELETE' });
+      await loadShifts();
+    }
+  }
+}
+
+document.addEventListener('mouseup', async () => {
+  if (!shiftGridDragging) return;
+  shiftGridDragging = false;
+
+  const grid = document.getElementById('shift-grid');
+  const selected = Array.from(grid.querySelectorAll('.grid-cell.selected')).filter(c => !c.classList.contains('has-shift'));
+
+  if (selected.length) {
+    const empId = document.getElementById('shift-employee').value;
+    const day = parseInt(selected[0].dataset.day);
+    const slots = selected.map(c => c.dataset.slot).sort();
+    const startTime = slots[0];
+    const timeSlots = generateTimeSlots();
+    const lastIdx = timeSlots.indexOf(slots[slots.length - 1]);
+    const endTime = timeSlots[lastIdx + 1] || '19:00';
+
+    await fetch('/api/shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId: empId, dayOfWeek: day, startTime, endTime })
+    });
+    await loadShifts();
+  }
+
+  grid.querySelectorAll('.grid-cell.selected').forEach(c => c.classList.remove('selected'));
+  shiftGridStart = null;
+});
 
 // ----- Ride Lists -----
 function renderRideLists() {
@@ -413,6 +548,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadEmployees();
   await loadShifts();
   await loadRides();
+  initScheduleDate();
+
+  // Re-render shift grid when employee changes
+  document.getElementById('shift-employee').addEventListener('change', renderShiftGrid);
+
   setInterval(loadRides, 5000);
   setInterval(renderDriverConsole, 1000);
+  setInterval(renderDaySchedule, 5000);
 });

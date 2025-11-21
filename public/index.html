@@ -20,32 +20,23 @@
       <h2>Staff &amp; Shifts</h2>
       <div id="employee-list" class="card"></div>
       <div class="card">
-        <h3>Weekly Schedule</h3>
-        <div id="schedule-grid"></div>
+        <h3>Daily Schedule View</h3>
+        <div class="schedule-nav">
+          <button class="btn" onclick="changeScheduleDay(-1)">&lt; Prev</button>
+          <input type="date" id="schedule-date" onchange="renderDaySchedule()">
+          <button class="btn" onclick="changeScheduleDay(1)">Next &gt;</button>
+        </div>
+        <div id="day-schedule" class="day-schedule"></div>
+        <div class="schedule-legend">
+          <span class="legend-item"><span class="legend-color shift"></span> Driver on shift</span>
+          <span class="legend-item"><span class="legend-color ride"></span> Scheduled ride</span>
+        </div>
       </div>
       <div class="card">
-        <h3>Add Shift</h3>
-        <form id="shift-form">
-          <label>Employee
-            <select id="shift-employee"></select>
-          </label>
-          <label>Day of Week
-            <select id="shift-day">
-              <option value="0">Monday</option>
-              <option value="1">Tuesday</option>
-              <option value="2">Wednesday</option>
-              <option value="3">Thursday</option>
-              <option value="4">Friday</option>
-            </select>
-          </label>
-          <label>Start Time
-            <select id="shift-start"></select>
-          </label>
-          <label>End Time
-            <select id="shift-end"></select>
-          </label>
-          <button type="submit" class="btn primary">Add Shift</button>
-        </form>
+        <h3>Add/Edit Shifts</h3>
+        <p class="small-text">Click and drag on the grid to add shifts. Click existing shifts to remove.</p>
+        <label>Employee <select id="shift-employee"></select></label>
+        <div id="shift-grid" class="shift-grid"></div>
       </div>
     </section>
 
