@@ -210,6 +210,51 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Driver claim ride endpoint
+app.post('/api/rides/:id/claim', (req, res) => {
+  const ride = rideRequests.find((r) => r.id === req.params.id);
+  if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  if (ride.status !== 'approved') return res.status(400).json({ error: 'Only approved rides can be claimed' });
+  if (ride.assignedDriverId) return res.status(400).json({ error: 'Ride already assigned' });
+  const { driverId } = req.body;
+  const driver = employees.find((e) => e.id === driverId && e.role === 'driver');
+  if (!driver) return res.status(400).json({ error: 'Driver not found' });
+  if (!driver.active) return res.status(400).json({ error: 'Driver must be clocked in to claim rides' });
+  ride.assignedDriverId = driverId;
+  ride.status = 'scheduled';
+  res.json(ride);
+});
+
+// Dev endpoint: seed sample rides
+app.post('/api/dev/seed-rides', (req, res) => {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const sampleRides = [
+    { riderName: 'Alice Student', riderEmail: 'alice@usc.edu', riderPhone: '213-555-0101', pickupLocation: 'Leavey Library', dropoffLocation: 'Doheny Library', hour: 9 },
+    { riderName: 'Bob Faculty', riderEmail: 'bob@usc.edu', riderPhone: '213-555-0102', pickupLocation: 'SGM', dropoffLocation: 'VKC', hour: 10 },
+    { riderName: 'Carol Staff', riderEmail: 'carol@usc.edu', riderPhone: '213-555-0103', pickupLocation: 'Lyon Center', dropoffLocation: 'RTH', hour: 11 },
+    { riderName: 'Dan Grad', riderEmail: 'dan@usc.edu', riderPhone: '213-555-0104', pickupLocation: 'USC Village', dropoffLocation: 'JFF', hour: 14 },
+  ];
+  sampleRides.forEach((s) => {
+    const requestedTime = `${todayStr}T${String(s.hour).padStart(2, '0')}:00`;
+    rideRequests.push({
+      id: generateId('ride'),
+      riderName: s.riderName,
+      riderEmail: s.riderEmail,
+      riderPhone: s.riderPhone,
+      pickupLocation: s.pickupLocation,
+      dropoffLocation: s.dropoffLocation,
+      requestedTime,
+      status: 'approved',
+      assignedDriverId: null,
+      graceStartTime: null,
+      consecutiveMisses: 0
+    });
+  });
+  res.json({ message: `Seeded ${sampleRides.length} sample rides for today`, count: sampleRides.length });
+});
+
 app.listen(PORT, () => {
+  console.log('USC DART server running from:', __dirname);
   console.log(`DART Ops server running on port ${PORT}`);
 });

@@ -49,16 +49,11 @@
     <section class="panel" id="rides-panel">
       <h2>Ride Requests</h2>
       <div class="card">
-        <h3>Intake Form</h3>
-        <form id="ride-form">
-          <label>Rider Name <input type="text" id="rider-name" required></label>
-          <label>Email <input type="email" id="rider-email" required></label>
-          <label>Phone <input type="tel" id="rider-phone" required></label>
-          <label>Pickup Location <input type="text" id="pickup" required></label>
-          <label>Dropoff Location <input type="text" id="dropoff" required></label>
-          <label>Requested Date/Time <input type="datetime-local" id="requested-time" required></label>
-          <button type="submit" class="btn primary">Submit Request</button>
-        </form>
+        <button id="load-sample-rides" class="btn secondary">Load Sample Rides (Dev)</button>
+      </div>
+      <div class="card" id="unassigned-list">
+        <h3>Unassigned Rides (Today)</h3>
+        <div class="list" id="unassigned-items"></div>
       </div>
       <div class="card" id="pending-list">
         <h3>Pending Requests</h3>

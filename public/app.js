@@ -118,12 +118,31 @@ function renderScheduleGrid() {
 
 // ----- Ride Lists -----
 function renderRideLists() {
+  const unassignedEl = document.getElementById('unassigned-items');
   const pendingEl = document.getElementById('pending-items');
   const approvedEl = document.getElementById('approved-items');
   const historyEl = document.getElementById('history-items');
+  unassignedEl.innerHTML = '';
   pendingEl.innerHTML = '';
   approvedEl.innerHTML = '';
   historyEl.innerHTML = '';
+
+  // Unassigned rides: approved, no driver, today only
+  const today = new Date().toISOString().split('T')[0];
+  const unassigned = rides.filter((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
+  unassigned.forEach((ride) => {
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.innerHTML = `
+      <div><strong>${ride.riderName}</strong></div>
+      <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
+      <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
+    `;
+    unassignedEl.appendChild(item);
+  });
+  if (!unassigned.length) {
+    unassignedEl.innerHTML = '<p class="small-text">No unassigned rides for today.</p>';
+  }
 
   const pending = rides.filter((r) => r.status === 'pending');
   const approved = rides.filter((r) => ['approved', 'scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(r.status));
@@ -224,6 +243,19 @@ async function assignDriver(rideId, driverId) {
   await loadRides();
 }
 
+async function claimRide(rideId, driverId) {
+  const res = await fetch(`/api/rides/${rideId}/claim`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ driverId })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    alert(err.error || 'Cannot claim ride');
+  }
+  await loadRides();
+}
+
 // ----- Driver Console -----
 function renderDriverConsole() {
   const info = document.getElementById('driver-info');
@@ -242,9 +274,36 @@ function renderDriverConsole() {
   }
 
   const today = new Date().toISOString().split('T')[0];
+
+  // Show claimable rides (approved, unassigned, today)
+  const claimable = rides.filter((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
+  if (claimable.length) {
+    const claimSection = document.createElement('div');
+    claimSection.innerHTML = '<h4>Available to Claim</h4>';
+    claimable.forEach((ride) => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      item.innerHTML = `
+        <div><strong>${ride.riderName}</strong></div>
+        <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
+        <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
+      `;
+      const claimBtn = document.createElement('button');
+      claimBtn.className = 'btn primary';
+      claimBtn.textContent = 'Claim Ride';
+      claimBtn.onclick = () => claimRide(ride.id, driver.id);
+      item.appendChild(claimBtn);
+      claimSection.appendChild(item);
+    });
+    list.appendChild(claimSection);
+  }
+
   const driverRides = rides.filter((r) => r.assignedDriverId === driver.id && r.requestedTime?.startsWith(today));
+  if (!driverRides.length && !claimable.length) {
+    list.innerHTML = '<p class="small-text">No rides assigned or available for today.</p>';
+    return;
+  }
   if (!driverRides.length) {
-    list.innerHTML = '<p class="small-text">No rides assigned for today.</p>';
     return;
   }
 
@@ -318,7 +377,6 @@ function buildGraceInfo(ride) {
 // ----- Forms -----
 function initForms() {
   const shiftForm = document.getElementById('shift-form');
-  const rideForm = document.getElementById('ride-form');
 
   // Populate time options
   const startSelect = document.getElementById('shift-start');
@@ -351,30 +409,22 @@ function initForms() {
     await loadShifts();
   });
 
-  rideForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const payload = {
-      riderName: document.getElementById('rider-name').value,
-      riderEmail: document.getElementById('rider-email').value,
-      riderPhone: document.getElementById('rider-phone').value,
-      pickupLocation: document.getElementById('pickup').value,
-      dropoffLocation: document.getElementById('dropoff').value,
-      requestedTime: document.getElementById('requested-time').value
-    };
-    await fetch('/api/rides', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    rideForm.reset();
-    await loadRides();
-  });
-
   const driverSelect = document.getElementById('driver-select');
   driverSelect.addEventListener('change', (e) => {
     selectedDriverId = e.target.value || null;
     renderDriverConsole();
   });
+
+  // Dev: Load sample rides button
+  const loadSampleBtn = document.getElementById('load-sample-rides');
+  if (loadSampleBtn) {
+    loadSampleBtn.addEventListener('click', async () => {
+      const res = await fetch('/api/dev/seed-rides', { method: 'POST' });
+      const data = await res.json();
+      alert(data.message || 'Sample rides loaded');
+      await loadRides();
+    });
+  }
 }
 
 // ----- Helpers -----
