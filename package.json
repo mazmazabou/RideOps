@@ -1,0 +1,13 @@
+{
+  "name": "dart_ops",
+  "version": "1.0.0",
+  "description": "USC DART operations console (dispatch + driver).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
