@@ -21,6 +21,7 @@ async function loadShifts() {
 async function loadRides() {
   const res = await fetch('/api/rides');
   rides = await res.json();
+  renderRideSchedule();
   renderRideLists();
   renderDriverConsole();
 }
@@ -108,6 +109,79 @@ function renderScheduleGrid() {
         return emp ? emp.name : 'Unknown';
       });
       html += `<td>${names.join('<br>')}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  grid.innerHTML = html;
+}
+
+// ----- Ride Schedule -----
+function renderRideSchedule() {
+  const grid = document.getElementById('ride-schedule-grid');
+  const timeSlots = generateTimeSlots();
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  // Get the current week's Monday
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  let html = '<table class="grid-table"><thead><tr><th>Time</th>';
+  days.forEach((d, idx) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + idx);
+    const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+    html += `<th>${d}<br><span class="small-text">${dateStr}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  timeSlots.forEach((slot) => {
+    html += `<tr><td>${slot}</td>`;
+    days.forEach((_, dayIdx) => {
+      const cellDate = new Date(monday);
+      cellDate.setDate(monday.getDate() + dayIdx);
+      const cellDateStr = cellDate.toISOString().split('T')[0];
+
+      // Find rides for this day/time slot
+      const cellRides = rides.filter((r) => {
+        if (!r.requestedTime) return false;
+        const rideDate = r.requestedTime.split('T')[0];
+        if (rideDate !== cellDateStr) return false;
+
+        // Extract time from requestedTime
+        const rideTime = new Date(r.requestedTime);
+        const rideHour = rideTime.getHours();
+        const rideMinute = rideTime.getMinutes();
+        const rideTimeStr = `${String(rideHour).padStart(2, '0')}:${String(rideMinute).padStart(2, '0')}`;
+
+        // Match time slot (30-min window)
+        const slotParts = slot.split(':');
+        const slotHour = parseInt(slotParts[0]);
+        const slotMinute = parseInt(slotParts[1]);
+
+        // Check if ride falls within this 30-min slot
+        if (rideHour === slotHour) {
+          if (slotMinute === 0 && rideMinute < 30) return true;
+          if (slotMinute === 30 && rideMinute >= 30) return true;
+        }
+        return false;
+      });
+
+      let cellContent = '';
+      cellRides.forEach((ride) => {
+        const driver = employees.find((e) => e.id === ride.assignedDriverId);
+        const driverName = driver ? driver.name.split(' ')[0] : '';
+        cellContent += `<div class="ride-pill ${ride.status}" title="${ride.riderName} - ${ride.status}">
+          ${ride.riderName.split(' ')[0]}${driverName ? ' (' + driverName + ')' : ''}
+        </div>`;
+      });
+
+      const cellClass = cellRides.length ? 'ride-schedule-cell has-rides' : 'ride-schedule-cell';
+      html += `<td class="${cellClass}">${cellContent}</td>`;
     });
     html += '</tr>';
   });
@@ -241,8 +315,17 @@ function renderDriverConsole() {
     claimable.forEach((ride) => {
       const item = document.createElement('div');
       item.className = 'item';
+      const contactButtons = ride.riderPhone
+        ? `<div class="contact-buttons">
+             <a href="tel:${ride.riderPhone}" class="contact-link" title="Call rider">📱</a>
+             <a href="sms:${ride.riderPhone}" class="contact-link" title="Text rider">💬</a>
+           </div>`
+        : '';
       item.innerHTML = `
-        <div><strong>${ride.riderName}</strong></div>
+        <div class="flex-row" style="justify-content: space-between; align-items: center;">
+          <strong>${ride.riderName}</strong>
+          ${contactButtons}
+        </div>
         <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
         <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
       `;
@@ -269,8 +352,17 @@ function renderDriverConsole() {
     const item = document.createElement('div');
     item.className = 'item';
     const graceInfo = buildGraceInfo(ride);
+    const contactButtons = ride.riderPhone
+      ? `<div class="contact-buttons">
+           <a href="tel:${ride.riderPhone}" class="contact-link" title="Call rider">📱</a>
+           <a href="sms:${ride.riderPhone}" class="contact-link" title="Text rider">💬</a>
+         </div>`
+      : '';
     item.innerHTML = `
-      <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong>${ride.riderName}</strong></div>
+      <div class="flex-row" style="justify-content: space-between; align-items: center;">
+        <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong>${ride.riderName}</strong></div>
+        ${contactButtons}
+      </div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
       <div class="small-text">Rider misses: ${ride.consecutiveMisses || 0}</div>

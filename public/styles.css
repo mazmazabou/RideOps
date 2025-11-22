@@ -172,3 +172,106 @@ input, select {
   font-size: 12px;
   color: #767676;
 }
+
+.contact-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.contact-link {
+  font-size: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.contact-link:hover {
+  transform: scale(1.2);
+}
+
+.schedule-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.legend-color.pending {
+  background: #FFD700;
+}
+
+.legend-color.approved {
+  background: #4CAF50;
+}
+
+.legend-color.completed {
+  background: #9E9E9E;
+}
+
+.legend-color.denied {
+  background: #F44336;
+}
+
+.ride-schedule-cell {
+  min-height: 40px;
+  position: relative;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.ride-schedule-cell:hover {
+  opacity: 0.8;
+}
+
+.ride-schedule-cell.has-rides {
+  font-weight: bold;
+}
+
+.ride-pill {
+  display: block;
+  font-size: 10px;
+  padding: 2px 4px;
+  margin: 2px 0;
+  border-radius: 3px;
+  color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ride-pill.pending {
+  background: #FFD700;
+}
+
+.ride-pill.approved,
+.ride-pill.scheduled,
+.ride-pill.driver_on_the_way,
+.ride-pill.driver_arrived_grace {
+  background: #4CAF50;
+  color: #FFF;
+}
+
+.ride-pill.completed {
+  background: #9E9E9E;
+  color: #FFF;
+}
+
+.ride-pill.denied,
+.ride-pill.no_show {
+  background: #F44336;
+  color: #FFF;
+}
