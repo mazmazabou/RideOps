@@ -315,6 +315,7 @@ function renderDriverConsole() {
     claimable.forEach((ride) => {
       const item = document.createElement('div');
       item.className = 'item';
+      console.log('Claimable ride:', ride.riderName, 'Phone:', ride.riderPhone);
       const contactButtons = ride.riderPhone
         ? `<div class="contact-buttons">
              <a href="tel:${ride.riderPhone}" class="contact-link" title="Call rider">📱</a>
@@ -352,6 +353,7 @@ function renderDriverConsole() {
     const item = document.createElement('div');
     item.className = 'item';
     const graceInfo = buildGraceInfo(ride);
+    console.log('Ride data:', ride.riderName, 'Phone:', ride.riderPhone);
     const contactButtons = ride.riderPhone
       ? `<div class="contact-buttons">
            <a href="tel:${ride.riderPhone}" class="contact-link" title="Call rider">📱</a>
