@@ -2,6 +2,55 @@ let employees = [];
 let shifts = [];
 let rides = [];
 let selectedDriverId = null;
+let currentPage = 'rides'; // Default page
+
+// ----- Page Navigation -----
+function navigateToPage(pageName) {
+  currentPage = pageName;
+
+  // Hide all pages
+  document.querySelectorAll('.page').forEach((page) => {
+    page.classList.remove('active');
+  });
+
+  // Show selected page
+  const targetPage = document.querySelector(`.page[data-page="${pageName}"]`);
+  if (targetPage) {
+    targetPage.classList.add('active');
+  }
+
+  // Update nav link active states
+  document.querySelectorAll('.nav-link').forEach((link) => {
+    link.classList.remove('active');
+  });
+  const activeLink = document.querySelector(`.nav-link[data-page="${pageName}"]`);
+  if (activeLink) {
+    activeLink.classList.add('active');
+  }
+}
+
+function handleHashChange() {
+  const hash = window.location.hash.slice(1); // Remove '#'
+  const pageName = hash.replace('/', '') || 'rides'; // Default to rides page
+  navigateToPage(pageName);
+}
+
+function initNavigation() {
+  // Handle initial page load
+  handleHashChange();
+
+  // Listen for hash changes
+  window.addEventListener('hashchange', handleHashChange);
+
+  // Handle nav link clicks
+  document.querySelectorAll('.nav-link').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const pageName = link.getAttribute('data-page');
+      window.location.hash = `#/${pageName}`;
+    });
+  });
+}
 
 // ----- Data Loading -----
 async function loadEmployees() {
@@ -486,6 +535,7 @@ function formatDate(dateStr) {
 
 // ----- Initialize -----
 document.addEventListener('DOMContentLoaded', async () => {
+  initNavigation();
   initForms();
   await loadEmployees();
   await loadShifts();

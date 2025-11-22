@@ -10,43 +10,52 @@
   <header class="header">
     <h1>USC DART Operations Console</h1>
     <p>Dispatch + Driver tools for Disabled Access To Road Transportation</p>
+    <nav class="nav-menu">
+      <a href="#/staff" class="nav-link" data-page="staff">Staff & Shifts</a>
+      <a href="#/rides" class="nav-link" data-page="rides">Ride Requests</a>
+      <a href="#/driver" class="nav-link" data-page="driver">Driver Console</a>
+    </nav>
   </header>
 
-  <main class="layout">
-    <section class="panel" id="staff-panel">
-      <h2>Staff &amp; Shifts</h2>
-      <div id="employee-list" class="card"></div>
-      <div class="card">
-        <h3>Weekly Schedule</h3>
-        <div id="schedule-grid"></div>
+  <main class="page-container">
+    <section class="page" id="staff-page" data-page="staff">
+      <div class="staff-left">
+        <h2>Staff &amp; Shifts</h2>
+        <div id="employee-list" class="card"></div>
+        <div class="card">
+          <h3>Add Shift</h3>
+          <form id="shift-form">
+            <label>Employee
+              <select id="shift-employee"></select>
+            </label>
+            <label>Day of Week
+              <select id="shift-day">
+                <option value="0">Monday</option>
+                <option value="1">Tuesday</option>
+                <option value="2">Wednesday</option>
+                <option value="3">Thursday</option>
+                <option value="4">Friday</option>
+              </select>
+            </label>
+            <label>Start Time
+              <select id="shift-start"></select>
+            </label>
+            <label>End Time
+              <select id="shift-end"></select>
+            </label>
+            <button type="submit" class="btn primary">Add Shift</button>
+          </form>
+        </div>
       </div>
-      <div class="card">
-        <h3>Add Shift</h3>
-        <form id="shift-form">
-          <label>Employee
-            <select id="shift-employee"></select>
-          </label>
-          <label>Day of Week
-            <select id="shift-day">
-              <option value="0">Monday</option>
-              <option value="1">Tuesday</option>
-              <option value="2">Wednesday</option>
-              <option value="3">Thursday</option>
-              <option value="4">Friday</option>
-            </select>
-          </label>
-          <label>Start Time
-            <select id="shift-start"></select>
-          </label>
-          <label>End Time
-            <select id="shift-end"></select>
-          </label>
-          <button type="submit" class="btn primary">Add Shift</button>
-        </form>
+      <div class="staff-right">
+        <h2>Weekly Schedule</h2>
+        <div class="card">
+          <div id="schedule-grid"></div>
+        </div>
       </div>
     </section>
 
-    <section class="panel" id="rides-panel">
+    <section class="page" id="rides-page" data-page="rides">
       <h2>Ride Requests</h2>
       <div class="card">
         <button id="load-sample-rides" class="btn secondary">Load Sample Rides (Dev)</button>
@@ -61,40 +70,46 @@
         </div>
         <div id="ride-schedule-grid"></div>
       </div>
-      <div class="card" id="unassigned-list">
-        <h3>Unassigned Rides (Today)</h3>
-        <div class="list" id="unassigned-items"></div>
-      </div>
-      <div class="card" id="pending-list">
-        <h3>Pending Requests</h3>
-        <div class="list" id="pending-items"></div>
-      </div>
-      <div class="card" id="approved-list">
-        <h3>Approved / Scheduled</h3>
-        <div class="list" id="approved-items"></div>
-      </div>
-      <div class="card" id="history-list">
-        <h3>Completed &amp; No-Show History</h3>
-        <div class="list" id="history-items"></div>
+      <div class="ride-lists-grid">
+        <div class="card" id="unassigned-list">
+          <h3>Unassigned Rides (Today)</h3>
+          <div class="list" id="unassigned-items"></div>
+        </div>
+        <div class="card" id="pending-list">
+          <h3>Pending Requests</h3>
+          <div class="list" id="pending-items"></div>
+        </div>
+        <div class="card" id="approved-list">
+          <h3>Approved / Scheduled</h3>
+          <div class="list" id="approved-items"></div>
+        </div>
+        <div class="card" id="history-list">
+          <h3>Completed &amp; No-Show History</h3>
+          <div class="list" id="history-items"></div>
+        </div>
       </div>
     </section>
 
-    <section class="panel" id="driver-panel">
-      <h2>Driver Console</h2>
-      <div class="card">
-        <label>Select Driver
-          <select id="driver-select"></select>
-        </label>
-        <div id="driver-info"></div>
+    <section class="page" id="driver-page" data-page="driver">
+      <div class="driver-left">
+        <h2>Driver Console</h2>
+        <div class="card">
+          <label>Select Driver
+            <select id="driver-select"></select>
+          </label>
+          <div id="driver-info"></div>
+        </div>
+        <div class="card" id="driver-rides">
+          <h3>Assigned Rides</h3>
+          <div class="list" id="driver-ride-list"></div>
+        </div>
       </div>
-      <div class="card" id="driver-rides">
-        <h3>Assigned Rides</h3>
-        <div class="list" id="driver-ride-list"></div>
-      </div>
-      <div class="card">
-        <h3>USC Campus Map</h3>
-        <div class="map-wrapper">
-          <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
+      <div class="driver-right">
+        <h2>USC Campus Map</h2>
+        <div class="card">
+          <div class="map-wrapper">
+            <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
+          </div>
         </div>
       </div>
     </section>

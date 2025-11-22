@@ -13,16 +13,90 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
-  padding: 16px;
+.nav-menu {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
-.panel h2 {
-  margin-top: 0;
+.nav-link {
+  padding: 8px 20px;
+  background: rgba(255, 204, 0, 0.2);
+  color: #FFCC00;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.nav-link:hover {
+  background: rgba(255, 204, 0, 0.3);
+}
+
+.nav-link.active {
+  background: #FFCC00;
   color: #990000;
+}
+
+.page-container {
+  padding: 16px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+.page h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #990000;
+}
+
+/* Staff page layout */
+#staff-page {
+  display: none;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+
+#staff-page.active {
+  display: grid;
+}
+
+/* Rides page layout */
+#rides-page {
+  display: none;
+  gap: 16px;
+}
+
+#rides-page.active {
+  display: block;
+}
+
+#rides-page .ride-lists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* Driver page layout */
+#driver-page {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+#driver-page.active {
+  display: grid;
 }
 
 .card {
@@ -80,8 +154,35 @@ input, select {
 
 .grid-table th, .grid-table td {
   border: 1px solid #CCCCCC;
-  padding: 4px;
+  padding: 6px 8px;
   text-align: left;
+}
+
+.grid-table th {
+  background: #990000;
+  color: #FFCC00;
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Larger ride schedule on rides page */
+#ride-schedule {
+  margin-bottom: 20px;
+}
+
+#ride-schedule .grid-table {
+  font-size: 13px;
+}
+
+#ride-schedule .grid-table th,
+#ride-schedule .grid-table td {
+  padding: 8px 10px;
+}
+
+#ride-schedule-grid {
+  overflow-x: auto;
 }
 
 .employee-row {
