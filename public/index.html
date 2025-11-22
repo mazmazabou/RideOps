@@ -51,6 +51,16 @@
       <div class="card">
         <button id="load-sample-rides" class="btn secondary">Load Sample Rides (Dev)</button>
       </div>
+      <div class="card" id="ride-schedule">
+        <h3>Weekly Ride Schedule</h3>
+        <div class="schedule-legend">
+          <span class="legend-item"><span class="legend-color pending"></span> Pending</span>
+          <span class="legend-item"><span class="legend-color approved"></span> Approved/Scheduled</span>
+          <span class="legend-item"><span class="legend-color completed"></span> Completed</span>
+          <span class="legend-item"><span class="legend-color denied"></span> Denied/No-show</span>
+        </div>
+        <div id="ride-schedule-grid"></div>
+      </div>
       <div class="card" id="unassigned-list">
         <h3>Unassigned Rides (Today)</h3>
         <div class="list" id="unassigned-items"></div>
