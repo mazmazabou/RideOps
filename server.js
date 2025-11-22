@@ -15,9 +15,24 @@ let employees = [
   { id: 'emp4', name: 'Chris', active: false }
 ];
 
+// Calculate current week's Monday for default shifts
+function getCurrentWeekMonday() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+const weekMonday = getCurrentWeekMonday();
+const mondayStr = weekMonday.toISOString().split('T')[0];
+const wednesdayStr = new Date(weekMonday.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
 let shifts = [
-  { id: 'shift1', employeeId: 'emp1', dayOfWeek: 0, startTime: '08:00', endTime: '12:00' },
-  { id: 'shift2', employeeId: 'emp4', dayOfWeek: 2, startTime: '12:00', endTime: '19:00' }
+  { id: 'shift1', employeeId: 'emp1', shiftDate: mondayStr, startTime: '08:00', endTime: '12:00' },
+  { id: 'shift2', employeeId: 'emp4', shiftDate: wednesdayStr, startTime: '12:00', endTime: '19:00' }
 ];
 
 let rideRequests = [];
@@ -75,10 +90,11 @@ app.get('/api/shifts', (req, res) => {
 });
 
 app.post('/api/shifts', (req, res) => {
-  const { employeeId, dayOfWeek, startTime, endTime } = req.body;
+  const { employeeId, shiftDate, startTime, endTime } = req.body;
   const emp = employees.find((e) => e.id === employeeId);
   if (!emp) return res.status(400).json({ error: 'Employee not found' });
-  const shift = { id: generateId('shift'), employeeId, dayOfWeek, startTime, endTime };
+  if (!shiftDate) return res.status(400).json({ error: 'Shift date is required' });
+  const shift = { id: generateId('shift'), employeeId, shiftDate, startTime, endTime };
   shifts.push(shift);
   res.json(shift);
 });

@@ -12,8 +12,14 @@
     <p>Dispatch + Driver tools for Disabled Access To Road Transportation</p>
   </header>
 
+  <nav class="navigation">
+    <button class="nav-btn active" data-page="staff">Staff &amp; Shifts</button>
+    <button class="nav-btn" data-page="rides">Ride Requests</button>
+    <button class="nav-btn" data-page="driver">Driver Console</button>
+  </nav>
+
   <main class="layout">
-    <section class="panel" id="staff-panel">
+    <section class="panel page-content" id="staff-panel" data-page="staff">
       <h2>Staff &amp; Shifts</h2>
       <div id="employee-list" class="card"></div>
       <div class="card">
@@ -26,14 +32,8 @@
           <label>Employee
             <select id="shift-employee"></select>
           </label>
-          <label>Day of Week
-            <select id="shift-day">
-              <option value="0">Monday</option>
-              <option value="1">Tuesday</option>
-              <option value="2">Wednesday</option>
-              <option value="3">Thursday</option>
-              <option value="4">Friday</option>
-            </select>
+          <label>Shift Date
+            <select id="shift-date"></select>
           </label>
           <label>Start Time
             <select id="shift-start"></select>
@@ -46,7 +46,7 @@
       </div>
     </section>
 
-    <section class="panel" id="rides-panel">
+    <section class="panel page-content" id="rides-panel" data-page="rides">
       <h2>Ride Requests</h2>
       <div class="card">
         <button id="load-sample-rides" class="btn secondary">Load Sample Rides (Dev)</button>
@@ -79,7 +79,7 @@
       </div>
     </section>
 
-    <section class="panel" id="driver-panel">
+    <section class="panel page-content" id="driver-panel" data-page="driver">
       <h2>Driver Console</h2>
       <div class="card">
         <label>Select Driver
@@ -111,6 +111,6 @@
     </ul>
   </section>
 
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

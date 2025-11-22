@@ -93,17 +93,49 @@ function generateTimeSlots() {
   return slots;
 }
 
+function getCurrentWeekDates() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  const weekDates = [];
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  for (let i = 0; i < 5; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    weekDates.push({
+      dayName: dayNames[i],
+      date: date,
+      dateStr: date.toISOString().split('T')[0],
+      displayStr: `${dayNames[i]} (${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()})`
+    });
+  }
+  return weekDates;
+}
+
 function renderScheduleGrid() {
   const grid = document.getElementById('schedule-grid');
   const timeSlots = generateTimeSlots();
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const weekDates = getCurrentWeekDates();
+
   let html = '<table class="grid-table"><thead><tr><th>Time</th>';
-  days.forEach((d) => (html += `<th>${d}</th>`));
+  weekDates.forEach((d) => {
+    html += `<th>${d.dayName}<br><span class="small-text">${d.date.getMonth() + 1}/${d.date.getDate()}</span></th>`;
+  });
   html += '</tr></thead><tbody>';
+
   timeSlots.forEach((slot) => {
     html += `<tr><td>${slot}</td>`;
-    days.forEach((_, idx) => {
-      const onShift = shifts.filter((s) => s.dayOfWeek === idx && s.startTime <= slot && s.endTime >= slot);
+    weekDates.forEach((d) => {
+      // Filter shifts for this specific date and time slot
+      const onShift = shifts.filter((s) =>
+        s.shiftDate === d.dateStr &&
+        s.startTime <= slot &&
+        s.endTime >= slot
+      );
       const names = onShift.map((s) => {
         const emp = employees.find((e) => e.id === s.employeeId);
         return emp ? emp.name : 'Unknown';
@@ -289,6 +321,25 @@ async function claimRide(rideId, driverId) {
 }
 
 // ----- Driver Console -----
+function createContactButton(icon, title, handler) {
+  const btn = document.createElement('button');
+  btn.className = 'contact-link';
+  btn.textContent = icon;
+  btn.title = title;
+  btn.onclick = handler;
+  return btn;
+}
+
+function handleCallRider(phone) {
+  console.log('Calling rider at:', phone);
+  window.location.href = `tel:${phone}`;
+}
+
+function handleTextRider(phone) {
+  console.log('Texting rider at:', phone);
+  window.location.href = `sms:${phone}`;
+}
+
 function renderDriverConsole() {
   const info = document.getElementById('driver-info');
   const list = document.getElementById('driver-ride-list');
@@ -315,20 +366,24 @@ function renderDriverConsole() {
     claimable.forEach((ride) => {
       const item = document.createElement('div');
       item.className = 'item';
-      const contactButtons = ride.riderPhone
-        ? `<div class="contact-buttons">
-             <a href="tel:${ride.riderPhone}" class="contact-link" title="Call rider">📱</a>
-             <a href="sms:${ride.riderPhone}" class="contact-link" title="Text rider">💬</a>
-           </div>`
-        : '';
       item.innerHTML = `
         <div class="flex-row" style="justify-content: space-between; align-items: center;">
           <strong>${ride.riderName}</strong>
-          ${contactButtons}
+          ${ride.riderPhone ? '<div class="contact-buttons"></div>' : ''}
         </div>
         <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
         <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
       `;
+
+      // Add contact buttons with handlers
+      if (ride.riderPhone) {
+        const contactDiv = item.querySelector('.contact-buttons');
+        const callBtn = createContactButton('☎', 'Call rider', () => handleCallRider(ride.riderPhone));
+        const textBtn = createContactButton('✉', 'Text rider', () => handleTextRider(ride.riderPhone));
+        contactDiv.appendChild(callBtn);
+        contactDiv.appendChild(textBtn);
+      }
+
       const claimBtn = document.createElement('button');
       claimBtn.className = 'btn primary';
       claimBtn.textContent = 'Claim Ride';
@@ -352,21 +407,24 @@ function renderDriverConsole() {
     const item = document.createElement('div');
     item.className = 'item';
     const graceInfo = buildGraceInfo(ride);
-    const contactButtons = ride.riderPhone
-      ? `<div class="contact-buttons">
-           <a href="tel:${ride.riderPhone}" class="contact-link" title="Call rider">📱</a>
-           <a href="sms:${ride.riderPhone}" class="contact-link" title="Text rider">💬</a>
-         </div>`
-      : '';
     item.innerHTML = `
       <div class="flex-row" style="justify-content: space-between; align-items: center;">
         <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong>${ride.riderName}</strong></div>
-        ${contactButtons}
+        ${ride.riderPhone ? '<div class="contact-buttons"></div>' : ''}
       </div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
       <div class="small-text">Rider misses: ${ride.consecutiveMisses || 0}</div>
     `;
+
+    // Add contact buttons with handlers
+    if (ride.riderPhone) {
+      const contactDiv = item.querySelector('.contact-buttons');
+      const callBtn = createContactButton('☎', 'Call rider', () => handleCallRider(ride.riderPhone));
+      const textBtn = createContactButton('✉', 'Text rider', () => handleTextRider(ride.riderPhone));
+      contactDiv.appendChild(callBtn);
+      contactDiv.appendChild(textBtn);
+    }
     const actions = document.createElement('div');
     actions.className = 'flex-row';
 
@@ -428,6 +486,16 @@ function buildGraceInfo(ride) {
 function initForms() {
   const shiftForm = document.getElementById('shift-form');
 
+  // Populate date options for current week
+  const dateSelect = document.getElementById('shift-date');
+  const weekDates = getCurrentWeekDates();
+  weekDates.forEach((d) => {
+    const opt = document.createElement('option');
+    opt.value = d.dateStr;
+    opt.textContent = d.displayStr;
+    dateSelect.appendChild(opt);
+  });
+
   // Populate time options
   const startSelect = document.getElementById('shift-start');
   const endSelect = document.getElementById('shift-end');
@@ -446,7 +514,7 @@ function initForms() {
     e.preventDefault();
     const payload = {
       employeeId: document.getElementById('shift-employee').value,
-      dayOfWeek: Number(document.getElementById('shift-day').value),
+      shiftDate: document.getElementById('shift-date').value,
       startTime: document.getElementById('shift-start').value,
       endTime: document.getElementById('shift-end').value
     };
@@ -484,8 +552,39 @@ function formatDate(dateStr) {
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 
+// ----- Navigation -----
+function initNavigation() {
+  const navButtons = document.querySelectorAll('.nav-btn');
+  const pages = document.querySelectorAll('.page-content');
+
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetPage = btn.dataset.page;
+
+      // Update active button
+      navButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Show target page, hide others
+      pages.forEach(page => {
+        if (page.dataset.page === targetPage) {
+          page.classList.add('active');
+        } else {
+          page.classList.remove('active');
+        }
+      });
+    });
+  });
+
+  // Show first page by default
+  if (pages.length > 0) {
+    pages[0].classList.add('active');
+  }
+}
+
 // ----- Initialize -----
 document.addEventListener('DOMContentLoaded', async () => {
+  initNavigation();
   initForms();
   await loadEmployees();
   await loadShifts();

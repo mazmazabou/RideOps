@@ -13,11 +13,50 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+.navigation {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  background: #FFFFFF;
+  border-bottom: 2px solid #990000;
+  padding: 0;
+}
+
+.nav-btn {
+  background: #FFFFFF;
+  color: #990000;
+  border: none;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.3s;
+}
+
+.nav-btn:hover {
+  background: #FFF9E6;
+  border-bottom-color: #FFCC00;
+}
+
+.nav-btn.active {
+  background: #990000;
+  color: #FFCC00;
+  border-bottom-color: #FFCC00;
+}
+
 .layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
   padding: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-content {
+  display: none;
+}
+
+.page-content.active {
+  display: block;
 }
 
 .panel h2 {
@@ -78,7 +117,16 @@ input, select {
   font-size: 12px;
 }
 
-.grid-table th, .grid-table td {
+.grid-table th {
+  border: 1px solid #990000;
+  padding: 4px;
+  text-align: left;
+  background: #990000;
+  color: #FFCC00;
+  font-weight: bold;
+}
+
+.grid-table td {
   border: 1px solid #CCCCCC;
   padding: 4px;
   text-align: left;
@@ -128,13 +176,14 @@ input, select {
   margin-right: 6px;
 }
 
-.status-tag.pending { background: #767676; }
-.status-tag.approved { background: #008000; }
-.status-tag.scheduled { background: #000000; }
-.status-tag.driver_on_the_way { background: #990000; }
-.status-tag.driver_arrived_grace { background: #FFCC00; color: #000000; }
-.status-tag.completed { background: #1a8f1a; }
-.status-tag.no_show { background: #990000; }
+.status-tag.pending { background: #FFCC00; color: #000000; }
+.status-tag.approved { background: #990000; }
+.status-tag.scheduled { background: #990000; }
+.status-tag.driver_on_the_way { background: #FFCC00; color: #990000; }
+.status-tag.driver_arrived_grace { background: #CCCCCC; color: #000000; }
+.status-tag.completed { background: #767676; }
+.status-tag.no_show { background: #0A0A0A; }
+.status-tag.denied { background: #0A0A0A; }
 
 .map-wrapper iframe {
   width: 100%;
@@ -179,14 +228,29 @@ input, select {
 }
 
 .contact-link {
-  font-size: 20px;
-  text-decoration: none;
+  font-size: 24px;
+  background: none;
+  border: 2px solid #990000;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.2s;
+  color: #990000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .contact-link:hover {
-  transform: scale(1.2);
+  background: #990000;
+  color: #FFCC00;
+  transform: scale(1.1);
+}
+
+.contact-link:active {
+  transform: scale(0.95);
 }
 
 .schedule-legend {
@@ -211,19 +275,19 @@ input, select {
 }
 
 .legend-color.pending {
-  background: #FFD700;
+  background: #FFCC00;
 }
 
 .legend-color.approved {
-  background: #4CAF50;
+  background: #990000;
 }
 
 .legend-color.completed {
-  background: #9E9E9E;
+  background: #767676;
 }
 
 .legend-color.denied {
-  background: #F44336;
+  background: #0A0A0A;
 }
 
 .ride-schedule-cell {
@@ -254,24 +318,35 @@ input, select {
 }
 
 .ride-pill.pending {
-  background: #FFD700;
+  background: #FFCC00;
+  color: #000;
 }
 
 .ride-pill.approved,
-.ride-pill.scheduled,
-.ride-pill.driver_on_the_way,
+.ride-pill.scheduled {
+  background: #990000;
+  color: #FFCC00;
+}
+
+.ride-pill.driver_on_the_way {
+  background: #FFCC00;
+  color: #990000;
+  font-weight: bold;
+}
+
 .ride-pill.driver_arrived_grace {
-  background: #4CAF50;
-  color: #FFF;
+  background: #CCCCCC;
+  color: #000;
+  font-weight: bold;
 }
 
 .ride-pill.completed {
-  background: #9E9E9E;
+  background: #767676;
   color: #FFF;
 }
 
 .ride-pill.denied,
 .ride-pill.no_show {
-  background: #F44336;
+  background: #0A0A0A;
   color: #FFF;
 }
