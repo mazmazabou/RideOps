@@ -167,23 +167,6 @@ input, select {
   margin-left: 6px;
 }
 
-.status-tag {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  color: #FFFFFF;
-  background: #767676;
-  margin-right: 6px;
-}
-
-.status-tag.pending { background: #FFCC00; color: #000000; }
-.status-tag.approved { background: #990000; }
-.status-tag.scheduled { background: #990000; }
-.status-tag.driver_on_the_way { background: #FFCC00; color: #990000; }
-.status-tag.driver_arrived_grace { background: #CCCCCC; color: #000000; }
-.status-tag.completed { background: #767676; }
-.status-tag.no_show { background: #0A0A0A; }
-.status-tag.denied { background: #0A0A0A; }
 
 .map-wrapper iframe {
   width: 100%;
@@ -350,3 +333,435 @@ input, select {
   background: #0A0A0A;
   color: #FFF;
 }
+
+/* ============================================================================
+   TOAST NOTIFICATIONS
+   ============================================================================ */
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  min-width: 280px;
+  max-width: 400px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  transform: translateX(450px);
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast.show {
+  transform: translateX(0);
+}
+
+.toast-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.toast-message {
+  flex: 1;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.toast-success {
+  border-left: 4px solid var(--success, #28a745);
+}
+
+.toast-success .toast-icon {
+  background: #d4edda;
+  color: var(--success, #28a745);
+}
+
+.toast-error {
+  border-left: 4px solid var(--danger, #dc3545);
+}
+
+.toast-error .toast-icon {
+  background: #f8d7da;
+  color: var(--danger, #dc3545);
+}
+
+.toast-warning {
+  border-left: 4px solid var(--warning, #ffc107);
+}
+
+.toast-warning .toast-icon {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.toast-info {
+  border-left: 4px solid var(--info, #17a2b8);
+}
+
+.toast-info .toast-icon {
+  background: #d1ecf1;
+  color: var(--info, #17a2b8);
+}
+
+/* ============================================================================
+   LOADING STATES
+   ============================================================================ */
+
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+
+.loader-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(153, 0, 0, 0.1);
+  border-top-color: var(--cardinal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+.loader-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   EMPTY STATES
+   ============================================================================ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.empty-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 8px 0;
+}
+
+.empty-message {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 0 0 20px 0;
+  max-width: 400px;
+}
+
+.empty-action {
+  margin-top: 12px;
+}
+
+/* ============================================================================
+   MODAL SYSTEM
+   ============================================================================ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  transition: background 0.2s ease;
+}
+
+.modal-overlay.show {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-overlay.hiding {
+  background: rgba(0, 0, 0, 0);
+}
+
+.modal-box {
+  background: var(--card);
+  padding: 28px;
+  border-radius: 14px;
+  max-width: 450px;
+  width: calc(100% - 40px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transform: scale(0.9);
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.modal-overlay.show .modal-box {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.modal-overlay.hiding .modal-box {
+  transform: scale(0.9);
+  opacity: 0;
+}
+
+.modal-title {
+  margin: 0 0 12px 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.modal-message {
+  margin: 0 0 24px 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-actions .btn {
+  margin-top: 0;
+  min-width: 100px;
+}
+
+/* ============================================================================
+   IMPROVED ANIMATIONS
+   ============================================================================ */
+
+.tab-panel {
+  display: none;
+  animation: fadeSlideIn 0.25s ease;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nav-btn {
+  transition: all 0.2s ease;
+}
+
+.nav-btn.active {
+  transform: translateX(6px);
+  box-shadow: -4px 0 0 0 var(--gold);
+}
+
+.nav-btn:not(.active):hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(3px);
+}
+
+/* ============================================================================
+   ENHANCED FOCUS STATES (Accessibility)
+   ============================================================================ */
+
+.grid-cell:focus,
+.nav-btn:focus,
+.btn:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid var(--cardinal);
+  outline-offset: 2px;
+}
+
+/* Remove focus outline on mouse click, keep for keyboard */
+.grid-cell:focus:not(:focus-visible),
+.btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================================================
+   IMPROVED STATUS BADGES
+   ============================================================================ */
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-tag::before {
+  font-size: 12px;
+}
+
+.status-tag.pending {
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.status-tag.pending::before {
+  content: "\23F1";
+}
+
+.status-tag.approved {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-tag.approved::before {
+  content: "\2714";
+}
+
+.status-tag.scheduled {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.status-tag.scheduled::before {
+  content: "\1F4C5";
+}
+
+.status-tag.driver_on_the_way {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-tag.driver_on_the_way::before {
+  content: "\1F698";
+}
+
+.status-tag.driver_arrived_grace {
+  background: #ffeaa7;
+  color: #856404;
+  border: 1px solid #fdd835;
+}
+
+.status-tag.driver_arrived_grace::before {
+  content: "\23F0";
+}
+
+.status-tag.completed {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #28a745;
+}
+
+.status-tag.completed::before {
+  content: "\2714\2714";
+}
+
+.status-tag.no_show {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-tag.no_show::before {
+  content: "\26A0";
+}
+
+/* ============================================================================
+   RESPONSIVE IMPROVEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .side-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .nav-btn {
+    flex-shrink: 0;
+    min-width: 130px;
+    text-align: center;
+  }
+
+  .nav-btn.active {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+
+  .modal-box {
+    margin: 20px;
+  }
+
+  .toast {
+    left: 20px;
+    right: 20px;
+    min-width: unset;
+  }
+
+  .card-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+
+.hidden { display: none !important; }
+.visible { display: block !important; }
+.text-center { text-align: center; }
+.text-muted { color: var(--muted); }
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
