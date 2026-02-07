@@ -1,3 +1,172 @@
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+// Toast notification system (replaces alert())
+function showToast(message, type = 'info', duration = 3000) {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `
+    <span class="toast-icon">${getToastIcon(type)}</span>
+    <span class="toast-message">${message}</span>
+  `;
+  document.body.appendChild(toast);
+
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+function getToastIcon(type) {
+  const icons = {
+    success: '✓',
+    error: '✗',
+    warning: '⚠',
+    info: 'ℹ'
+  };
+  return icons[type] || icons.info;
+}
+
+// Loading state management
+function showLoader(containerId, message = 'Loading...') {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `
+    <div class="loader">
+      <div class="loader-spinner"></div>
+      <p class="loader-text">${message}</p>
+    </div>
+  `;
+}
+
+function hideLoader(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+}
+
+// Empty state handler
+function showEmptyState(containerId, options = {}) {
+  const {
+    icon = '📋',
+    title = 'No items found',
+    message = '',
+    actionLabel = null,
+    actionHandler = null
+  } = options;
+
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  let html = `
+    <div class="empty-state">
+      <div class="empty-icon">${icon}</div>
+      <h3 class="empty-title">${title}</h3>
+      ${message ? `<p class="empty-message">${message}</p>` : ''}
+      ${actionLabel ? `<button class="btn secondary empty-action">${actionLabel}</button>` : ''}
+    </div>
+  `;
+
+  el.innerHTML = html;
+
+  if (actionLabel && actionHandler) {
+    el.querySelector('.empty-action').onclick = actionHandler;
+  }
+}
+
+// Confirmation modal (replaces confirm())
+function showConfirmModal(options = {}) {
+  return new Promise((resolve) => {
+    const {
+      title = 'Confirm Action',
+      message = 'Are you sure?',
+      confirmLabel = 'Confirm',
+      cancelLabel = 'Cancel',
+      type = 'warning'
+    } = options;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-box">
+        <h3 class="modal-title">${title}</h3>
+        <p class="modal-message">${message}</p>
+        <div class="modal-actions">
+          <button class="btn secondary modal-cancel">${cancelLabel}</button>
+          <button class="btn ${type === 'danger' ? 'danger' : 'primary'} modal-confirm">
+            ${confirmLabel}
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const cleanup = () => {
+      modal.classList.add('hiding');
+      setTimeout(() => modal.remove(), 200);
+    };
+
+    modal.querySelector('.modal-cancel').onclick = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    modal.querySelector('.modal-confirm').onclick = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        cleanup();
+        resolve(false);
+      }
+    };
+
+    setTimeout(() => modal.classList.add('show'), 10);
+  });
+}
+
+// Debounce helper for search inputs
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+// Format time helpers
+function formatTime12Hour(time24) {
+  const [hours, minutes] = time24.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+}
+
+function formatRelativeTime(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString();
+}
+
+// ============================================================================
+// APPLICATION STATE & LOGIC
+// ============================================================================
+
 let employees = [];
 let shifts = [];
 let rides = [];
@@ -302,7 +471,7 @@ async function updateRide(url) {
   const res = await fetch(url, { method: 'POST' });
   if (!res.ok) {
     const err = await res.json();
-    alert(err.error || 'Failed to update ride');
+    showToast(err.error || 'Failed to update ride', 'error');
   }
   await loadRides();
 }
