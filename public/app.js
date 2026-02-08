@@ -714,6 +714,141 @@ function rideMatchesFilter(ride, filterText) {
     || (ride.status || '').toLowerCase().includes(q);
 }
 
+// ----- Ride Action Helpers -----
+
+function buildAssignDropdown(ride, onDone) {
+  const select = document.createElement('select');
+  select.className = 'reassign-select';
+  select.innerHTML = '<option value="">Assign to...</option>';
+  employees.filter((e) => e.active).forEach((e) => {
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = e.name;
+    select.appendChild(opt);
+  });
+  select.onchange = async () => {
+    const driverId = select.value;
+    if (!driverId) return;
+    const driverName = employees.find((e) => e.id === driverId)?.name || 'driver';
+    const confirmed = await showConfirmModal({
+      title: 'Assign Ride',
+      message: `Assign this ride to ${driverName}?`,
+      confirmLabel: 'Assign',
+      cancelLabel: 'Cancel',
+      type: 'warning'
+    });
+    if (!confirmed) { select.value = ''; return; }
+    const res = await fetch(`/api/rides/${ride.id}/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.error || 'Failed to assign', 'error');
+    } else {
+      showToast(`Ride assigned to ${driverName}`, 'success');
+    }
+    if (onDone) await onDone();
+  };
+  return select;
+}
+
+function buildReassignDropdown(ride, excludeDriverId, onDone) {
+  const select = document.createElement('select');
+  select.className = 'reassign-select';
+  select.innerHTML = '<option value="">Reassign to...</option>';
+  employees.filter((e) => e.active && e.id !== excludeDriverId).forEach((e) => {
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = e.name;
+    select.appendChild(opt);
+  });
+  select.onchange = async () => {
+    const driverId = select.value;
+    if (!driverId) return;
+    const driverName = employees.find((e) => e.id === driverId)?.name || 'driver';
+    const confirmed = await showConfirmModal({
+      title: 'Reassign Ride',
+      message: `Reassign this ride to ${driverName}?`,
+      confirmLabel: 'Reassign',
+      cancelLabel: 'Cancel',
+      type: 'warning'
+    });
+    if (!confirmed) { select.value = ''; return; }
+    const res = await fetch(`/api/rides/${ride.id}/reassign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.error || 'Failed to reassign', 'error');
+    } else {
+      showToast(`Ride reassigned to ${driverName}`, 'success');
+    }
+    if (onDone) await onDone();
+  };
+  return select;
+}
+
+function buildCancelButton(ride, onDone) {
+  const btn = document.createElement('button');
+  btn.className = 'btn danger';
+  btn.textContent = 'Cancel';
+  btn.onclick = async () => {
+    const confirmed = await showConfirmModal({
+      title: 'Cancel Ride',
+      message: 'Cancel this ride? This cannot be undone.',
+      confirmLabel: 'Cancel Ride',
+      cancelLabel: 'Keep Ride',
+      type: 'danger'
+    });
+    if (!confirmed) return;
+    const res = await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.error || 'Failed to cancel', 'error');
+    } else {
+      showToast('Ride cancelled', 'success');
+    }
+    if (onDone) await onDone();
+  };
+  return btn;
+}
+
+function buildUnassignButton(ride, driverName, onDone) {
+  const btn = document.createElement('button');
+  btn.className = 'btn secondary';
+  btn.textContent = 'Unassign';
+  btn.onclick = async () => {
+    const confirmed = await showConfirmModal({
+      title: 'Unassign Driver',
+      message: `Unassign ${driverName} from this ride? It will return to the Available queue.`,
+      confirmLabel: 'Unassign',
+      cancelLabel: 'Cancel',
+      type: 'warning'
+    });
+    if (!confirmed) return;
+    const res = await fetch(`/api/rides/${ride.id}/unassign`, { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      showToast(err.error || 'Failed to unassign', 'error');
+    } else {
+      showToast('Ride unassigned', 'success');
+    }
+    if (onDone) await onDone();
+  };
+  return btn;
+}
+
+function buildWarningBanner(driverName) {
+  const banner = document.createElement('div');
+  banner.className = 'admin-warning-banner';
+  banner.innerHTML = `&#9888;&#65039; This ride is assigned to ${driverName}. Actions here will override the driver's workflow.`;
+  return banner;
+}
+
 // ----- Ride Lists -----
 function renderRideLists() {
   const unassignedEl = document.getElementById('unassigned-items');
@@ -737,6 +872,7 @@ function renderRideLists() {
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
     `;
+    item.appendChild(buildAssignDropdown(ride, () => loadRides()));
     unassignedEl.appendChild(item);
   });
   if (!unassigned.length) {
@@ -770,6 +906,7 @@ function renderRideLists() {
     `;
     item.querySelector('.btn.primary').onclick = () => updateRide(`/api/rides/${ride.id}/approve`);
     item.querySelector('[data-role="deny"]').onclick = () => updateRide(`/api/rides/${ride.id}/deny`);
+    item.querySelector('.flex-row').appendChild(buildCancelButton(ride, () => loadRides()));
     pendingEl.appendChild(item);
   });
   if (!pending.length) {
@@ -797,6 +934,23 @@ function renderRideLists() {
       buildContactPill('sms', ride.riderPhone, '✉', `Text ${ride.riderName}`)
     );
     item.appendChild(contactRow);
+
+    // Office quick actions
+    if (!ride.assignedDriverId) {
+      item.appendChild(buildAssignDropdown(ride, () => loadRides()));
+    } else if (['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
+      if (['driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
+        item.appendChild(buildWarningBanner(driverName));
+      }
+      const actionRow = document.createElement('div');
+      actionRow.className = 'flex-row';
+      actionRow.style.flexWrap = 'wrap';
+      actionRow.appendChild(buildUnassignButton(ride, driverName, () => loadRides()));
+      actionRow.appendChild(buildReassignDropdown(ride, ride.assignedDriverId, () => loadRides()));
+      actionRow.appendChild(buildCancelButton(ride, () => loadRides()));
+      item.appendChild(actionRow);
+    }
+
     approvedEl.appendChild(item);
   });
   if (!approved.length) {
@@ -810,8 +964,9 @@ function renderRideLists() {
   history.forEach((ride) => {
     const item = document.createElement('div');
     item.className = 'item';
+    const cancelledByOffice = ride.status === 'cancelled' && ride.cancelledBy === 'office';
     item.innerHTML = `
-      <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span>${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text">When: ${formatDate(ride.requestedTime)}</div>
       <div class="small-text">Misses: ${ride.consecutiveMisses || 0}</div>
@@ -985,18 +1140,16 @@ function renderDriverDetail() {
     item.className = 'item';
     const graceInfo = buildGraceInfo(ride);
 
-    // Admin warning banner for assigned rides
-    if (ride.assignedDriverId) {
-      const warningBanner = document.createElement('div');
-      warningBanner.className = 'admin-warning-banner';
-      warningBanner.innerHTML = `&#9888;&#65039; This ride is assigned to ${driver.name}. Actions you take here will override the driver's workflow.`;
-      item.appendChild(warningBanner);
+    // Admin warning banner — only for active in-progress statuses
+    if (['driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
+      item.appendChild(buildWarningBanner(driver.name));
     }
 
     const rideInfo = document.createElement('div');
     rideInfo.innerHTML = `
       <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong><a href="#" data-user="${ride.riderId || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
+      ${ride.notes ? `<div class="small-text">Notes: ${ride.notes}</div>` : ''}
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
       <div class="small-text">Rider misses: ${ride.consecutiveMisses || 0}</div>
     `;
@@ -1018,12 +1171,18 @@ function renderDriverDetail() {
     }
 
     // Driver action buttons
-    const actions = document.createElement('div');
-    actions.className = 'flex-row';
-    actions.style.flexWrap = 'wrap';
-
     const actionable = ['scheduled','driver_on_the_way','driver_arrived_grace'];
     if (actionable.includes(ride.status)) {
+      const driverLabel = document.createElement('div');
+      driverLabel.className = 'small-text';
+      driverLabel.style.cssText = 'margin-top:8px;margin-bottom:4px;font-weight:700;';
+      driverLabel.textContent = 'Driver Actions';
+      item.appendChild(driverLabel);
+
+      const actions = document.createElement('div');
+      actions.className = 'flex-row';
+      actions.style.flexWrap = 'wrap';
+
       const onWayBtn = document.createElement('button');
       onWayBtn.className = 'btn primary';
       onWayBtn.textContent = 'On My Way';
@@ -1067,111 +1226,29 @@ function renderDriverDetail() {
         if (confirmed) await updateRide(`/api/rides/${ride.id}/no-show`);
       };
       actions.appendChild(noShowBtn);
-    }
-    if (actions.children.length) item.appendChild(actions);
-
-    // Admin override buttons
-    const adminActions = document.createElement('div');
-    adminActions.className = 'flex-row';
-    adminActions.style.flexWrap = 'wrap';
-    adminActions.style.marginTop = '4px';
-
-    if (actionable.includes(ride.status)) {
-      const unassignBtn = document.createElement('button');
-      unassignBtn.className = 'btn secondary';
-      unassignBtn.textContent = 'Unassign';
-      unassignBtn.onclick = async () => {
-        const confirmed = await showConfirmModal({
-          title: 'Unassign Driver',
-          message: `Unassign ${driver.name} from this ride? It will return to the Available queue for other drivers to claim.`,
-          confirmLabel: 'Unassign',
-          cancelLabel: 'Cancel',
-          type: 'warning'
-        });
-        if (!confirmed) return;
-        const res = await fetch(`/api/rides/${ride.id}/unassign`, { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json();
-          showToast(err.error || 'Failed to unassign', 'error');
-        } else {
-          showToast('Ride unassigned', 'success');
-        }
-        await loadRides();
-      };
-      adminActions.appendChild(unassignBtn);
-
-      // Reassign dropdown
-      const reassignWrapper = document.createElement('span');
-      reassignWrapper.style.display = 'inline-flex';
-      reassignWrapper.style.alignItems = 'center';
-      reassignWrapper.style.gap = '4px';
-      reassignWrapper.style.marginTop = '8px';
-      const reassignSelect = document.createElement('select');
-      reassignSelect.className = 'reassign-select';
-      reassignSelect.innerHTML = '<option value="">Reassign to...</option>';
-      employees.filter((e) => e.active && e.id !== driver.id).forEach((e) => {
-        const opt = document.createElement('option');
-        opt.value = e.id;
-        opt.textContent = e.name;
-        reassignSelect.appendChild(opt);
-      });
-      reassignSelect.onchange = async () => {
-        const newDriverId = reassignSelect.value;
-        if (!newDriverId) return;
-        const newDriver = employees.find((e) => e.id === newDriverId);
-        const confirmed = await showConfirmModal({
-          title: 'Reassign Ride',
-          message: `Reassign this ride from ${driver.name} to ${newDriver?.name || 'another driver'}?`,
-          confirmLabel: 'Reassign',
-          cancelLabel: 'Cancel',
-          type: 'warning'
-        });
-        if (!confirmed) { reassignSelect.value = ''; return; }
-        const res = await fetch(`/api/rides/${ride.id}/reassign`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ driverId: newDriverId })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          showToast(err.error || 'Failed to reassign', 'error');
-        } else {
-          showToast(`Ride reassigned to ${newDriver?.name || 'driver'}`, 'success');
-        }
-        await loadRides();
-      };
-      reassignWrapper.appendChild(reassignSelect);
-      adminActions.appendChild(reassignWrapper);
+      item.appendChild(actions);
     }
 
-    // Cancel button for non-terminal rides
-    const terminalStatuses = ['completed', 'no_show', 'cancelled', 'denied'];
-    if (!terminalStatuses.includes(ride.status)) {
-      const cancelBtn = document.createElement('button');
-      cancelBtn.className = 'btn danger';
-      cancelBtn.textContent = 'Cancel Ride';
-      cancelBtn.onclick = async () => {
-        const confirmed = await showConfirmModal({
-          title: 'Cancel Ride',
-          message: 'Cancel this ride? This cannot be undone. Use this when a rider has called to cancel.',
-          confirmLabel: 'Cancel Ride',
-          cancelLabel: 'Keep Ride',
-          type: 'danger'
-        });
-        if (!confirmed) return;
-        const res = await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' });
-        if (!res.ok) {
-          const err = await res.json();
-          showToast(err.error || 'Failed to cancel', 'error');
-        } else {
-          showToast('Ride cancelled', 'success');
-        }
-        await loadRides();
-      };
-      adminActions.appendChild(cancelBtn);
-    }
+    // Office override buttons
+    const hasOverrides = actionable.includes(ride.status) || !['completed', 'no_show', 'cancelled', 'denied'].includes(ride.status);
+    if (hasOverrides) {
+      const officeLabel = document.createElement('div');
+      officeLabel.className = 'small-text';
+      officeLabel.style.cssText = 'margin-top:12px;margin-bottom:4px;font-weight:700;color:var(--cardinal);';
+      officeLabel.textContent = 'Office Overrides';
+      item.appendChild(officeLabel);
 
-    if (adminActions.children.length) item.appendChild(adminActions);
+      const adminActions = document.createElement('div');
+      adminActions.className = 'flex-row';
+      adminActions.style.flexWrap = 'wrap';
+
+      if (actionable.includes(ride.status)) {
+        adminActions.appendChild(buildUnassignButton(ride, driver.name, () => loadRides()));
+        adminActions.appendChild(buildReassignDropdown(ride, driver.id, () => loadRides()));
+      }
+      adminActions.appendChild(buildCancelButton(ride, () => loadRides()));
+      item.appendChild(adminActions);
+    }
     list.appendChild(item);
   });
 }
@@ -1205,6 +1282,10 @@ function renderAllActiveRides() {
   const activeStatuses = ['pending', 'approved', 'scheduled', 'driver_on_the_way', 'driver_arrived_grace'];
   const activeRides = rides.filter((r) => activeStatuses.includes(r.status) && r.requestedTime?.startsWith(today));
 
+  // Update count in header
+  const countEl = document.getElementById('active-rides-count');
+  if (countEl) countEl.textContent = activeRides.length ? `(${activeRides.length})` : '';
+
   if (!activeRides.length) {
     showEmptyState(list, {
       icon: '[]',
@@ -1213,6 +1294,9 @@ function renderAllActiveRides() {
     });
     return;
   }
+
+  // Sort by urgency — soonest requested time first
+  activeRides.sort((a, b) => new Date(a.requestedTime) - new Date(b.requestedTime));
 
   list.innerHTML = '';
   activeRides.forEach((ride) => {
@@ -1243,6 +1327,9 @@ function renderAllActiveRides() {
         document.getElementById('driver-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
       item.appendChild(viewLink);
+      item.appendChild(buildCancelButton(ride, () => loadRides()));
+    } else {
+      item.appendChild(buildAssignDropdown(ride, () => loadRides()));
     }
     list.appendChild(item);
   });

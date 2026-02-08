@@ -100,6 +100,7 @@ async function runMigrations() {
     `ALTER TABLE rides ADD COLUMN IF NOT EXISTS recurring_id TEXT;`,
     `ALTER TABLE rides ADD COLUMN IF NOT EXISTS consecutive_misses INTEGER DEFAULT 0;`,
     `ALTER TABLE rides ADD COLUMN IF NOT EXISTS notes TEXT;`,
+    `ALTER TABLE rides ADD COLUMN IF NOT EXISTS cancelled_by TEXT;`,
     `CREATE TABLE IF NOT EXISTS recurring_rides (
       id TEXT PRIMARY KEY,
       rider_id TEXT REFERENCES users(id) ON DELETE CASCADE,
@@ -249,7 +250,8 @@ function mapRide(row) {
     graceStartTime: row.grace_start_time,
     consecutiveMisses: row.consecutive_misses || 0,
     notes: row.notes || '',
-    recurringId: row.recurring_id || null
+    recurringId: row.recurring_id || null,
+    cancelledBy: row.cancelled_by || null
   };
 }
 
@@ -656,7 +658,7 @@ app.get('/api/rides', requireStaff, async (req, res) => {
   const { status } = req.query;
   const baseSql = `
     SELECT id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-           requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id
+           requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, cancelled_by
     FROM rides
   `;
   const result = status
@@ -782,11 +784,11 @@ app.post('/api/rides/:id/cancel', requireAuth, async (req, res) => {
 
   const result = await query(
     `UPDATE rides
-     SET status = 'cancelled', assigned_driver_id = NULL, grace_start_time = NULL, updated_at = NOW()
+     SET status = 'cancelled', assigned_driver_id = NULL, grace_start_time = NULL, cancelled_by = $2, updated_at = NOW()
      WHERE id = $1
      RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-               requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id`,
-    [ride.id]
+               requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, cancelled_by`,
+    [ride.id, isOffice ? 'office' : 'rider']
   );
   await addRideEvent(ride.id, req.session.userId, isOffice ? 'cancelled_by_office' : 'cancelled');
   res.json(mapRide(result.rows[0]));
