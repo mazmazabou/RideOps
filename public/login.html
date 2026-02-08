@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - USC DART</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <style>
     body { display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
     .login-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
-    .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 100%; max-width: 360px; }
+    .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 100%; max-width: 360px; border-bottom: 3px solid #FFCC00; }
     .login-card h2 { margin-top: 0; color: #990000; text-align: center; }
     .login-card input { width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; margin-top: 0.25rem; box-sizing: border-box; }
     .login-card button { width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 1rem; }
@@ -28,10 +29,36 @@
         <label>Password<input type="password" id="password" required autocomplete="current-password"></label>
         <button type="submit" class="btn primary">Sign In</button>
       </form>
-      <div class="login-hint"><strong>Test accounts:</strong><br>Drivers: jamie, avery, casey, chris<br>Office: office<br>Password: dart123</div>
+      <div class="login-hint" data-dev-only hidden aria-hidden="true"><strong>Test accounts:</strong><br>Drivers: mazen, jason, jocelin, olivia<br>Office: office<br>Riders: sarah, tom<br>Password: dart123</div>
+      <div id="signup-link" style="display:none; text-align:center; margin-top:1rem; font-size:0.9rem;">
+        <a href="/signup" style="color:#990000; font-weight:700; text-decoration:none;">New rider? Create an account</a>
+      </div>
     </div>
   </div>
+  <script src="/utils.js"></script>
   <script>
+    (async () => {
+      if (typeof window.applyDevOnlyVisibility === 'function') {
+        await window.applyDevOnlyVisibility(document);
+      } else {
+        const hint = document.querySelector('[data-dev-only]');
+        const isDev = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (hint) {
+          hint.hidden = !isDev;
+          hint.setAttribute('aria-hidden', String(!isDev));
+        }
+      }
+      try {
+        const res = await fetch('/api/auth/signup-allowed');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.allowed) {
+            document.getElementById('signup-link').style.display = 'block';
+          }
+        }
+      } catch {}
+    })();
+
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errorEl = document.getElementById('login-error');
@@ -44,7 +71,9 @@
         });
         if (!res.ok) { const data = await res.json(); errorEl.textContent = data.error || 'Login failed'; errorEl.classList.add('show'); return; }
         const user = await res.json();
-        window.location.href = user.role === 'office' ? '/office' : '/driver';
+        if (user.role === 'office') window.location.href = '/office';
+        else if (user.role === 'driver') window.location.href = '/driver';
+        else window.location.href = '/rider';
       } catch { errorEl.textContent = 'Connection error'; errorEl.classList.add('show'); }
     });
   </script>

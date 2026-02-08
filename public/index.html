@@ -4,97 +4,221 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>USC DART Operations Console</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="header">
-    <div>
-      <h1>USC DART Operations Console</h1>
-      <p>Dispatch + Driver tools for Disabled Access To Road Transportation</p>
-    </div>
-    <button class="btn-logout" onclick="logout()">Logout</button>
-  </header>
-
-  <main class="layout">
-    <section class="panel" id="staff-panel">
-      <h2>Staff &amp; Shifts</h2>
-      <div id="employee-list" class="card"></div>
-      <div class="card">
-        <h3>Daily Schedule View</h3>
-        <div class="schedule-nav">
-          <button class="btn" onclick="changeScheduleDay(-1)">&lt; Prev</button>
-          <input type="date" id="schedule-date" onchange="renderDaySchedule()">
-          <button class="btn" onclick="changeScheduleDay(1)">Next &gt;</button>
-        </div>
-        <div id="day-schedule" class="day-schedule"></div>
-        <div class="schedule-legend">
-          <span class="legend-item"><span class="legend-color shift"></span> Driver on shift</span>
-          <span class="legend-item"><span class="legend-color ride"></span> Scheduled ride</span>
-        </div>
+  <div class="shell">
+    <aside class="side-nav">
+      <div class="brand">
+        <div class="brand-title">USC DART Ops</div>
+        <div class="brand-sub">Dispatch + Driver</div>
       </div>
-      <div class="card">
-        <h3>Add/Edit Shifts</h3>
-        <p class="small-text">Click and drag on the grid to add shifts. Click existing shifts to remove.</p>
-        <label>Employee <select id="shift-employee"></select></label>
-        <div id="shift-grid" class="shift-grid"></div>
-      </div>
-    </section>
+      <button class="nav-btn active" data-target="staff-panel">Staff &amp; Shifts</button>
+      <button class="nav-btn" data-target="rides-panel">Ride Requests</button>
+      <button class="nav-btn" data-target="driver-panel">Dispatch &amp; Monitoring</button>
+      <button class="nav-btn" data-target="admin-panel">Admin Settings</button>
+      <button class="nav-btn" data-target="profile-panel">Profile</button>
+      <div class="spacer"></div>
+      <button class="nav-btn" onclick="logout()">Logout</button>
+    </aside>
 
-    <section class="panel" id="rides-panel">
+    <main class="content-area">
+      <header class="header">
+        <div>
+          <h1>USC DART Operations Console</h1>
+          <p>Dispatch + Driver tools for Disabled Access To Road Transportation</p>
+        </div>
+      </header>
+
+      <section class="panel tab-panel active" id="staff-panel">
+        <h2>Staff &amp; Shifts</h2>
+        <div id="employee-list" class="card"></div>
+        <div class="card">
+          <div class="card-header-row">
+            <h3>Schedule View</h3>
+            <div class="schedule-toggle">
+              <button class="btn toggle-btn active" data-schedule-mode="weekly" onclick="setScheduleMode('weekly')">Weekly</button>
+              <button class="btn toggle-btn" data-schedule-mode="daily" onclick="setScheduleMode('daily')">Daily</button>
+            </div>
+          </div>
+          <div class="schedule-nav">
+            <div class="nav-left">
+              <button class="btn" onclick="changeScheduleWeek(-1)">&laquo; Prev Week</button>
+              <button class="btn" onclick="changeScheduleDay(-1)">&lt; Prev Day</button>
+            </div>
+            <input type="date" id="schedule-date" onchange="onScheduleDateChange()">
+            <div class="nav-right">
+              <button class="btn" onclick="changeScheduleDay(1)">Next Day &gt;</button>
+              <button class="btn" onclick="changeScheduleWeek(1)">Next Week &raquo;</button>
+            </div>
+          </div>
+          <div id="day-schedule" class="day-schedule"></div>
+          <div class="schedule-legend">
+            <span class="legend-item"><span class="legend-color shift"></span> Driver on shift</span>
+            <span class="legend-item"><span class="legend-color ride"></span> Scheduled ride</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Add/Edit Shifts</h3>
+          <p class="small-text">Click and drag on the grid to add shifts. Click existing shifts to remove.</p>
+          <label>Employee
+            <div class="flex-row">
+              <select id="shift-employee"></select>
+              <button class="btn secondary" id="shift-employee-profile" type="button">View Profile</button>
+            </div>
+          </label>
+          <div id="shift-grid" class="shift-grid"></div>
+        </div>
+      </section>
+
+      <section class="panel tab-panel" id="rides-panel">
       <h2>Ride Requests</h2>
-      <div class="card">
+      <div style="margin-bottom:12px;">
+        <input type="text" id="ride-filter-input" placeholder="Filter rides by name, location, or status..." style="width:100%;">
+      </div>
+      <div class="card" id="sample-rides-card" data-dev-only hidden aria-hidden="true">
         <button id="load-sample-rides" class="btn secondary">Load Sample Rides (Dev)</button>
       </div>
-      <div class="card" id="unassigned-list">
-        <h3>Unassigned Rides (Today)</h3>
-        <div class="list" id="unassigned-items"></div>
+      <div class="card">
+        <h3>Weekly Ride Schedule</h3>
+        <p class="small-text">Color-coded ride grid (08:00–19:00, Mon–Fri).</p>
+        <div class="schedule-nav">
+          <div class="nav-left">
+            <button class="btn" id="ride-week-prev" type="button">&laquo; Prev Week</button>
+          </div>
+          <div class="small-text" id="ride-week-label"></div>
+          <div class="nav-right">
+            <button class="btn" id="ride-week-next" type="button">Next Week &raquo;</button>
+          </div>
+        </div>
+        <div id="ride-schedule-grid"></div>
       </div>
-      <div class="card" id="pending-list">
-        <h3>Pending Requests</h3>
-        <div class="list" id="pending-items"></div>
-      </div>
-      <div class="card" id="approved-list">
-        <h3>Approved / Scheduled</h3>
-        <div class="list" id="approved-items"></div>
-      </div>
-      <div class="card" id="history-list">
-        <h3>Completed &amp; No-Show History</h3>
-        <div class="list" id="history-items"></div>
-      </div>
-    </section>
+        <div class="card" id="unassigned-list">
+          <h3>Unassigned Rides (Today)</h3>
+          <div class="list" id="unassigned-items"></div>
+        </div>
+        <div class="card" id="pending-list">
+          <h3>Pending Requests</h3>
+          <div class="list" id="pending-items"></div>
+        </div>
+        <div class="card" id="approved-list">
+          <h3>Approved / Scheduled</h3>
+          <div class="list" id="approved-items"></div>
+        </div>
+        <div class="card" id="history-list">
+          <h3>Completed &amp; No-Show History</h3>
+          <div class="list" id="history-items"></div>
+        </div>
+      </section>
 
-    <section class="panel" id="driver-panel">
-      <h2>Driver Console</h2>
-      <div class="card">
-        <label>Select Driver
-          <select id="driver-select"></select>
-        </label>
-        <div id="driver-info"></div>
-      </div>
-      <div class="card" id="driver-rides">
-        <h3>Assigned Rides</h3>
-        <div class="list" id="driver-ride-list"></div>
-      </div>
-      <div class="card">
+      <section class="panel tab-panel" id="driver-panel">
+        <h2>Dispatch &amp; Monitoring</h2>
+        <div class="card">
+          <h3>Active Drivers</h3>
+          <div id="driver-dashboard" class="driver-dashboard"></div>
+        </div>
+        <div class="card" id="driver-detail" style="display:none;">
+          <div class="card-header-row">
+            <h3 id="driver-detail-title">Driver: —</h3>
+            <div>
+              <button class="btn secondary" id="admin-clock-toggle">Clock In</button>
+            </div>
+          </div>
+          <div class="list" id="driver-ride-list"></div>
+        </div>
+        <div class="card">
+          <div class="toggle-header" onclick="toggleAllActiveRides(this)">
+            <h3>All Active Rides</h3>
+            <button class="toggle-btn-slim" type="button">▸</button>
+          </div>
+          <div id="all-active-rides" style="display:none;">
+            <div class="list" id="all-active-rides-list"></div>
+          </div>
+        </div>
+        <div class="card">
         <h3>USC Campus Map</h3>
-        <div class="map-wrapper">
+        <div class="map-wrapper office-map">
           <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
+        </div>
+        <div class="map-actions">
+          <a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a>
         </div>
       </div>
     </section>
-  </main>
 
-  <section class="rules">
-    <h2>Program Rules / Guidelines</h2>
-    <ul>
-      <li>DART is a free service provided by USC Transportation to assist USC students, faculty and staff with mobility issues in getting around campus. Service is available at UPC during the Fall and Spring semesters only, between 8:00am–7:00pm, Monday–Friday.</li>
-      <li>DART vehicles (golf carts) are not city-street legal and cannot leave campus. Service is NOT available to off-campus housing, off-campus parking structures, the USC Village, etc.</li>
-      <li>Riders must be able to independently get in and out of a standard golf cart. Drivers cannot assist with lifting/carrying medical equipment (crutches, wheelchairs, etc.). A wheelchair-accessible golf cart is available upon request.</li>
-      <li>Due to high demand, drivers cannot wait more than five (5) minutes past a scheduled pick-up time. After that grace period, they may leave to continue other assignments.</li>
-      <li>Service is automatically terminated after five (5) consecutive missed pick-ups.</li>
-    </ul>
-  </section>
+      <section class="panel tab-panel" id="admin-panel">
+        <h2>Admin Settings</h2>
+        <div class="card">
+          <h3>Search by USC ID</h3>
+          <div class="flex-row">
+            <input type="text" id="admin-usc-search" placeholder="Enter 10-digit USC ID" maxlength="10" pattern="[0-9]{10}">
+            <button class="btn primary" id="admin-usc-search-btn" type="button">Search</button>
+          </div>
+          <div id="admin-search-result" class="small-text"></div>
+        </div>
+        <div class="card">
+          <h3>Create User</h3>
+          <div class="form-grid">
+            <label>Name<input type="text" id="admin-new-name" required></label>
+            <label>USC Email<input type="email" id="admin-new-email" required></label>
+            <label>Phone<input type="tel" id="admin-new-phone"></label>
+            <label>USC ID (10 digits)<input type="text" id="admin-new-uscid" maxlength="10" required></label>
+            <label>Role
+              <select id="admin-new-role">
+                <option value="rider">rider</option>
+                <option value="driver">driver</option>
+                <option value="office">office</option>
+              </select>
+            </label>
+            <label>Temp Password<input type="password" id="admin-new-password" required></label>
+          </div>
+          <button class="btn primary" id="admin-create-btn" type="button">Create User</button>
+          <div id="admin-create-message" class="small-text"></div>
+        </div>
+        <div class="card">
+          <h3>Users</h3>
+          <div class="small-text">Manage riders, drivers, and office accounts. You cannot delete your own office account.</div>
+          <div class="table-responsive">
+            <table class="grid-table" id="admin-users-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>USC Email</th>
+                  <th>USC ID</th>
+                  <th>Phone</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
+      <section class="panel tab-panel" id="profile-panel">
+        <h2>User Profile</h2>
+        <div id="admin-profile-content" class="card"></div>
+      </section>
+
+      <section class="rules">
+        <div class="toggle-header" onclick="toggleRulesSection(this)" style="cursor:pointer;">
+          <h2 style="margin:0;">Program Rules &amp; Guidelines</h2>
+          <button class="toggle-btn-slim" type="button" style="color:#FFCC00;">&#9656;</button>
+        </div>
+        <ul id="rules-list" style="display:none;">
+          <li>DART is a free service provided by USC Transportation to assist USC students, faculty and staff with mobility issues in getting around campus. Service is available at UPC during the Fall and Spring semesters only, between 8:00am–7:00pm, Monday–Friday.</li>
+          <li>DART vehicles (golf carts) are not city-street legal and cannot leave campus. Service is NOT available to off-campus housing, off-campus parking structures, the USC Village, etc.</li>
+          <li>Riders must be able to independently get in and out of a standard golf cart. Drivers cannot assist with lifting/carrying medical equipment (crutches, wheelchairs, etc.). A wheelchair-accessible golf cart is available upon request.</li>
+          <li>Due to high demand, drivers cannot wait more than five (5) minutes past a scheduled pick-up time. After that grace period, they may leave to continue other assignments.</li>
+          <li>Service is automatically terminated after five (5) consecutive missed pick-ups.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+  <script src="/utils.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

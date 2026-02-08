@@ -1,3 +1,7 @@
 node_modules/
 .DS_Store
 *.log
+.vscode/
+test-results/
+public/.RData
+public/.Rhistory

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rider - USC DART</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background: radial-gradient(circle at 18% 18%, rgba(245,195,75,0.08), transparent 32%), #f9f6f2; }
+    .rider-container { width: min(1180px, 100% - 24px); margin: 0 auto; padding: 20px 0 24px; display: flex; flex-direction: column; gap: 16px; }
+    .rider-hero { background: linear-gradient(135deg, var(--cardinal), var(--cardinal-deep)); color: var(--gold); padding: 18px; border-radius: 14px; box-shadow: 0 8px 18px rgba(0,0,0,0.18); display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .rider-hero h1 { margin: 0; font-size: 1.35rem; letter-spacing: 0.3px; }
+    .info-row { display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.95rem; color: #fff; margin: 8px 0 0; }
+    .inline-pill { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.35); border-radius: 14px; padding: 6px 12px; }
+    .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+    form .inline { display: flex; gap: 12px; flex-wrap: wrap; }
+    form .inline > div { flex: 1; min-width: 220px; }
+    .note { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .list { max-height: none; }
+    .section-title { margin: 0 0 8px; }
+  </style>
+</head>
+<body>
+  <div class="rider-container">
+    <div class="rider-hero">
+      <div>
+        <h1>DART Rider</h1>
+        <div id="user-info" class="info-row"></div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+
+    <section class="card">
+      <div class="toggle-header">
+        <h3 class="section-title">My Account</h3>
+        <button class="toggle-btn-slim" type="button" onclick="toggleSection('rider-account', this)">▾</button>
+      </div>
+      <div id="rider-account">
+      <div class="two-col">
+        <label>USC ID (read-only)
+          <input type="text" id="profile-uscid" readonly>
+        </label>
+        <label>USC Email (read-only)
+          <input type="email" id="profile-email" readonly>
+        </label>
+        <label>Username (read-only)
+          <input type="text" id="profile-username" readonly>
+        </label>
+        <label>Full Name
+          <input type="text" id="profile-name">
+        </label>
+        <label>Phone
+          <input type="tel" id="profile-phone">
+        </label>
+      </div>
+      <button class="btn primary" id="profile-save">Save Changes</button>
+      <div id="profile-message" class="small-text"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toggle-header">
+        <h3 class="section-title">New Reservation</h3>
+        <button class="toggle-btn-slim" type="button" onclick="toggleSection('rider-request', this)">▾</button>
+      </div>
+      <div id="rider-request">
+      <p class="small-text">Service hours: Monday–Friday, 8:00am–7:00pm. USC campus only.</p>
+      <form id="ride-form">
+        <div class="flex-row">
+          <label><input type="radio" name="ride-type" value="one-time" checked> One-time</label>
+          <label><input type="radio" name="ride-type" value="recurring"> Recurring</label>
+        </div>
+        <div class="inline">
+          <div>
+            <label>Pickup Location
+              <select id="pickup-location" required></select>
+            </label>
+            <label class="small-text">If other, type details
+              <input type="text" id="pickup-note" placeholder="e.g. Front of VKC by the fountain">
+            </label>
+          </div>
+          <div>
+            <label>Dropoff Location
+              <select id="dropoff-location" required></select>
+            </label>
+            <label class="small-text">If other, type details
+              <input type="text" id="dropoff-note" placeholder="e.g. Gate 2, near crosswalk">
+            </label>
+          </div>
+        </div>
+        <div class="inline">
+          <div>
+            <label id="requested-time-label">Requested Time
+              <input type="datetime-local" id="requested-time" required>
+            </label>
+            <div class="note">Must be within 8:00–19:00, Mon–Fri.</div>
+            <div id="recurring-fields" style="display:none;">
+              <label>Start Date
+                <input type="date" id="recurring-start">
+              </label>
+              <label>End Date
+                <input type="date" id="recurring-end">
+              </label>
+              <label>Time of Day
+                <input type="time" id="recurring-time">
+              </label>
+              <div class="small-text">Days of week</div>
+              <div class="flex-row" id="recurring-days">
+                <label><input type="checkbox" value="1"> Mon</label>
+                <label><input type="checkbox" value="2"> Tue</label>
+                <label><input type="checkbox" value="3"> Wed</label>
+                <label><input type="checkbox" value="4"> Thu</label>
+                <label><input type="checkbox" value="5"> Fri</label>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label>Phone (for driver contact)
+              <input type="tel" id="rider-phone" placeholder="213-555-0123">
+            </label>
+            <label>Notes
+              <textarea id="notes" rows="3" placeholder="Accessibility needs, exact spot, etc."></textarea>
+            </label>
+          </div>
+        </div>
+        <button type="submit" class="btn primary">Submit Request</button>
+      </form>
+      <div id="form-message" class="small-text"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toggle-header">
+        <h3 class="section-title">My Requests</h3>
+        <button class="toggle-btn-slim" type="button" onclick="toggleSection('rider-requests-list', this)">▾</button>
+      </div>
+      <div id="rider-requests-list">
+        <div class="status-legend small-text" style="margin-bottom:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+          <span><span class="status-tag pending">pending</span> Awaiting review</span>
+          <span><span class="status-tag approved">approved</span> Awaiting driver</span>
+          <span><span class="status-tag scheduled">scheduled</span> Driver assigned</span>
+          <span><span class="status-tag driver_on_the_way">on the way</span> Driver coming</span>
+          <span><span class="status-tag completed">completed</span> Done</span>
+        </div>
+        <div class="list" id="my-rides"></div>
+        <button class="btn secondary" id="rider-history-toggle" type="button">View all history</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toggle-header">
+        <h3 class="section-title">My Recurring Rides</h3>
+        <button class="toggle-btn-slim" type="button" onclick="toggleSection('rider-recurring', this)">▾</button>
+      </div>
+      <div class="list" id="rider-recurring">
+        <div class="list" id="my-recurring"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/utils.js"></script>
+  <script>
+    let locations = [];
+    let meUser = null;
+    let showAllHistory = false;
+
+    async function init() {
+      const me = await fetchMe();
+      if (!me || me.role !== 'rider') { window.location.href = '/'; return; }
+      meUser = me;
+      document.getElementById('user-info').innerHTML = `
+        <span class="inline-pill">${me.name}</span>
+        <span class="inline-pill">${me.email || ''}</span>
+      `;
+      await loadProfile();
+      await loadLocations();
+      setDefaultTime();
+      initRideTypeToggle();
+      attachForm(me);
+      await loadMyRides();
+      await loadMyRecurring();
+      setInterval(loadMyRides, 5000);
+      const historyToggle = document.getElementById('rider-history-toggle');
+      if (historyToggle) {
+        historyToggle.onclick = () => { showAllHistory = !showAllHistory; loadMyRides(); historyToggle.textContent = showAllHistory ? 'Show recent only' : 'View all history'; };
+      }
+    }
+
+    async function fetchMe() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) return null;
+        return res.json();
+      } catch {
+        return null;
+      }
+    }
+
+    async function loadProfile() {
+      try {
+        const res = await fetch('/api/me');
+        const profile = await res.json();
+        document.getElementById('profile-uscid').value = profile.usc_id || '';
+        document.getElementById('profile-email').value = profile.email || '';
+        document.getElementById('profile-username').value = profile.username || '';
+        document.getElementById('profile-name').value = profile.name || '';
+        document.getElementById('profile-phone').value = profile.phone || '';
+      } catch {}
+      const saveBtn = document.getElementById('profile-save');
+      if (saveBtn) saveBtn.onclick = saveProfile;
+    }
+
+    async function saveProfile() {
+      const msg = document.getElementById('profile-message');
+      msg.textContent = '';
+      const name = document.getElementById('profile-name').value.trim();
+      const phone = document.getElementById('profile-phone').value.trim();
+      const res = await fetch('/api/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Could not save profile';
+        return;
+      }
+      msg.textContent = 'Saved!';
+      meUser = data;
+      document.getElementById('user-info').innerHTML = `
+        <span class="inline-pill">${data.name}</span>
+        <span class="inline-pill">${data.email || ''}</span>
+      `;
+    }
+
+    function initRideTypeToggle() {
+      const radios = document.querySelectorAll('input[name="ride-type"]');
+      const recurringFields = document.getElementById('recurring-fields');
+      const requestedLabel = document.getElementById('requested-time-label');
+      radios.forEach((r) => r.addEventListener('change', () => {
+        if (r.value === 'recurring' && r.checked) {
+          recurringFields.style.display = 'block';
+          requestedLabel.style.display = 'none';
+        } else if (r.checked) {
+          recurringFields.style.display = 'none';
+          requestedLabel.style.display = 'block';
+        }
+      }));
+    }
+
+    function setDefaultTime() {
+      const input = document.getElementById('requested-time');
+      const recurringTime = document.getElementById('recurring-time');
+      const recurringStart = document.getElementById('recurring-start');
+      const recurringEnd = document.getElementById('recurring-end');
+      const now = new Date();
+      const date = new Date(now);
+      const day = date.getDay();
+      if (day === 0) date.setDate(date.getDate() + 1);
+      if (day === 6) date.setDate(date.getDate() + 2);
+      let hours = date.getHours();
+      let minutes = date.getMinutes();
+      minutes = minutes > 30 ? 0 : 30;
+      if (hours < 8) hours = 8;
+      if (hours >= 19) { hours = 8; date.setDate(date.getDate() + 1); }
+      date.setHours(hours, minutes, 0, 0);
+      const isoLocal = formatDateInputLocal(date);
+      input.value = isoLocal;
+      if (recurringTime) recurringTime.value = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}`;
+      if (recurringStart) recurringStart.value = isoLocal.split('T')[0];
+      if (recurringEnd) {
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 7);
+        recurringEnd.value = formatDateInputLocal(endDate).split('T')[0];
+      }
+    }
+
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/locations');
+        locations = await res.json();
+      } catch {
+        locations = [];
+      }
+      const selects = [document.getElementById('pickup-location'), document.getElementById('dropoff-location')];
+      selects.forEach(select => {
+        select.innerHTML = '<option value="">Select location</option>';
+        locations.forEach(loc => {
+          const label = typeof loc === 'string' ? loc : (loc.label || loc.value);
+          const value = typeof loc === 'string' ? loc : (loc.label || loc.value);
+          if (!label) return;
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = label;
+          select.appendChild(opt);
+        });
+        const other = document.createElement('option');
+        other.value = 'Other';
+        other.textContent = 'Other (type below)';
+        select.appendChild(other);
+      });
+    }
+
+    function attachForm(me) {
+      const form = document.getElementById('ride-form');
+      const submitBtn = form.querySelector('button[type="submit"]');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rideType = document.querySelector('input[name="ride-type"]:checked')?.value || 'one-time';
+        const pickup = document.getElementById('pickup-location').value;
+        const dropoff = document.getElementById('dropoff-location').value;
+        const pickupNote = document.getElementById('pickup-note').value.trim();
+        const dropoffNote = document.getElementById('dropoff-note').value.trim();
+        const requestedTime = document.getElementById('requested-time').value;
+        const riderPhone = document.getElementById('rider-phone').value;
+        const notes = document.getElementById('notes').value.trim();
+
+        const messageEl = document.getElementById('form-message');
+        messageEl.textContent = '';
+
+        const resolvedPickup = pickup === 'Other' ? pickupNote : pickup;
+        const resolvedDropoff = dropoff === 'Other' ? dropoffNote : dropoff;
+
+        if (!resolvedPickup || !resolvedDropoff) {
+          messageEl.textContent = 'Please choose pickup and dropoff (or type details).';
+          return;
+        }
+
+        // Disable submit button and show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        if (rideType === 'recurring') {
+          const start = document.getElementById('recurring-start').value;
+          const end = document.getElementById('recurring-end').value;
+          const timeOfDay = document.getElementById('recurring-time').value;
+          const days = Array.from(document.querySelectorAll('#recurring-days input:checked')).map((c) => c.value);
+          if (!start || !end || !timeOfDay || !days.length) {
+            messageEl.textContent = 'Select start/end dates, time of day, and days.';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Request';
+            return;
+          }
+          try {
+            const res = await fetch('/api/recurring-rides', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pickupLocation: resolvedPickup,
+                dropoffLocation: resolvedDropoff,
+                timeOfDay,
+                startDate: start,
+                endDate: end,
+                daysOfWeek: days,
+                notes,
+                riderPhone
+              })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              messageEl.textContent = data.error || 'Could not submit recurring request.';
+              return;
+            }
+            messageEl.textContent = `Recurring request submitted. Created ${data.createdRides} rides.`;
+            await loadMyRecurring();
+            await loadMyRides();
+          } catch {
+            messageEl.textContent = 'Network error submitting request.';
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Request';
+          }
+        } else {
+          try {
+            const res = await fetch('/api/rides', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pickupLocation: resolvedPickup,
+                dropoffLocation: resolvedDropoff,
+                requestedTime,
+                riderPhone,
+                riderName: me.name,
+                notes
+              })
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              messageEl.textContent = err.error || 'Could not submit request.';
+              return;
+            }
+            messageEl.textContent = 'Request submitted. Watch your status below.';
+            document.getElementById('notes').value = '';
+            document.getElementById('pickup-note').value = '';
+            document.getElementById('dropoff-note').value = '';
+            await loadMyRides();
+          } catch {
+            messageEl.textContent = 'Network error submitting request.';
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Request';
+          }
+        }
+      });
+    }
+
+    async function loadMyRides() {
+      try {
+        const res = await fetch('/api/my-rides');
+        if (!res.ok) throw new Error();
+        const rides = await res.json();
+        renderMyRides(rides);
+      } catch {
+        showEmptyState('my-rides', {
+          icon: '[]',
+          title: 'Unable to load requests',
+          message: 'Please refresh and try again.'
+        });
+      }
+    }
+
+    async function loadMyRecurring() {
+      try {
+        const res = await fetch('/api/recurring-rides/my');
+        if (!res.ok) throw new Error();
+        const rows = await res.json();
+        renderRecurring(rows);
+      } catch {
+        showEmptyState('my-recurring', {
+          icon: '[]',
+          title: 'Unable to load recurring rides',
+          message: 'Please refresh and try again.'
+        });
+      }
+    }
+
+    function renderMyRides(rides) {
+      const container = document.getElementById('my-rides');
+      if (!rides.length) {
+        showEmptyState(container, {
+          icon: '[]',
+          title: 'No requests yet',
+          message: 'Submit a ride request above to get started.'
+        });
+        return;
+      }
+      const sorted = rides.slice().sort((a, b) => new Date(b.requestedTime) - new Date(a.requestedTime));
+      const limited = showAllHistory ? sorted : sorted.slice(0, 10);
+      container.innerHTML = '';
+      limited.forEach((ride) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        const misses = Number(ride.consecutiveMisses || 0);
+        const missReminder = misses >= 3
+          ? `<div class="small-text">Reminder: ${misses} of 5 allowed no-shows used.</div>`
+          : '';
+        const canCancel = ride.status === 'pending' || (ride.status === 'approved' && !ride.assignedDriverId);
+        div.innerHTML = `
+          <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g,' ')}</span> <strong>${ride.pickupLocation}</strong> → ${ride.dropoffLocation}</div>
+          <div class="small-text">When: ${formatDateTime(ride.requestedTime)}</div>
+          <div class="small-text">Notes: ${ride.notes || '—'}</div>
+          ${missReminder}
+        `;
+        if (canCancel) {
+          const cancelBtn = document.createElement('button');
+          cancelBtn.className = 'btn danger';
+          cancelBtn.textContent = 'Cancel';
+          cancelBtn.onclick = () => cancelRide(ride.id);
+          div.appendChild(cancelBtn);
+        }
+        container.appendChild(div);
+      });
+      if (!showAllHistory && sorted.length > 10) {
+        const note = document.createElement('div');
+        note.className = 'small-text';
+        note.textContent = `Showing recent 10 of ${sorted.length}.`;
+        container.appendChild(note);
+      }
+    }
+
+    function renderRecurring(rows) {
+      const container = document.getElementById('my-recurring');
+      if (!rows.length) {
+        showEmptyState(container, {
+          icon: '[]',
+          title: 'No recurring rides yet',
+          message: 'Recurring rides will appear here after you create one.'
+        });
+        return;
+      }
+      container.innerHTML = '';
+      rows.forEach((r) => {
+        const div = document.createElement('div');
+        const days = (r.days_of_week || []).join(', ');
+        div.className = 'item';
+        div.innerHTML = `
+          <div><strong>${r.pickup_location}</strong> → ${r.dropoff_location}</div>
+          <div class="small-text">Time: ${r.time_of_day} | Days: ${days || '—'}</div>
+          <div class="small-text">From ${r.start_date} to ${r.end_date}</div>
+          <div class="small-text">Status: ${r.status} | Upcoming: ${r.upcomingCount || 0}</div>
+        `;
+        if (r.status === 'active') {
+          const btn = document.createElement('button');
+          btn.className = 'btn danger';
+          btn.textContent = 'Cancel series';
+          btn.onclick = () => cancelRecurring(r.id);
+          div.appendChild(btn);
+        }
+        container.appendChild(div);
+      });
+    }
+
+    async function cancelRide(id) {
+      const confirmed = await showConfirmModal({
+        title: 'Cancel Ride Request',
+        message: 'Cancel this ride request?',
+        confirmLabel: 'Cancel Ride',
+        cancelLabel: 'Keep Ride',
+        type: 'warning'
+      });
+      if (!confirmed) return;
+
+      const res = await fetch(`/api/rides/${id}/cancel`, { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || 'Could not cancel ride', 'error');
+        return;
+      }
+      showToast('Ride cancelled successfully', 'success');
+      await loadMyRides();
+      await loadMyRecurring();
+    }
+
+    async function cancelRecurring(id) {
+      const confirmed = await showConfirmModal({
+        title: 'Cancel Recurring Series',
+        message: 'Cancel this recurring ride series and future rides?',
+        confirmLabel: 'Cancel Series',
+        cancelLabel: 'Keep Series',
+        type: 'warning'
+      });
+      if (!confirmed) return;
+
+      const res = await fetch(`/api/recurring-rides/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+      if (!res.ok) {
+        showToast('Could not cancel recurring ride', 'error');
+        return;
+      }
+      showToast('Recurring ride cancelled successfully', 'success');
+      await loadMyRecurring();
+      await loadMyRides();
+    }
+
+    function toggleSection(id, btn) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const isHidden = el.style.display === 'none';
+      el.style.display = isHidden ? 'block' : 'none';
+      if (btn) btn.textContent = isHidden ? '▾' : '▸';
+    }
+
+    function formatDateInputLocal(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      const h = String(date.getHours()).padStart(2, '0');
+      const min = String(date.getMinutes()).padStart(2, '0');
+      return `${y}-${m}-${d}T${h}:${min}`;
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+
+    init();
+  </script>
+</body>
+</html>
