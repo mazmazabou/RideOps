@@ -28,17 +28,17 @@
   <div class="signup-container">
     <div class="signup-card">
       <h1>Create Rider Account</h1>
-      <div class="hint">USC email required. After signup, you’ll land on the rider console.</div>
+      <div class="hint">After signup, you'll land on the rider console.</div>
       <div id="error" class="error"></div>
       <div id="success" class="success"></div>
       <form id="signup-form">
         <label>Full name
           <input type="text" id="name" required placeholder="e.g. Alex Trojan">
         </label>
-        <label>USC email
-          <input type="email" id="email" required placeholder="you@usc.edu">
+        <label>Email
+          <input type="email" id="email" required placeholder="you@example.com">
         </label>
-        <div class="note" id="username-note">Username will be set to the part before @usc.edu after 8+ characters.</div>
+        <div class="note" id="username-note">Username will be set to the part before @ in your email.</div>
         <div class="form-row">
           <div>
             <label>Phone (for drivers)
@@ -69,13 +69,11 @@
 
     emailInput.addEventListener('input', () => {
       const val = emailInput.value.trim().toLowerCase();
-      if (val.length >= 8 && val.includes('@usc.edu')) {
-        const handle = val.replace('@usc.edu', '');
+      if (val.includes('@') && val.indexOf('@') > 0) {
+        const handle = val.split('@')[0];
         usernameNote.textContent = `Username will be: ${handle}`;
-      } else if (val.length >= 8) {
-        usernameNote.textContent = 'Username will use the part before @usc.edu (USC email required).';
       } else {
-        usernameNote.textContent = 'Username will be set to the part before @usc.edu after 8+ characters.';
+        usernameNote.textContent = 'Username will be set to the part before @ in your email.';
       }
     });
 

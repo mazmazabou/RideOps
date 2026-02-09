@@ -49,7 +49,7 @@ let adminUsers = [];
 let filteredAdminUsers = [];
 let selectedAdminUser = null;
 let rideScheduleAnchor = new Date();
-let emailEnabled = false;
+let emailConfigured = false;
 
 // ----- Auth -----
 async function checkAuth() {
@@ -107,7 +107,7 @@ async function checkEmailStatus() {
     const res = await fetch('/api/admin/email-status');
     if (res.ok) {
       const data = await res.json();
-      emailEnabled = data.enabled;
+      emailConfigured = data.configured;
     }
   } catch {}
   renderEmailIndicator();
@@ -116,10 +116,10 @@ async function checkEmailStatus() {
 function renderEmailIndicator() {
   const el = document.getElementById('admin-email-status');
   if (!el) return;
-  if (emailEnabled) {
-    el.innerHTML = '<span style="color:#228b22;">&#10003; Email notifications active</span>';
+  if (emailConfigured) {
+    el.innerHTML = '<span class="email-status-badge active">Email notifications active</span>';
   } else {
-    el.innerHTML = '<span style="color:#e65100;">&#9888; Email not configured — temporary passwords will be shown on screen</span>';
+    el.innerHTML = '<span class="email-status-badge inactive">Email not configured — temporary passwords will be shown on screen</span>';
   }
 }
 
@@ -361,9 +361,15 @@ async function createAdminUser() {
       if (data.emailSent) {
         msg.innerHTML = '<span style="color:#228b22;">User created. Welcome email sent.</span>';
       } else {
-        msg.innerHTML = `<span style="color:#228b22;">User created.</span> Temporary password (share with user):<br>
-          <code style="background:#f5f5f5; padding:2px 6px; border-radius:4px;">${password}</code>
-          <button class="btn secondary small" style="margin-left:8px;" onclick="navigator.clipboard.writeText('${password.replace(/'/g, "\\'")}').then(()=>showToast('Copied','success'))">Copy</button>`;
+        const safeUser = data.username || email.split('@')[0];
+        const safePw = password.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const clipText = `Username: ${safeUser}\\nPassword: ${password}`;
+        msg.innerHTML = `<span style="color:#228b22;">User created.</span> Share these credentials:<br>
+          <div style="background:#f5f5f5; padding:8px 12px; border-radius:6px; margin-top:6px; font-family:monospace; font-size:0.9rem;">
+            <strong>Username:</strong> ${safeUser}<br>
+            <strong>Password:</strong> ${safePw}
+          </div>
+          <button class="btn secondary small" style="margin-top:6px;" onclick="navigator.clipboard.writeText('${clipText}').then(()=>showToast('Credentials copied','success'))">Copy Credentials</button>`;
       }
     }
     await loadAdminUsers();

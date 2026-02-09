@@ -1,9 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const campusLocations = require('./public/usc_building_options');
+const { isConfigured: emailConfigured, sendWelcomeEmail, sendPasswordResetEmail } = require('./email');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -137,13 +139,13 @@ async function runMigrations() {
 
 async function seedDefaultUsers() {
   const defaults = [
-    { id: 'emp1', username: 'mazen', name: 'Mazen', email: 'mazen@usc.edu', usc_id: '1000000001', phone: '213-555-0101', role: 'driver', active: false },
-    { id: 'emp2', username: 'jason', name: 'Jason', email: 'jason@usc.edu', usc_id: '1000000002', phone: '213-555-0102', role: 'driver', active: false },
-    { id: 'emp3', username: 'jocelin', name: 'Jocelin', email: 'jocelin@usc.edu', usc_id: '1000000003', phone: '213-555-0103', role: 'driver', active: false },
-    { id: 'emp4', username: 'olivia', name: 'Olivia', email: 'olivia@usc.edu', usc_id: '1000000004', phone: '213-555-0104', role: 'driver', active: false },
-    { id: 'office', username: 'office', name: 'Office', email: 'office@usc.edu', usc_id: '1000009999', phone: '213-555-0199', role: 'office', active: true },
-    { id: 'rider1', username: 'sarah', name: 'Sarah Student', email: 'sarah@usc.edu', usc_id: '1000000011', phone: '213-555-0111', role: 'rider', active: false },
-    { id: 'rider2', username: 'tom', name: 'Tom Faculty', email: 'tom@usc.edu', usc_id: '1000000012', phone: '213-555-0112', role: 'rider', active: false }
+    { id: 'emp1', username: 'mazen', name: 'Mazen', email: 'hello@ride-ops.com', usc_id: '1000000001', phone: '213-555-0101', role: 'driver', active: false },
+    { id: 'emp2', username: 'jason', name: 'Jason', email: 'hello@ride-ops.com', usc_id: '1000000002', phone: '213-555-0102', role: 'driver', active: false },
+    { id: 'emp3', username: 'jocelin', name: 'Jocelin', email: 'hello@ride-ops.com', usc_id: '1000000003', phone: '213-555-0103', role: 'driver', active: false },
+    { id: 'emp4', username: 'olivia', name: 'Olivia', email: 'hello@ride-ops.com', usc_id: '1000000004', phone: '213-555-0104', role: 'driver', active: false },
+    { id: 'office', username: 'office', name: 'Office', email: 'hello@ride-ops.com', usc_id: '1000009999', phone: '213-555-0199', role: 'office', active: true },
+    { id: 'rider1', username: 'sarah', name: 'Sarah Student', email: 'hello@ride-ops.com', usc_id: '1000000011', phone: '213-555-0111', role: 'rider', active: false },
+    { id: 'rider2', username: 'tom', name: 'Tom Faculty', email: 'hello@ride-ops.com', usc_id: '1000000012', phone: '213-555-0112', role: 'rider', active: false }
   ];
 
   for (const user of defaults) {
@@ -190,8 +192,8 @@ function formatLocalDate(date) {
   return `${y}-${m}-${d}`;
 }
 
-function isUSCEmail(email) {
-  return typeof email === 'string' && email.toLowerCase().endsWith('@usc.edu');
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function isValidUSCID(value) {
@@ -457,8 +459,8 @@ app.post('/api/auth/signup', async (req, res) => {
   if (!name || !email || !password || !uscId) {
     return res.status(400).json({ error: 'Name, email, password, and USC ID are required' });
   }
-  if (!isUSCEmail(email)) {
-    return res.status(400).json({ error: 'A valid @usc.edu email is required' });
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'A valid email is required' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
@@ -466,7 +468,7 @@ app.post('/api/auth/signup', async (req, res) => {
   if (!isValidUSCID(uscId)) {
     return res.status(400).json({ error: 'USC ID must be 10 digits' });
   }
-  const uname = email.toLowerCase().replace('@usc.edu', '');
+  const uname = email.toLowerCase().split('@')[0];
   const existing = await query('SELECT 1 FROM users WHERE username = $1 OR email = $2 OR phone = $3 OR usc_id = $4', [uname, email.toLowerCase(), phone || null, uscId]);
   if (existing.rowCount) {
     return res.status(400).json({ error: 'Username, email, phone, or USC ID already exists' });
@@ -534,12 +536,12 @@ app.post('/api/admin/users', requireOffice, async (req, res) => {
   if (!name || !email || !uscId || !role || !password) {
     return res.status(400).json({ error: 'Name, email, USC ID, role, and password are required' });
   }
-  if (!isUSCEmail(email)) return res.status(400).json({ error: 'USC email required' });
+  if (!isValidEmail(email)) return res.status(400).json({ error: 'A valid email is required' });
   if (!isValidUSCID(uscId)) return res.status(400).json({ error: 'USC ID must be 10 digits' });
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'Invalid phone format' });
   if (!['rider', 'driver', 'office'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
-  const username = role === 'rider' ? email.toLowerCase().replace('@usc.edu', '') : email.toLowerCase().split('@')[0];
+  const username = email.toLowerCase().split('@')[0];
   const existing = await query('SELECT 1 FROM users WHERE username = $1 OR email = $2 OR usc_id = $3 OR phone = $4', [username, email.toLowerCase(), uscId, phone || null]);
   if (existing.rowCount) {
     return res.status(400).json({ error: 'Username, email, phone, or USC ID already exists' });
@@ -556,9 +558,8 @@ app.post('/api/admin/users', requireOffice, async (req, res) => {
   // Fire-and-forget welcome email
   let emailSent = false;
   try {
-    const { isEmailEnabled, sendWelcomeEmail } = require('./email');
-    emailSent = isEmailEnabled();
-    if (emailSent) sendWelcomeEmail(email.toLowerCase(), name, username, password).catch(() => {});
+    emailSent = emailConfigured();
+    if (emailSent) sendWelcomeEmail(email.toLowerCase(), name, username, password, role, 'USC DART').catch(() => {});
   } catch {}
 
   const result = await query(
@@ -574,7 +575,7 @@ app.put('/api/admin/users/:id', requireOffice, async (req, res) => {
   const { name, phone, email, uscId, role } = req.body;
   if (name && name.length > 120) return res.status(400).json({ error: 'Name too long' });
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'Invalid phone format' });
-  if (email && !isUSCEmail(email)) return res.status(400).json({ error: 'A valid @usc.edu email is required' });
+  if (email && !isValidEmail(email)) return res.status(400).json({ error: 'A valid email is required' });
   if (uscId && !isValidUSCID(uscId)) return res.status(400).json({ error: 'USC ID must be 10 digits' });
   if (role && !['rider', 'driver', 'office'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
@@ -663,9 +664,8 @@ app.post('/api/admin/users/:id/reset-password', requireOffice, async (req, res) 
   // Attempt email notification
   let emailSent = false;
   try {
-    const { isEmailEnabled, sendPasswordResetEmail } = require('./email');
-    emailSent = isEmailEnabled();
-    if (emailSent && user.email) sendPasswordResetEmail(user.email, user.name, newPassword).catch(() => {});
+    emailSent = emailConfigured();
+    if (emailSent && user.email) sendPasswordResetEmail(user.email, user.name, newPassword, 'USC DART').catch(() => {});
   } catch {}
 
   res.json({ success: true, emailSent });
@@ -673,12 +673,11 @@ app.post('/api/admin/users/:id/reset-password', requireOffice, async (req, res) 
 
 // Email status check
 app.get('/api/admin/email-status', requireOffice, (req, res) => {
-  let enabled = false;
+  let configured = false;
   try {
-    const { isEmailEnabled } = require('./email');
-    enabled = isEmailEnabled();
+    configured = emailConfigured();
   } catch {}
-  res.json({ enabled });
+  res.json({ configured });
 });
 
 // ----- Pages -----
@@ -803,8 +802,8 @@ app.post('/api/rides', requireAuth, async (req, res) => {
   const name = requesterRole === 'rider' ? req.session.name : riderName;
   const phone = riderPhone;
 
-  if (!email || !isUSCEmail(email)) {
-    return res.status(400).json({ error: 'A valid @usc.edu email is required' });
+  if (!email || !isValidEmail(email)) {
+    return res.status(400).json({ error: 'A valid email is required' });
   }
   if (!name) {
     return res.status(400).json({ error: 'Rider name is required' });
@@ -1486,10 +1485,10 @@ app.post('/api/dev/seed-rides', requireOffice, async (req, res) => {
   }
   const todayStr = formatLocalDate(new Date());
   const sampleRides = [
-    { riderName: 'Alice Student', riderEmail: 'alice@usc.edu', riderPhone: '213-555-0101', pickupLocation: 'Leavey Library', dropoffLocation: 'Doheny Library', hour: 9 },
-    { riderName: 'Bob Faculty', riderEmail: 'bob@usc.edu', riderPhone: '213-555-0102', pickupLocation: 'SGM', dropoffLocation: 'VKC', hour: 10 },
-    { riderName: 'Carol Staff', riderEmail: 'carol@usc.edu', riderPhone: '213-555-0103', pickupLocation: 'Lyon Center', dropoffLocation: 'RTH', hour: 11 },
-    { riderName: 'Dan Grad', riderEmail: 'dan@usc.edu', riderPhone: '213-555-0104', pickupLocation: 'USC Village', dropoffLocation: 'JFF', hour: 14 },
+    { riderName: 'Alice Student', riderEmail: 'hello@ride-ops.com', riderPhone: '213-555-0101', pickupLocation: 'Leavey Library', dropoffLocation: 'Doheny Library', hour: 9 },
+    { riderName: 'Bob Faculty', riderEmail: 'hello@ride-ops.com', riderPhone: '213-555-0102', pickupLocation: 'SGM', dropoffLocation: 'VKC', hour: 10 },
+    { riderName: 'Carol Staff', riderEmail: 'hello@ride-ops.com', riderPhone: '213-555-0103', pickupLocation: 'Lyon Center', dropoffLocation: 'RTH', hour: 11 },
+    { riderName: 'Dan Grad', riderEmail: 'hello@ride-ops.com', riderPhone: '213-555-0104', pickupLocation: 'USC Village', dropoffLocation: 'JFF', hour: 14 },
   ];
   for (const s of sampleRides) {
     const requestedTime = `${todayStr}T${String(s.hour).padStart(2, '0')}:00`;

@@ -450,6 +450,10 @@ input:focus, select:focus, textarea:focus {
 .admin-actions-cell { white-space: nowrap; }
 .admin-actions-cell .btn { margin: 2px; }
 
+.email-status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; }
+.email-status-badge.active { background: #d4edda; color: #155724; }
+.email-status-badge.inactive { background: #fff3cd; color: #856404; }
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
