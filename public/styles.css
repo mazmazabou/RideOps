@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=bar_chart,calendar_today,cell_tower,check_circle,description,directions_car,error,groups,inbox,info,local_shipping,logout,person,schedule,settings,warning&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=bar_chart,block,calendar_today,cancel,cell_tower,check_circle,description,directions_car,error,groups,inbox,info,logout,person,person_pin_circle,schedule,settings,taxi_alert,traffic_jam,warning&display=swap');
 
 :root {
   --cardinal: #990000;
@@ -843,26 +843,17 @@ iframe.driver-map {
   border: 1px solid #767676;
 }
 
-.status-tag::before { font-size: 12px; }
+.status-tag .material-symbols-outlined { font-size: 14px; }
 
 .status-tag.pending { background: #CCCCCC; color: #0A0A0A; border: 1px solid #767676; }
-.status-tag.pending::before { content: "\23F1"; }
 .status-tag.approved { background: #FFCC00; color: #0A0A0A; border: 1px solid #d4a900; }
-.status-tag.approved::before { content: "\2714"; }
 .status-tag.scheduled { background: #4CAF50; color: #FFFFFF; border: 1px solid #388E3C; }
-.status-tag.scheduled::before { content: "\1F4C5"; }
 .status-tag.driver_on_the_way { background: #990000; color: #FFFFFF; border: 1px solid #990000; }
-.status-tag.driver_on_the_way::before { content: "\1F698"; }
 .status-tag.driver_arrived_grace { background: #FFCC00; color: #0A0A0A; border: 1px solid #990000; }
-.status-tag.driver_arrived_grace::before { content: "\23F0"; }
 .status-tag.completed { background: #4CAF50; color: #FFFFFF; border: 1px solid #388E3C; }
-.status-tag.completed::before { content: "\2714\2714"; }
 .status-tag.no_show { background: #FF9800; color: #FFFFFF; border: 1px solid #E65100; }
-.status-tag.no_show::before { content: "\26A0"; }
 .status-tag.denied { background: #d32f2f; color: #FFFFFF; border: 1px solid #b71c1c; }
-.status-tag.denied::before { content: "\26D4"; }
 .status-tag.cancelled { background: #888888; color: #FFFFFF; border: 1px solid #666666; }
-.status-tag.cancelled::before { content: "\2715"; }
 
 /* ============================================================================
    DRIVER DASHBOARD (Office Dispatch & Monitoring)

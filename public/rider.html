@@ -148,11 +148,12 @@
       <div id="rider-requests-list">
         <div class="legend-popover" id="legend-popover" style="display:none;">
           <div style="display:flex;flex-direction:column;gap:6px;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag pending">pending</span> <span>Awaiting review</span></div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag approved">approved</span> <span>Awaiting driver</span></div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag scheduled">scheduled</span> <span>Driver assigned</span></div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag driver_on_the_way">on the way</span> <span>Driver coming</span></div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag completed">completed</span> <span>Done</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag pending"><span class="material-symbols-outlined">schedule</span>Pending</span> <span>Awaiting review</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag approved"><span class="material-symbols-outlined">check_circle</span>Approved</span> <span>Awaiting driver</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag scheduled"><span class="material-symbols-outlined">calendar_today</span>Scheduled</span> <span>Driver assigned</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag driver_on_the_way"><span class="material-symbols-outlined">directions_car</span>On The Way</span> <span>Driver coming</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag driver_arrived_grace"><span class="material-symbols-outlined">person_pin_circle</span>Driver Arrived</span> <span>Driver waiting at pickup</span></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span class="status-tag completed"><span class="material-symbols-outlined">check_circle</span>Completed</span> <span>Done</span></div>
           </div>
         </div>
         <div class="list" id="my-rides"></div>
@@ -176,6 +177,27 @@
     let locations = [];
     let meUser = null;
     let showAllHistory = false;
+
+    function statusLabel(status) {
+      const labels = {
+        pending: 'Pending', approved: 'Approved', scheduled: 'Scheduled',
+        driver_on_the_way: 'On The Way', driver_arrived_grace: 'Driver Arrived',
+        completed: 'Completed', no_show: 'No-Show', denied: 'Denied', cancelled: 'Cancelled'
+      };
+      return labels[status] || status.replace(/_/g, ' ');
+    }
+
+    const STATUS_ICONS = {
+      pending: 'schedule', approved: 'check_circle', scheduled: 'calendar_today',
+      driver_on_the_way: 'directions_car', driver_arrived_grace: 'person_pin_circle',
+      completed: 'check_circle', no_show: 'warning', denied: 'block', cancelled: 'cancel'
+    };
+
+    function statusTag(status) {
+      const icon = STATUS_ICONS[status];
+      const iconHtml = icon ? `<span class="material-symbols-outlined">${icon}</span>` : '';
+      return `<span class="status-tag ${status}">${iconHtml}${statusLabel(status)}</span>`;
+    }
 
     fetch('/api/tenant-config').then(r=>r.ok?r.json():null).then(c=>{
       if(!c)return;
@@ -527,7 +549,7 @@
           : '';
         const canCancel = ride.status === 'pending' || (ride.status === 'approved' && !ride.assignedDriverId);
         div.innerHTML = `
-          <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g,' ')}</span> <strong>${ride.pickupLocation}</strong> → ${ride.dropoffLocation}</div>
+          <div>${statusTag(ride.status)} <strong>${ride.pickupLocation}</strong> → ${ride.dropoffLocation}</div>
           <div class="small-text">When: ${formatDateTime(ride.requestedTime)}</div>
           <div class="small-text">Notes: ${ride.notes || '—'}</div>
           ${missReminder}

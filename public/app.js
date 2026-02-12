@@ -25,6 +25,28 @@ function fallbackIsDevMode() {
   return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
+// Status display helpers
+function statusLabel(status) {
+  const labels = {
+    pending: 'Pending', approved: 'Approved', scheduled: 'Scheduled',
+    driver_on_the_way: 'On The Way', driver_arrived_grace: 'Driver Arrived',
+    completed: 'Completed', no_show: 'No-Show', denied: 'Denied', cancelled: 'Cancelled'
+  };
+  return labels[status] || status.replace(/_/g, ' ');
+}
+
+const STATUS_ICONS = {
+  pending: 'schedule', approved: 'check_circle', scheduled: 'calendar_today',
+  driver_on_the_way: 'directions_car', driver_arrived_grace: 'person_pin_circle',
+  completed: 'check_circle', no_show: 'warning', denied: 'block', cancelled: 'cancel'
+};
+
+function statusTag(status) {
+  const icon = STATUS_ICONS[status];
+  const iconHtml = icon ? `<span class="material-symbols-outlined">${icon}</span>` : '';
+  return `<span class="status-tag ${status}">${iconHtml}${statusLabel(status)}</span>`;
+}
+
 // Debounce helper for search inputs
 function debounce(func, wait) {
   let timeout;
@@ -728,7 +750,7 @@ function renderProfilePanel(data) {
 
 function renderProfileRide(ride) {
   return `<div class="item">
-    <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g,' ')}</span> ${ride.pickupLocation} → ${ride.dropoffLocation}</div>
+    <div>${statusTag(ride.status)} ${ride.pickupLocation} → ${ride.dropoffLocation}</div>
     <div class="small-text">${formatDate(ride.requestedTime)}</div>
   </div>`;
 }
@@ -1176,7 +1198,7 @@ function buildHistoryItem(ride) {
   item.className = 'item';
   const cancelledByOffice = ride.status === 'cancelled' && ride.cancelledBy === 'office';
   item.innerHTML = `
-    <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span>${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+    <div>${statusTag(ride.status)}${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
     <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
     <div class="small-text">When: ${formatDate(ride.requestedTime)}</div>
     <div class="small-text">Misses: ${ride.consecutiveMisses || 0}</div>
@@ -1259,7 +1281,7 @@ function renderRideLists() {
     const rideVehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name) : null;
     const driverDisplay = ride.assignedDriverId ? `<span class="ride-driver-prominent">${driverName}</span>` : driverName;
     item.innerHTML = `
-      <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div>${statusTag(ride.status)} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text ride-meta">When: ${formatDate(ride.requestedTime)} · Driver: ${driverDisplay}${rideVehicleName ? ` · Cart: ${rideVehicleName}` : ''}</div>
       ${ride.status === 'approved' && !ride.assignedDriverId ? '<div class="ride-hint">Needs driver assignment</div>' : ''}
@@ -1349,7 +1371,7 @@ function renderRideLists() {
         const summary = document.createElement('div');
         summary.className = 'history-group-summary';
         summary.innerHTML = `
-          <span class="status-tag ${firstRide.status}">${firstRide.status.replace(/_/g, ' ')}</span>
+          ${statusTag(firstRide.status)}
           <strong>${firstRide.riderName}</strong>
           <span class="small-text">${firstRide.pickupLocation} → ${firstRide.dropoffLocation}</span>
           <span class="history-group-count">${runLength}</span>
@@ -1487,7 +1509,7 @@ function renderDriverDashboard() {
         const remaining = Math.max(0, 300 - elapsed);
         const minutes = Math.floor(remaining / 60);
         const seconds = Math.floor(remaining % 60).toString().padStart(2, '0');
-        currentStatus += ` (grace ${minutes}:${seconds})`;
+        currentStatus += ` (${minutes}:${seconds} remaining)`;
       }
     }
 
@@ -1584,7 +1606,7 @@ function renderDriverDetail() {
     const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || 'Unknown') : null;
     const rideInfo = document.createElement('div');
     rideInfo.innerHTML = `
-      <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong><a href="#" data-user="${ride.riderId || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div>${statusTag(ride.status)} <strong><a href="#" data-user="${ride.riderId || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       ${ride.notes ? `<div class="small-text">Notes: ${ride.notes}</div>` : ''}
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
@@ -1796,7 +1818,7 @@ function renderAllActiveRides() {
       : 'Unassigned';
     item.innerHTML = `
       <div>
-        <span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span>
+        ${statusTag(ride.status)}
         <strong>${ride.riderName}</strong>
       </div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
@@ -1844,8 +1866,8 @@ function buildGraceInfo(ride) {
   const seconds = Math.floor(remaining % 60).toString().padStart(2, '0');
   const canNoShow = remaining <= 0;
   const message = canNoShow
-    ? 'Grace period expired. You may mark a no-show.'
-    : `Grace period running (${minutes}:${seconds} remaining)`;
+    ? 'Wait time expired. You may mark a no-show.'
+    : `Waiting for rider (${minutes}:${seconds} remaining)`;
   return { message, canNoShow };
 }
 
@@ -2373,7 +2395,7 @@ async function loadAnalyticsFrequency() {
 
     // Status breakdown
     const statusData = data.byStatus.map(r => ({
-      label: r.status.replace(/_/g, ' '),
+      label: statusLabel(r.status),
       count: r.count,
       colorClass: STATUS_COLORS[r.status] || ''
     }));

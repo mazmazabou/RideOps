@@ -397,12 +397,12 @@
         const elapsed = (Date.now() - new Date(el.dataset.grace).getTime()) / 1000;
         const remaining = Math.max(0, 300 - elapsed);
         if (remaining <= 0) {
-          el.textContent = 'Grace expired - can mark no-show';
+          el.textContent = 'Rider did not show \u2014 you may mark no-show';
           el.style.background = '#f8d7da';
           const btn = el.closest('.ride-card')?.querySelector('.btn.danger');
           if (btn) btn.disabled = false;
         } else {
-          el.textContent = `Grace: ${Math.floor(remaining / 60)}:${String(Math.floor(remaining % 60)).padStart(2, '0')}`;
+          el.textContent = `Waiting for rider (${Math.floor(remaining / 60)}:${String(Math.floor(remaining % 60)).padStart(2, '0')})`;
         }
       });
     }
