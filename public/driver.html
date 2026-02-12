@@ -48,8 +48,31 @@
     </div>
     <div class="section">
       <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>My Account</span>
-        <button class="btn secondary" id="profile-toggle" type="button" onclick="toggleProfileEdit()">Edit</button>
+        <span>My Rides Today</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('my-rides', this)">▾</button>
+      </div>
+      <div class="section-content" id="my-rides"></div>
+    </div>
+    <div class="section" id="available-section">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Available to Claim</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('available-rides', this)">▾</button>
+      </div>
+      <div class="section-content" id="available-rides"></div>
+    </div>
+    <div class="section map-section">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Campus Map</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('driver-map-box', this)">▾</button>
+      </div>
+      <div class="section-content" id="driver-map-box">
+        <iframe class="driver-map" src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
+        <div class="map-actions">
+          <a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>My Account <span id="account-summary" style="font-weight:400;font-size:0.85rem;color:#666;margin-left:8px;"></span></span>
+        <button class="toggle-btn-slim" id="profile-toggle" type="button" onclick="toggleProfileEdit()">▸</button>
       </div>
       <div class="section-content" id="profile-content" style="display:none;">
         <label>USC ID (read-only)
@@ -76,29 +99,6 @@
         <label>Confirm New Password<input type="password" id="pw-confirm"></label>
         <button class="btn secondary" onclick="changePassword()">Update Password</button>
         <div id="pw-message" class="small-text"></div>
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>My Rides Today</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('my-rides', this)">▾</button>
-      </div>
-      <div class="section-content" id="my-rides"></div>
-    </div>
-    <div class="section" id="available-section">
-      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Available to Claim</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('available-rides', this)">▾</button>
-      </div>
-      <div class="section-content" id="available-rides"></div>
-    </div>
-    <div class="section map-section">
-      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Campus Map</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('driver-map-box', this)">▾</button>
-      </div>
-      <div class="section-content" id="driver-map-box">
-        <iframe class="driver-map" src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
-        <div class="map-actions">
-          <a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a>
-        </div>
       </div>
     </div>
   </div>
@@ -154,9 +154,6 @@
         }
         currentUser = await res.json();
         document.getElementById('user-name').textContent = currentUser.name;
-        if (window.matchMedia('(max-width: 768px)').matches) {
-          toggleProfileEdit(true);
-        }
         await loadProfile();
         await loadData();
         setInterval(loadData, 3000);
@@ -183,6 +180,12 @@
         document.getElementById('profile-username').value = me.username || '';
         document.getElementById('profile-name').value = me.name || '';
         document.getElementById('profile-phone').value = me.phone || '';
+        const summaryEl = document.getElementById('account-summary');
+        if (summaryEl) {
+          const nm = me.name || '';
+          const em = me.email || '';
+          summaryEl.textContent = nm && em ? '\u2014 ' + nm + ' \u00b7 ' + em : nm ? '\u2014 ' + nm : '';
+        }
       } catch {}
 
       const saveBtn = document.getElementById('profile-save');
@@ -206,6 +209,12 @@
       }
       msg.textContent = 'Saved!';
       document.getElementById('user-name').textContent = data.name;
+      const summaryEl = document.getElementById('account-summary');
+      if (summaryEl) {
+        const nm = data.name || '';
+        const em = document.getElementById('profile-email').value || '';
+        summaryEl.textContent = nm && em ? '\u2014 ' + nm + ' \u00b7 ' + em : nm ? '\u2014 ' + nm : '';
+      }
       toggleProfileEdit(true);
     }
 
@@ -261,10 +270,10 @@
       const isOpen = content.style.display !== 'none';
       if (forceClose || isOpen) {
         content.style.display = 'none';
-        btn.textContent = 'Edit';
+        btn.textContent = '▸';
       } else {
         content.style.display = 'block';
-        btn.textContent = 'Close';
+        btn.textContent = '▾';
       }
     }
 

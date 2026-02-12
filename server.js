@@ -1210,7 +1210,11 @@ app.post('/api/rides/:id/set-vehicle', requireStaff, async (req, res) => {
 
 // ----- Vehicle endpoints -----
 app.get('/api/vehicles', requireStaff, async (req, res) => {
-  const result = await query(`SELECT * FROM vehicles ORDER BY name`);
+  const includeRetired = req.query.includeRetired === 'true';
+  const sql = includeRetired
+    ? `SELECT * FROM vehicles ORDER BY name`
+    : `SELECT * FROM vehicles WHERE status != 'retired' ORDER BY name`;
+  const result = await query(sql);
   res.json(result.rows);
 });
 
@@ -1248,6 +1252,12 @@ app.delete('/api/vehicles/:id', requireOffice, async (req, res) => {
   const result = await query(`DELETE FROM vehicles WHERE id = $1 RETURNING id`, [req.params.id]);
   if (!result.rowCount) return res.status(404).json({ error: 'Vehicle not found' });
   res.json({ success: true });
+});
+
+app.post('/api/vehicles/:id/retire', requireOffice, async (req, res) => {
+  const result = await query(`UPDATE vehicles SET status = 'retired' WHERE id = $1 RETURNING *`, [req.params.id]);
+  if (!result.rowCount) return res.status(404).json({ error: 'Vehicle not found' });
+  res.json(result.rows[0]);
 });
 
 app.post('/api/vehicles/:id/maintenance', requireOffice, async (req, res) => {

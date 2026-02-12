@@ -526,7 +526,7 @@ function renderRideScheduleGrid() {
               return `<span class="ride-chip ${statusClass} ${offsetClass}"><span>${riderLink}</span><span class="time">${formatTimeOnly(ride.requestedTime)}</span><span class="small-text">${pickup}</span></span>`;
             })
             .join('')
-        : '<span class="empty-cell">—</span>';
+        : '';
       html += `<td>${content}</td>`;
     });
     html += '</tr>';
@@ -635,7 +635,7 @@ function renderProfilePanel(data) {
   const pastList = past.slice(0, 5).map(renderProfileRide).join('') || '<p class="small-text">None.</p>';
   const isSelf = user.id === currentUser.id;
   const passwordSection = isSelf ? `
-    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); max-width:500px;">
       <h4>Change Password</h4>
       <label>Current Password<input type="password" id="profile-pw-current"></label>
       <label>New Password (min 8 chars)<input type="password" id="profile-pw-new"></label>
@@ -655,14 +655,14 @@ function renderProfilePanel(data) {
     <div class="flex-row" style="gap:12px; margin:10px 0;">
       <button class="btn primary" onclick="renderProfileEdit()">Edit Name/Phone</button>
     </div>
-    <div>
+    ${user.role !== 'office' ? `<div>
       <h4>Upcoming Rides</h4>
       ${upcomingList}
     </div>
     <div>
       <h4>Recent Rides</h4>
       ${pastList}
-    </div>
+    </div>` : ''}
     ${passwordSection}
   `;
   if (isSelf) {
@@ -780,7 +780,7 @@ function renderDailySchedule() {
       });
       html += '</div></div>';
     } else {
-      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots"><span class="small-text">—</span></div></div>`;
+      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots"></div></div>`;
     }
   });
 
@@ -825,7 +825,7 @@ function renderWeeklySchedule() {
         const offsetClass = getSlotInfo(new Date(r.requestedTime)).offset === 'mid' ? 'offset-mid' : '';
         cellParts.push(`<span class="schedule-slot ride ${offsetClass}">${clickable}</span>`);
       });
-      const cellContent = cellParts.length ? `<div class="cell-stack">${cellParts.join('')}</div>` : '<span class="empty-cell">—</span>';
+      const cellContent = cellParts.length ? `<div class="cell-stack">${cellParts.join('')}</div>` : '';
       html += `<td>${cellContent}</td>`;
     });
     html += '</tr>';
@@ -1407,9 +1407,23 @@ async function claimRide(rideId, driverId) {
 
 // ----- Dispatch & Monitoring (Driver Dashboard) -----
 function renderDriverConsole() {
+  renderDispatchSummary();
   renderDriverDashboard();
   renderDriverDetail();
   renderAllActiveRides();
+}
+
+function renderDispatchSummary() {
+  const today = getTodayLocalDate();
+  const activeDrivers = employees.filter(e => e.active).length;
+  const activeRides = rides.filter(r => ['scheduled','driver_on_the_way','driver_arrived_grace'].includes(r.status) && r.requestedTime?.startsWith(today)).length;
+  const pendingRides = rides.filter(r => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today)).length;
+  const completedToday = rides.filter(r => r.status === 'completed' && r.requestedTime?.startsWith(today)).length;
+  const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  el('dispatch-active-drivers', activeDrivers);
+  el('dispatch-active-rides', activeRides);
+  el('dispatch-pending-rides', pendingRides);
+  el('dispatch-completed-today', completedToday);
 }
 
 function renderDriverDashboard() {
@@ -2151,7 +2165,9 @@ function renderVehicleCards(vehicles) {
       ${alert}
       <div class="ride-actions-compact" style="margin-top:8px;">
         <button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
-        <button class="btn danger small" onclick="deleteVehicle('${v.id}')">Delete</button>
+        ${v.rideCount > 0
+          ? `<button class="btn secondary small" onclick="retireVehicle('${v.id}', '${(v.name||'').replace(/'/g, "\\'")}')">Retire</button>`
+          : `<button class="btn danger small" onclick="deleteVehicle('${v.id}', '${(v.name||'').replace(/'/g, "\\'")}')">Delete</button>`}
       </div>
     </div>`;
   }).join('');
@@ -2374,10 +2390,10 @@ async function logVehicleMaintenance(vehicleId) {
   }
 }
 
-async function deleteVehicle(vehicleId) {
+async function deleteVehicle(vehicleId, vehicleName) {
   const confirmed = await showConfirmModal({
     title: 'Delete Vehicle',
-    message: 'Delete this vehicle? Ride references will be cleared.',
+    message: `Are you sure you want to delete "${vehicleName || 'this vehicle'}"? This action cannot be undone.`,
     confirmLabel: 'Delete',
     cancelLabel: 'Cancel',
     type: 'danger'
@@ -2389,6 +2405,25 @@ async function deleteVehicle(vehicleId) {
     showToast(err.error || 'Failed to delete', 'error');
   } else {
     showToast('Vehicle deleted', 'success');
+    loadAnalyticsVehicles();
+  }
+}
+
+async function retireVehicle(vehicleId, vehicleName) {
+  const confirmed = await showConfirmModal({
+    title: 'Retire Vehicle',
+    message: `Retire "${vehicleName || 'this vehicle'}"? It will be hidden from driver dropdowns but its ride history will be preserved.`,
+    confirmLabel: 'Retire',
+    cancelLabel: 'Cancel',
+    type: 'warning'
+  });
+  if (!confirmed) return;
+  const res = await fetch(`/api/vehicles/${vehicleId}/retire`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json();
+    showToast(err.error || 'Failed to retire vehicle', 'error');
+  } else {
+    showToast('Vehicle retired', 'success');
     loadAnalyticsVehicles();
   }
 }

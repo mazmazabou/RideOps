@@ -157,6 +157,24 @@
 
       <section class="panel tab-panel" id="driver-panel">
         <h2>Dispatch &amp; Monitoring</h2>
+        <div class="dispatch-summary-card">
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-active-drivers">0</span>
+            <span class="stat-label">Drivers Active</span>
+          </div>
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-active-rides">0</span>
+            <span class="stat-label">Active Rides</span>
+          </div>
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-pending-rides">0</span>
+            <span class="stat-label">Awaiting Assignment</span>
+          </div>
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-completed-today">0</span>
+            <span class="stat-label">Completed Today</span>
+          </div>
+        </div>
         <div class="card">
           <h3>Active Drivers</h3>
           <div id="driver-dashboard" class="driver-dashboard"></div>
