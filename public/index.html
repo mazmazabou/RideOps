@@ -17,30 +17,31 @@
         <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">&laquo;</button>
       </div>
       <button class="nav-btn active" data-target="staff-panel" title="Staff &amp; Shifts">
-        <span class="nav-icon">&#x1F465;</span><span class="nav-label">Staff &amp; Shifts</span>
+        <span class="nav-icon"><span class="material-symbols-outlined">groups</span></span><span class="nav-label">Staff &amp; Shifts</span>
       </button>
       <button class="nav-btn" data-target="rides-panel" title="Ride Requests">
-        <span class="nav-icon">&#x1F697;</span><span class="nav-label">Ride Requests</span>
+        <span class="nav-icon"><span class="material-symbols-outlined">directions_car</span></span><span class="nav-label">Ride Requests</span>
       </button>
       <button class="nav-btn" data-target="driver-panel" title="Dispatch &amp; Monitoring">
-        <span class="nav-icon">&#x1F4E1;</span><span class="nav-label">Dispatch &amp; Monitoring</span>
+        <span class="nav-icon"><span class="material-symbols-outlined">cell_tower</span></span><span class="nav-label">Dispatch &amp; Monitoring</span>
       </button>
-      <button class="nav-btn" data-target="admin-panel" title="Admin Settings">
-        <span class="nav-icon">&#x2699;&#xFE0F;</span><span class="nav-label">Admin Settings</span>
-      </button>
-      <button class="nav-btn" data-target="profile-panel" title="Profile">
-        <span class="nav-icon">&#x1F464;</span><span class="nav-label">Profile</span>
+      <button class="nav-btn" data-target="fleet-panel" title="Fleet">
+        <span class="nav-icon"><span class="material-symbols-outlined">local_shipping</span></span><span class="nav-label">Fleet</span>
       </button>
       <button class="nav-btn" data-target="analytics-panel" title="Analytics">
-        <span class="nav-icon">&#x1F4CA;</span><span class="nav-label">Analytics</span>
+        <span class="nav-icon"><span class="material-symbols-outlined">bar_chart</span></span><span class="nav-label">Analytics</span>
       </button>
-      <button class="nav-btn" onclick="showRulesModal()" title="Program Rules">
-        <span class="nav-icon">&#x1F4CB;</span><span class="nav-label">Rules</span>
+      <button class="nav-btn" data-target="admin-panel" title="Admin Settings">
+        <span class="nav-icon"><span class="material-symbols-outlined">settings</span></span><span class="nav-label">Admin Settings</span>
       </button>
-      <div class="spacer"></div>
-      <button class="nav-btn" onclick="logout()" title="Logout">
-        <span class="nav-icon">&#x1F6AA;</span><span class="nav-label">Logout</span>
-      </button>
+      <div class="sidebar-footer">
+        <button class="sidebar-footer-user" onclick="showTab('profile-panel')" title="Profile">
+          <span class="footer-user-icon"><span class="material-symbols-outlined">person</span></span>
+          <span class="footer-user-name" id="sidebar-user-name">Office</span>
+        </button>
+        <button class="sidebar-footer-btn" onclick="showRulesModal()" title="Program Rules"><span class="material-symbols-outlined">description</span></button>
+        <button class="sidebar-footer-btn" onclick="logout()" title="Logout"><span class="material-symbols-outlined">logout</span></button>
+      </div>
     </aside>
 
     <main class="content-area">
@@ -269,12 +270,22 @@
         <div id="admin-profile-content" class="card"></div>
       </section>
 
+      <section class="panel tab-panel" id="fleet-panel">
+        <h2>Fleet Management</h2>
+        <div class="card">
+          <div class="card-header-row">
+            <h3>Vehicles</h3>
+            <button class="btn primary small" id="add-vehicle-btn" type="button">Add Vehicle</button>
+          </div>
+        </div>
+        <div id="vehicles-grid" class="vehicles-grid"></div>
+      </section>
+
       <section class="panel tab-panel" id="analytics-panel">
         <h2>Analytics &amp; Reports</h2>
         <div class="sub-tabs">
           <button class="sub-tab active" data-subtarget="analytics-dashboard-view">Dashboard</button>
           <button class="sub-tab" data-subtarget="analytics-hotspots-view">Hotspots</button>
-          <button class="sub-tab" data-subtarget="analytics-vehicles-view">Vehicles</button>
           <button class="sub-tab" data-subtarget="analytics-milestones-view">Milestones</button>
           <button class="sub-tab" data-subtarget="analytics-reports-view">Reports</button>
         </div>
@@ -301,16 +312,6 @@
           <div class="card"><h3>Top Pickup Locations</h3><div id="hotspot-pickups"></div></div>
           <div class="card"><h3>Top Dropoff Locations</h3><div id="hotspot-dropoffs"></div></div>
           <div class="card"><h3>Most Popular Routes</h3><div id="hotspot-routes"></div></div>
-        </div>
-
-        <div class="sub-panel" id="analytics-vehicles-view" style="display:none;">
-          <div class="card">
-            <div class="card-header-row">
-              <h3>Fleet Management</h3>
-              <button class="btn primary small" id="add-vehicle-btn" type="button">Add Vehicle</button>
-            </div>
-          </div>
-          <div id="vehicles-grid" class="vehicles-grid"></div>
         </div>
 
         <div class="sub-panel" id="analytics-milestones-view" style="display:none;">

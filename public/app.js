@@ -25,6 +25,28 @@ function fallbackIsDevMode() {
   return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
+// Status display helpers
+function statusLabel(status) {
+  const labels = {
+    pending: 'Pending', approved: 'Approved', scheduled: 'Scheduled',
+    driver_on_the_way: 'On The Way', driver_arrived_grace: 'Driver Arrived',
+    completed: 'Completed', no_show: 'No-Show', denied: 'Denied', cancelled: 'Cancelled'
+  };
+  return labels[status] || status.replace(/_/g, ' ');
+}
+
+const STATUS_ICONS = {
+  pending: 'schedule', approved: 'check_circle', scheduled: 'calendar_today',
+  driver_on_the_way: 'directions_car', driver_arrived_grace: 'person_pin_circle',
+  completed: 'check_circle', no_show: 'warning', denied: 'block', cancelled: 'cancel'
+};
+
+function statusTag(status) {
+  const icon = STATUS_ICONS[status];
+  const iconHtml = icon ? `<span class="material-symbols-outlined">${icon}</span>` : '';
+  return `<span class="status-tag ${status}">${iconHtml}${statusLabel(status)}</span>`;
+}
+
 // Debounce helper for search inputs
 function debounce(func, wait) {
   let timeout;
@@ -110,7 +132,6 @@ async function loadRides() {
     const res = await fetch('/api/rides');
     if (res.ok) rides = await res.json();
   } catch (e) { console.error('Failed to load rides', e); }
-  renderRideSchedule();
   renderRideLists();
   renderRideScheduleGrid();
   renderDriverConsole();
@@ -525,7 +546,7 @@ function renderRideScheduleGrid() {
 
   if (!Object.keys(slotMap).length) {
     showEmptyState(grid, {
-      icon: '\uD83D\uDCC5',
+      icon: 'calendar_today',
       title: 'No rides on the calendar',
       message: 'Approved and scheduled rides will appear here. Try switching to the Active Rides tab to approve pending requests.',
       actionLabel: 'Go to Active Rides',
@@ -729,7 +750,7 @@ function renderProfilePanel(data) {
 
 function renderProfileRide(ride) {
   return `<div class="item">
-    <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g,' ')}</span> ${ride.pickupLocation} → ${ride.dropoffLocation}</div>
+    <div>${statusTag(ride.status)} ${ride.pickupLocation} → ${ride.dropoffLocation}</div>
     <div class="small-text">${formatDate(ride.requestedTime)}</div>
   </div>`;
 }
@@ -1177,7 +1198,7 @@ function buildHistoryItem(ride) {
   item.className = 'item';
   const cancelledByOffice = ride.status === 'cancelled' && ride.cancelledBy === 'office';
   item.innerHTML = `
-    <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span>${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+    <div>${statusTag(ride.status)}${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
     <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
     <div class="small-text">When: ${formatDate(ride.requestedTime)}</div>
     <div class="small-text">Misses: ${ride.consecutiveMisses || 0}</div>
@@ -1260,7 +1281,7 @@ function renderRideLists() {
     const rideVehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name) : null;
     const driverDisplay = ride.assignedDriverId ? `<span class="ride-driver-prominent">${driverName}</span>` : driverName;
     item.innerHTML = `
-      <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div>${statusTag(ride.status)} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text ride-meta">When: ${formatDate(ride.requestedTime)} · Driver: ${driverDisplay}${rideVehicleName ? ` · Cart: ${rideVehicleName}` : ''}</div>
       ${ride.status === 'approved' && !ride.assignedDriverId ? '<div class="ride-hint">Needs driver assignment</div>' : ''}
@@ -1300,7 +1321,7 @@ function renderRideLists() {
   document.getElementById('approved-list').style.display = (rideFilterText && !approved.length) ? 'none' : '';
   if (!approved.length && !rideFilterText) {
     showEmptyState(approvedEl, {
-      icon: '[]',
+      icon: 'inbox',
       title: 'No approved or scheduled rides',
       message: 'Approved rides in progress will show in this section.'
     });
@@ -1350,7 +1371,7 @@ function renderRideLists() {
         const summary = document.createElement('div');
         summary.className = 'history-group-summary';
         summary.innerHTML = `
-          <span class="status-tag ${firstRide.status}">${firstRide.status.replace(/_/g, ' ')}</span>
+          ${statusTag(firstRide.status)}
           <strong>${firstRide.riderName}</strong>
           <span class="small-text">${firstRide.pickupLocation} → ${firstRide.dropoffLocation}</span>
           <span class="history-group-count">${runLength}</span>
@@ -1384,7 +1405,7 @@ function renderRideLists() {
   document.getElementById('history-list').style.display = (historyFilterText && !history.length) ? 'none' : '';
   if (!history.length && !historyFilterText) {
     showEmptyState(historyEl, {
-      icon: '[]',
+      icon: 'inbox',
       title: 'No completed history yet',
       message: 'Completed and no-show rides will appear here after dispatch activity.'
     });
@@ -1488,7 +1509,7 @@ function renderDriverDashboard() {
         const remaining = Math.max(0, 300 - elapsed);
         const minutes = Math.floor(remaining / 60);
         const seconds = Math.floor(remaining % 60).toString().padStart(2, '0');
-        currentStatus += ` (grace ${minutes}:${seconds})`;
+        currentStatus += ` (${minutes}:${seconds} remaining)`;
       }
     }
 
@@ -1509,7 +1530,7 @@ function renderDriverDashboard() {
 
   if (!employees.length) {
     showEmptyState(dashboard, {
-      icon: '[]',
+      icon: 'inbox',
       title: 'No drivers registered',
       message: 'Add drivers in Admin Settings to see them here.'
     });
@@ -1565,7 +1586,7 @@ function renderDriverDetail() {
   const driverRides = rides.filter((r) => r.assignedDriverId === driver.id && r.requestedTime?.startsWith(today));
   if (!driverRides.length && !(driver.active && rides.some((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today)))) {
     showEmptyState(list, {
-      icon: '[]',
+      icon: 'inbox',
       title: 'No rides for today',
       message: 'This driver has no assigned or claimable rides right now.'
     });
@@ -1585,7 +1606,7 @@ function renderDriverDetail() {
     const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || 'Unknown') : null;
     const rideInfo = document.createElement('div');
     rideInfo.innerHTML = `
-      <div><span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span> <strong><a href="#" data-user="${ride.riderId || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div>${statusTag(ride.status)} <strong><a href="#" data-user="${ride.riderId || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       ${ride.notes ? `<div class="small-text">Notes: ${ride.notes}</div>` : ''}
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
@@ -1778,7 +1799,7 @@ function renderAllActiveRides() {
 
   if (!activeRides.length) {
     showEmptyState(list, {
-      icon: '[]',
+      icon: 'inbox',
       title: 'No active rides today',
       message: 'Active rides across all drivers will appear here.'
     });
@@ -1797,7 +1818,7 @@ function renderAllActiveRides() {
       : 'Unassigned';
     item.innerHTML = `
       <div>
-        <span class="status-tag ${ride.status}">${ride.status.replace(/_/g, ' ')}</span>
+        ${statusTag(ride.status)}
         <strong>${ride.riderName}</strong>
       </div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
@@ -1845,8 +1866,8 @@ function buildGraceInfo(ride) {
   const seconds = Math.floor(remaining % 60).toString().padStart(2, '0');
   const canNoShow = remaining <= 0;
   const message = canNoShow
-    ? 'Grace period expired. You may mark a no-show.'
-    : `Grace period running (${minutes}:${seconds} remaining)`;
+    ? 'Wait time expired. You may mark a no-show.'
+    : `Waiting for rider (${minutes}:${seconds} remaining)`;
   return { message, canNoShow };
 }
 
@@ -2098,6 +2119,17 @@ function initTabs() {
   });
 }
 
+function showTab(panelId) {
+  const buttons = document.querySelectorAll('.nav-btn[data-target]');
+  const panels = document.querySelectorAll('.tab-panel');
+  buttons.forEach((b) => b.classList.remove('active'));
+  panels.forEach((p) => p.classList.remove('active'));
+  const matchBtn = document.querySelector(`.nav-btn[data-target="${panelId}"]`);
+  if (matchBtn) matchBtn.classList.add('active');
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+}
+
 // ============================================================================
 // ANALYTICS MODULE
 // ============================================================================
@@ -2118,7 +2150,7 @@ function renderBarChart(containerId, data, options = {}) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (!data || !data.length) {
-    showEmptyState(container, { icon: '[]', title: 'No data', message: 'No ride data for this period.' });
+    showEmptyState(container, { icon: 'inbox', title: 'No data', message: 'No ride data for this period.' });
     return;
   }
   const max = Math.max(...data.map(d => parseInt(d.count) || 0));
@@ -2143,7 +2175,7 @@ function renderHotspotList(containerId, items, colorClass) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (!items || !items.length) {
-    showEmptyState(container, { icon: '[]', title: 'No data', message: 'No location data available.' });
+    showEmptyState(container, { icon: 'inbox', title: 'No data', message: 'No location data available.' });
     return;
   }
   const cls = colorClass || '';
@@ -2201,7 +2233,7 @@ function renderVehicleCards(vehicles) {
   const grid = document.getElementById('vehicles-grid');
   if (!grid) return;
   if (!vehicles || !vehicles.length) {
-    showEmptyState(grid, { icon: '[]', title: 'No vehicles', message: 'Add vehicles to track fleet usage.' });
+    showEmptyState(grid, { icon: 'inbox', title: 'No vehicles', message: 'Add vehicles to track fleet usage.' });
     return;
   }
   grid.innerHTML = vehicles.map(v => {
@@ -2211,17 +2243,27 @@ function renderVehicleCards(vehicles) {
     const lastMaint = v.last_maintenance_date
       ? new Date(v.last_maintenance_date).toLocaleDateString() : 'Never';
     const lastUsed = v.lastUsed ? new Date(v.lastUsed).toLocaleDateString() : 'Never';
-    return `<div class="vehicle-card${overdueClass}">
-      <div class="vehicle-name">${v.name}</div>
+    const retiredClass = v.status === 'retired' ? ' vehicle-retired' : '';
+    const retiredBadge = v.status === 'retired' ? '<span class="retired-badge">Retired</span>' : '';
+    const escapedName = (v.name||'').replace(/'/g, "\\'");
+    let actionButtons;
+    if (v.status === 'retired') {
+      actionButtons = `<button class="btn secondary small" onclick="reactivateVehicle('${v.id}', '${escapedName}')">Reactivate</button>`;
+    } else if (v.rideCount > 0) {
+      actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
+        <button class="btn secondary small" onclick="retireVehicle('${v.id}', '${escapedName}')">Retire</button>`;
+    } else {
+      actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
+        <button class="btn danger small" onclick="deleteVehicle('${v.id}', '${escapedName}')">Delete</button>`;
+    }
+    return `<div class="vehicle-card${overdueClass}${retiredClass}">
+      <div class="vehicle-name">${v.name}${retiredBadge}</div>
       <div class="vehicle-meta">Type: ${v.type} &middot; Status: ${v.status}</div>
       <div class="vehicle-meta">Completed rides: ${v.rideCount} &middot; Last used: ${lastUsed}</div>
       <div class="vehicle-meta">Last maintenance: ${lastMaint}</div>
       ${alert}
       <div class="ride-actions-compact" style="margin-top:8px;">
-        <button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
-        ${v.rideCount > 0
-          ? `<button class="btn secondary small" onclick="retireVehicle('${v.id}', '${(v.name||'').replace(/'/g, "\\'")}')">Retire</button>`
-          : `<button class="btn danger small" onclick="deleteVehicle('${v.id}', '${(v.name||'').replace(/'/g, "\\'")}')">Delete</button>`}
+        ${actionButtons}
       </div>
     </div>`;
   }).join('');
@@ -2231,7 +2273,7 @@ function renderMilestoneList(containerId, people, type) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (!people || !people.length) {
-    showEmptyState(container, { icon: '[]', title: `No ${type} data`, message: `No completed rides yet.` });
+    showEmptyState(container, { icon: 'inbox', title: `No ${type} data`, message: `No completed rides yet.` });
     return;
   }
   const badgeLabels = { 50: 'Rising Star', 100: 'Century Club', 250: 'Quarter Thousand', 500: (tenantConfig?.orgShortName || 'DART') + ' Legend', 1000: 'Diamond' };
@@ -2353,7 +2395,7 @@ async function loadAnalyticsFrequency() {
 
     // Status breakdown
     const statusData = data.byStatus.map(r => ({
-      label: r.status.replace(/_/g, ' '),
+      label: statusLabel(r.status),
       count: r.count,
       colorClass: STATUS_COLORS[r.status] || ''
     }));
@@ -2388,7 +2430,7 @@ async function loadAnalyticsHotspots() {
   } catch (e) { console.error('Analytics hotspots error:', e); }
 }
 
-async function loadAnalyticsVehicles() {
+async function loadFleetVehicles() {
   try {
     const res = await fetch('/api/analytics/vehicles' + getAnalyticsDateParams());
     if (!res.ok) return;
@@ -2419,7 +2461,6 @@ async function loadAllAnalytics() {
     loadAnalyticsSummary(),
     loadAnalyticsFrequency(),
     loadAnalyticsHotspots(),
-    loadAnalyticsVehicles(),
     loadAnalyticsMilestones(),
     loadSemesterReport()
   ]);
@@ -2444,7 +2485,7 @@ async function logVehicleMaintenance(vehicleId) {
     showToast(err.error || 'Failed to log maintenance', 'error');
   } else {
     showToast('Maintenance logged', 'success');
-    loadAnalyticsVehicles();
+    loadFleetVehicles();
   }
 }
 
@@ -2463,7 +2504,7 @@ async function deleteVehicle(vehicleId, vehicleName) {
     showToast(err.error || 'Failed to delete', 'error');
   } else {
     showToast('Vehicle deleted', 'success');
-    loadAnalyticsVehicles();
+    loadFleetVehicles();
   }
 }
 
@@ -2482,7 +2523,30 @@ async function retireVehicle(vehicleId, vehicleName) {
     showToast(err.error || 'Failed to retire vehicle', 'error');
   } else {
     showToast('Vehicle retired', 'success');
-    loadAnalyticsVehicles();
+    loadFleetVehicles();
+  }
+}
+
+async function reactivateVehicle(vehicleId, vehicleName) {
+  const confirmed = await showConfirmModal({
+    title: 'Reactivate Vehicle',
+    message: `Reactivate "${vehicleName || 'this vehicle'}"? It will become available for assignment again.`,
+    confirmLabel: 'Reactivate',
+    cancelLabel: 'Cancel',
+    type: 'warning'
+  });
+  if (!confirmed) return;
+  const res = await fetch(`/api/vehicles/${vehicleId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'available' })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    showToast(err.error || 'Failed to reactivate vehicle', 'error');
+  } else {
+    showToast('Vehicle reactivated', 'success');
+    loadFleetVehicles();
   }
 }
 
@@ -2500,7 +2564,7 @@ async function addVehicle() {
     showToast(err.error || 'Failed to add vehicle', 'error');
   } else {
     showToast('Vehicle added', 'success');
-    loadAnalyticsVehicles();
+    loadFleetVehicles();
   }
 }
 
@@ -2554,6 +2618,8 @@ function exportSemesterCSV() {
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTenantConfig();
   if (!await checkAuth()) return;
+  const sidebarUserName = document.getElementById('sidebar-user-name');
+  if (sidebarUserName && currentUser?.name) sidebarUserName.textContent = currentUser.name;
   if (typeof window.applyDevOnlyVisibility === 'function') {
     await window.applyDevOnlyVisibility(document);
   }
@@ -2647,6 +2713,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!analyticsLoaded) {
         analyticsLoaded = true;
         loadAllAnalytics();
+      }
+    });
+  }
+
+  // Fleet: lazy load vehicles on first tab click
+  let fleetLoaded = false;
+  const fleetNavBtn = document.querySelector('.nav-btn[data-target="fleet-panel"]');
+  if (fleetNavBtn) {
+    fleetNavBtn.addEventListener('click', () => {
+      if (!fleetLoaded) {
+        fleetLoaded = true;
+        loadFleetVehicles();
       }
     });
   }

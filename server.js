@@ -1255,8 +1255,10 @@ app.delete('/api/vehicles/:id', requireOffice, async (req, res) => {
 });
 
 app.post('/api/vehicles/:id/retire', requireOffice, async (req, res) => {
+  const check = await query(`SELECT status FROM vehicles WHERE id = $1`, [req.params.id]);
+  if (!check.rowCount) return res.status(404).json({ error: 'Vehicle not found' });
+  if (check.rows[0].status === 'retired') return res.status(400).json({ error: 'Vehicle is already retired' });
   const result = await query(`UPDATE vehicles SET status = 'retired' WHERE id = $1 RETURNING *`, [req.params.id]);
-  if (!result.rowCount) return res.status(404).json({ error: 'Vehicle not found' });
   res.json(result.rows[0]);
 });
 

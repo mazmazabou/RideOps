@@ -49,10 +49,10 @@
 
   function getToastIcon(type) {
     const icons = {
-      success: '\u2713',
-      error: '\u2717',
-      warning: '\u26A0',
-      info: '\u2139'
+      success: 'check_circle',
+      error: 'error',
+      warning: 'warning',
+      info: 'info'
     };
     return icons[type] || icons.info;
   }
@@ -61,7 +61,7 @@
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
-      <span class="toast-icon">${getToastIcon(type)}</span>
+      <span class="toast-icon"><span class="material-symbols-outlined">${getToastIcon(type)}</span></span>
       <span class="toast-message">${message}</span>
     `;
     document.body.appendChild(toast);
@@ -140,7 +140,7 @@
 
   function showEmptyState(containerOrId, options = {}) {
     const {
-      icon = '[]',
+      icon = 'inbox',
       title = 'No items found',
       message = '',
       actionLabel = null,
@@ -155,7 +155,7 @@
 
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">${icon}</div>
+        <div class="empty-icon"><span class="material-symbols-outlined">${icon}</span></div>
         <h3 class="empty-title">${title}</h3>
         ${message ? `<p class="empty-message">${message}</p>` : ''}
         ${actionLabel ? `<button class="btn secondary empty-action">${actionLabel}</button>` : ''}

@@ -302,7 +302,7 @@
       const myRidesEl = document.getElementById('my-rides');
       if (!myRides.length) {
         showEmptyState(myRidesEl, {
-          icon: '[]',
+          icon: 'inbox',
           title: 'No rides assigned today',
           message: 'Your next assignments will appear here when dispatch adds them.'
         });
@@ -319,7 +319,7 @@
         const availableRides = rides.filter((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
         if (!availableRides.length) {
           showEmptyState(availableEl, {
-            icon: '[]',
+            icon: 'inbox',
             title: 'No rides available',
             message: 'Approved rides with no assigned driver will show up here.'
           });
@@ -378,7 +378,7 @@
         const diffMin = Math.round(diffMs / 60000);
         if (diffMin >= 0 && diffMin <= 15) {
           urgencyClass = 'urgent';
-          urgencyLabel = `<div class="ride-urgency urgent">\u23F0 In ${diffMin} min</div>`;
+          urgencyLabel = `<div class="ride-urgency urgent"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">schedule</span> In ${diffMin} min</div>`;
         } else if (diffMin > 15 && diffMin <= 30) {
           urgencyClass = 'soon';
           urgencyLabel = `<div class="ride-urgency soon">In ${diffMin} min</div>`;
@@ -397,12 +397,12 @@
         const elapsed = (Date.now() - new Date(el.dataset.grace).getTime()) / 1000;
         const remaining = Math.max(0, 300 - elapsed);
         if (remaining <= 0) {
-          el.textContent = 'Grace expired - can mark no-show';
+          el.textContent = 'Rider did not show \u2014 you may mark no-show';
           el.style.background = '#f8d7da';
           const btn = el.closest('.ride-card')?.querySelector('.btn.danger');
           if (btn) btn.disabled = false;
         } else {
-          el.textContent = `Grace: ${Math.floor(remaining / 60)}:${String(Math.floor(remaining % 60)).padStart(2, '0')}`;
+          el.textContent = `Waiting for rider (${Math.floor(remaining / 60)}:${String(Math.floor(remaining % 60)).padStart(2, '0')})`;
         }
       });
     }
