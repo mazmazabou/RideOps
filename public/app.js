@@ -104,6 +104,7 @@ async function loadShifts() {
 async function loadRides() {
   const res = await fetch('/api/rides');
   rides = await res.json();
+  renderRideSchedule();
   renderRideLists();
   renderRideScheduleGrid();
   renderDriverConsole();
@@ -454,6 +455,29 @@ function generateTimeSlots() {
   }
   slots.push('19:00');
   return slots;
+}
+
+function getCurrentWeekDates() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  const weekDates = [];
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  for (let i = 0; i < 5; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    weekDates.push({
+      dayName: dayNames[i],
+      date: date,
+      dateStr: date.toISOString().split('T')[0],
+      displayStr: `${dayNames[i]} (${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()})`
+    });
+  }
+  return weekDates;
 }
 
 function renderScheduleGrid() {
