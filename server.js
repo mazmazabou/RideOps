@@ -760,6 +760,11 @@ app.get('/rider', requireRider, (req, res) => {
 // Demo mode routes (before static middleware)
 if (DEMO_MODE) {
   app.get('/login', (req, res) => res.redirect('/demo.html'));
+  app.get('/login.html', (req, res) => res.redirect('/demo.html'));
+  app.get('/', (req, res, next) => {
+    if (!req.session.userId) return res.redirect('/demo.html');
+    next();
+  });
 }
 
 app.get('/demo-config.js', (req, res) => {
