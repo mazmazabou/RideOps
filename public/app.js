@@ -89,21 +89,27 @@ async function logout() {
 
 // ----- Data Loading -----
 async function loadEmployees() {
-  const res = await fetch('/api/employees');
-  employees = await res.json();
+  try {
+    const res = await fetch('/api/employees');
+    if (res.ok) employees = await res.json();
+  } catch (e) { console.error('Failed to load employees', e); }
   renderEmployees();
   populateEmployeeSelects();
 }
 
 async function loadShifts() {
-  const res = await fetch('/api/shifts');
-  shifts = await res.json();
+  try {
+    const res = await fetch('/api/shifts');
+    if (res.ok) shifts = await res.json();
+  } catch (e) { console.error('Failed to load shifts', e); }
   renderScheduleGrid();
 }
 
 async function loadRides() {
-  const res = await fetch('/api/rides');
-  rides = await res.json();
+  try {
+    const res = await fetch('/api/rides');
+    if (res.ok) rides = await res.json();
+  } catch (e) { console.error('Failed to load rides', e); }
   renderRideSchedule();
   renderRideLists();
   renderRideScheduleGrid();
@@ -119,8 +125,10 @@ async function loadVehicles() {
 
 async function loadAdminUsers() {
   if (!currentUser || currentUser.role !== 'office') return;
-  const res = await fetch('/api/admin/users');
-  adminUsers = await res.json();
+  try {
+    const res = await fetch('/api/admin/users');
+    if (res.ok) adminUsers = await res.json();
+  } catch (e) { console.error('Failed to load admin users', e); }
   filterAdminUsers();
 }
 
