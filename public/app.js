@@ -70,6 +70,7 @@ let scheduleMode = 'weekly';
 let adminUsers = [];
 let filteredAdminUsers = [];
 let selectedAdminUser = null;
+let drawerUserId = null;
 let rideScheduleAnchor = new Date();
 let emailConfigured = false;
 let tenantConfig = null;
@@ -191,28 +192,323 @@ function renderAdminUsers(users) {
   if (!tbody) return;
   tbody.innerHTML = '';
   users.forEach((u) => {
-    const isSelf = u.id === currentUser.id;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><a href="#" data-user="${u.id}" class="admin-user-link">${u.name || ''}</a></td>
-      <td><a href="#" data-user="${u.id}" class="admin-user-link">${u.username || ''}</a></td>
-      <td>${u.role}</td>
-      <td><a href="#" data-user="${u.id}" class="admin-user-link">${u.email || ''}</a></td>
-      <td><a href="#" data-user="${u.id}" class="admin-user-link">${u.usc_id || ''}</a></td>
+      <td>
+        <div class="admin-name-primary">${u.name || ''}</div>
+        <div class="admin-name-secondary">${u.email || ''}</div>
+      </td>
+      <td>${u.username || ''}</td>
+      <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+      <td>${u.usc_id || ''}</td>
       <td>${u.phone || ''}</td>
-      <td class="admin-actions-cell"><button class="btn secondary small admin-edit-btn">Edit</button><button class="btn secondary small admin-reset-pw-btn">Reset PW</button>${isSelf ? '' : '<button class="btn danger small admin-delete-btn">Delete</button>'}</td>
+      <td></td>
+      <td><span class="material-symbols-outlined admin-chevron">chevron_right</span></td>
     `;
-    tr.querySelectorAll('.admin-user-link').forEach((link) => {
-      link.onclick = (e) => { e.preventDefault(); loadUserProfile(u.id); };
-    });
-    const editBtn = tr.querySelector('.admin-edit-btn');
-    if (editBtn) editBtn.onclick = () => showEditUserModal(u);
-    const resetBtn = tr.querySelector('.admin-reset-pw-btn');
-    if (resetBtn) resetBtn.onclick = () => resetUserPassword(u.id, u.name);
-    const deleteBtn = tr.querySelector('.admin-delete-btn');
-    if (deleteBtn) deleteBtn.onclick = () => deleteUser(u.id);
+    // Insert kebab menu into the 6th cell
+    const kebabCell = tr.querySelectorAll('td')[5];
+    kebabCell.appendChild(buildAdminKebabMenu(u));
+    // Row click opens drawer (skip if kebab clicked)
+    tr.onclick = (e) => { if (!e.target.closest('.kebab-menu-wrapper')) openAdminDrawer(u.id); };
     tbody.appendChild(tr);
   });
+}
+
+function buildAdminKebabMenu(user) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'kebab-menu-wrapper';
+
+  const btn = document.createElement('button');
+  btn.className = 'kebab-btn';
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">more_vert</span>';
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'kebab-dropdown';
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'edit-option';
+  editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">edit</span> Edit';
+  editBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); openAdminDrawer(user.id, 'edit'); };
+  dropdown.appendChild(editBtn);
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'edit-option';
+  resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">lock_reset</span> Reset Password';
+  resetBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); openAdminDrawer(user.id, 'password'); };
+  dropdown.appendChild(resetBtn);
+
+  if (user.id !== currentUser.id) {
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-option';
+    deleteBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete';
+    deleteBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); deleteUser(user.id); };
+    dropdown.appendChild(deleteBtn);
+  }
+
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.kebab-dropdown.open').forEach((d) => { if (d !== dropdown) d.classList.remove('open'); });
+    dropdown.classList.toggle('open');
+  };
+  const closeHandler = (e) => {
+    if (!wrapper.contains(e.target)) {
+      dropdown.classList.remove('open');
+      document.removeEventListener('click', closeHandler);
+    }
+  };
+  btn.addEventListener('click', () => {
+    setTimeout(() => document.addEventListener('click', closeHandler), 0);
+  });
+
+  wrapper.appendChild(btn);
+  wrapper.appendChild(dropdown);
+  return wrapper;
+}
+
+async function openAdminDrawer(userId, scrollTo) {
+  drawerUserId = userId;
+  const drawer = document.getElementById('admin-drawer');
+  const backdrop = document.getElementById('admin-drawer-backdrop');
+  const body = document.getElementById('admin-drawer-body');
+  const title = document.getElementById('admin-drawer-title');
+
+  drawer.classList.add('open');
+  backdrop.classList.add('open');
+  body.innerHTML = '<div class="loader"><div class="loader-spinner"></div><p class="loader-text">Loading...</p></div>';
+  title.textContent = 'User Details';
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/profile`);
+    if (!res.ok) throw new Error('Failed to load user');
+    const data = await res.json();
+    const user = data.user;
+    const isSelf = user.id === currentUser.id;
+    const initial = (user.name || user.username || '?').charAt(0).toUpperCase();
+
+    title.textContent = user.name || user.username;
+
+    let html = '';
+
+    // User header
+    html += `<div style="display:flex; align-items:center; gap:14px; margin-bottom:24px;">
+      <div class="drawer-avatar">${initial}</div>
+      <div>
+        <div style="font-weight:700; font-size:16px;">${user.name || ''}</div>
+        <div style="margin-top:2px;"><span class="role-badge role-${user.role}">${user.role}</span></div>
+        <div class="admin-name-secondary" style="margin-top:4px;">@${user.username || ''}</div>
+      </div>
+    </div>`;
+
+    // Rider no-show banner (riders only, above details)
+    if (user.role === 'rider') {
+      const missCount = data.missCount || 0;
+      const severity = missCount >= 5 ? 'noshows-critical' : missCount > 0 ? 'noshows-warn' : 'noshows-clear';
+      html += `<div class="drawer-noshows-banner ${severity}">
+        <div class="drawer-noshows-count">${missCount}</div>
+        <div class="drawer-noshows-label">consecutive no-show${missCount !== 1 ? 's' : ''}</div>
+        ${missCount >= 5 ? '<div class="small-text" style="font-weight:700; color:#c62828;">SERVICE TERMINATED</div>' : ''}
+        ${missCount > 0 ? '<button class="btn secondary small" id="drawer-reset-miss-count" style="margin-left:auto;">Reset</button>' : ''}
+      </div>`;
+    }
+
+    // Details section (view mode)
+    html += `<div class="drawer-section" id="drawer-details-view">
+      <div class="drawer-section-title">Details</div>
+      <div class="drawer-field"><div class="drawer-field-label">Email</div><div class="drawer-field-value">${user.email || '—'}</div></div>
+      <div class="drawer-field"><div class="drawer-field-label">USC ID</div><div class="drawer-field-value">${user.usc_id || '—'}</div></div>
+      <div class="drawer-field"><div class="drawer-field-label">Phone</div><div class="drawer-field-value">${user.phone || '—'}</div></div>
+      ${user.role === 'driver' ? `<div class="drawer-field"><div class="drawer-field-label">Status</div><div class="drawer-field-value">${user.active ? '<span style="color:#28a745; font-weight:700;">Clocked In</span>' : '<span style="color:#dc3545;">Clocked Out</span>'}</div></div>` : ''}
+      <button class="btn secondary small" id="drawer-edit-toggle" style="margin-top:4px;">Edit</button>
+    </div>`;
+
+    // Edit section (hidden)
+    html += `<div class="drawer-section" id="drawer-details-edit" style="display:none;">
+      <div class="drawer-section-title">Edit Details</div>
+      <label>Name<input type="text" id="drawer-edit-name" value="${user.name || ''}"></label>
+      <label>Email<input type="email" id="drawer-edit-email" value="${user.email || ''}"></label>
+      <label>Phone<input type="tel" id="drawer-edit-phone" value="${user.phone || ''}"></label>
+      <label>USC ID<input type="text" id="drawer-edit-uscid" value="${user.usc_id || ''}" maxlength="10"></label>
+      <label>Role
+        <select id="drawer-edit-role">
+          <option value="rider" ${user.role === 'rider' ? 'selected' : ''}>rider</option>
+          <option value="driver" ${user.role === 'driver' ? 'selected' : ''}>driver</option>
+          <option value="office" ${user.role === 'office' ? 'selected' : ''}>office</option>
+        </select>
+      </label>
+      <div id="drawer-edit-message" class="small-text" style="margin-top:8px;"></div>
+      <div class="flex-row" style="gap:8px; margin-top:12px;">
+        <button class="btn primary" id="drawer-edit-save">Save</button>
+        <button class="btn secondary" id="drawer-edit-cancel">Cancel</button>
+      </div>
+    </div>`;
+
+    // Rides (non-office)
+    if (user.role !== 'office') {
+      const upcoming = (data.upcoming || []).slice(0, 5);
+      const past = (data.past || []).slice(0, 5);
+      html += `<div class="drawer-section">
+        <div class="drawer-section-title">Upcoming Rides</div>
+        ${upcoming.length ? upcoming.map(renderProfileRide).join('') : '<p class="small-text">None.</p>'}
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-section-title">Recent Rides</div>
+        ${past.length ? past.map(renderProfileRide).join('') : '<p class="small-text">None.</p>'}
+      </div>`;
+    }
+
+    // Divider before admin actions
+    html += `<hr class="drawer-divider">`;
+
+    // Password reset section
+    html += `<div class="drawer-section" id="drawer-password-section">
+      <div class="drawer-section-title">Password Reset</div>
+      <label>New Password (min 8 chars)<input type="password" id="drawer-pw-input"></label>
+      <div id="drawer-pw-message" class="small-text" style="margin-top:8px;"></div>
+      <div id="drawer-pw-result" style="display:none; margin-top:8px;">
+        <div class="small-text" style="font-weight:700;">Temporary password (email not configured):</div>
+        <div class="flex-row" style="gap:8px; margin-top:4px;">
+          <code id="drawer-pw-display" style="background:#f5f5f5; padding:4px 8px; border-radius:4px; font-size:14px;"></code>
+          <button class="btn secondary small" id="drawer-pw-copy">Copy</button>
+        </div>
+      </div>
+      <button class="btn primary small" id="drawer-pw-reset" style="margin-top:8px;">Reset Password</button>
+    </div>`;
+
+    // Danger zone
+    if (!isSelf) {
+      html += `<div class="drawer-section">
+        <div class="drawer-danger-zone">
+          <div class="drawer-section-title" style="color:#c62828;">Danger Zone</div>
+          <p class="small-text" style="margin:0 0 12px 0;">Permanently delete this user and all associated data.</p>
+          <button class="btn danger small" id="drawer-delete-btn">Delete User</button>
+        </div>
+      </div>`;
+    }
+
+    body.innerHTML = html;
+
+    // Wire reset miss count
+    const resetMissBtn = body.querySelector('#drawer-reset-miss-count');
+    if (resetMissBtn) resetMissBtn.onclick = async () => {
+      const confirmed = await showConfirmModal({
+        title: 'Reset Miss Count',
+        message: `Reset ${user.name || user.username}'s consecutive no-show count to 0? This will restore their ability to have rides approved.`,
+        confirmLabel: 'Reset',
+        cancelLabel: 'Cancel',
+        type: 'warning'
+      });
+      if (!confirmed) return;
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/reset-miss-count`, { method: 'POST' });
+        const result = await res.json();
+        if (!res.ok) { showToast(result.error || 'Reset failed', 'error'); return; }
+        showToast('Miss count reset to 0', 'success');
+        openAdminDrawer(userId);
+      } catch { showToast('Network error', 'error'); }
+    };
+
+    // Wire edit toggle
+    const editToggle = body.querySelector('#drawer-edit-toggle');
+    const detailsView = body.querySelector('#drawer-details-view');
+    const detailsEdit = body.querySelector('#drawer-details-edit');
+    if (editToggle) editToggle.onclick = () => {
+      detailsView.style.display = 'none';
+      detailsEdit.style.display = '';
+    };
+    const editCancel = body.querySelector('#drawer-edit-cancel');
+    if (editCancel) editCancel.onclick = () => {
+      detailsEdit.style.display = 'none';
+      detailsView.style.display = '';
+    };
+
+    // Wire edit save
+    const editSave = body.querySelector('#drawer-edit-save');
+    if (editSave) editSave.onclick = async () => {
+      const msg = body.querySelector('#drawer-edit-message');
+      msg.textContent = '';
+      const payload = {
+        name: body.querySelector('#drawer-edit-name').value.trim(),
+        email: body.querySelector('#drawer-edit-email').value.trim(),
+        phone: body.querySelector('#drawer-edit-phone').value.trim(),
+        uscId: body.querySelector('#drawer-edit-uscid').value.trim(),
+        role: body.querySelector('#drawer-edit-role').value
+      };
+      try {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (!res.ok) { msg.textContent = result.error || 'Update failed'; msg.style.color = '#c62828'; return; }
+        showToast('User updated successfully', 'success');
+        await loadAdminUsers();
+        openAdminDrawer(userId);
+      } catch { msg.textContent = 'Network error'; msg.style.color = '#c62828'; }
+    };
+
+    // Wire password reset
+    const pwResetBtn = body.querySelector('#drawer-pw-reset');
+    if (pwResetBtn) pwResetBtn.onclick = async () => {
+      const msg = body.querySelector('#drawer-pw-message');
+      const pw = body.querySelector('#drawer-pw-input').value;
+      msg.textContent = '';
+      msg.style.color = '';
+      if (!pw || pw.length < 8) { msg.textContent = 'Password must be at least 8 characters.'; msg.style.color = '#c62828'; return; }
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newPassword: pw })
+        });
+        const result = await res.json();
+        if (!res.ok) { msg.textContent = result.error || 'Reset failed'; msg.style.color = '#c62828'; return; }
+        if (result.emailSent) {
+          showToast('Password reset. Notification email sent.', 'success');
+          msg.textContent = 'Password reset successfully. Email sent.';
+          msg.style.color = '#228b22';
+        } else {
+          msg.textContent = 'Password reset successfully.';
+          msg.style.color = '#228b22';
+          const resultDiv = body.querySelector('#drawer-pw-result');
+          resultDiv.style.display = 'block';
+          body.querySelector('#drawer-pw-display').textContent = pw;
+          body.querySelector('#drawer-pw-copy').onclick = () => {
+            navigator.clipboard.writeText(pw).then(() => showToast('Copied to clipboard', 'success'));
+          };
+          pwResetBtn.style.display = 'none';
+          body.querySelector('#drawer-pw-input').parentElement.style.display = 'none';
+        }
+      } catch { msg.textContent = 'Network error'; msg.style.color = '#c62828'; }
+    };
+
+    // Wire delete
+    const deleteBtn = body.querySelector('#drawer-delete-btn');
+    if (deleteBtn) deleteBtn.onclick = () => deleteUser(userId);
+
+    // Scroll to section if requested
+    if (scrollTo === 'edit') {
+      detailsView.style.display = 'none';
+      detailsEdit.style.display = '';
+    } else if (scrollTo === 'password') {
+      const pwSection = body.querySelector('#drawer-password-section');
+      if (pwSection) setTimeout(() => pwSection.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
+  } catch (e) {
+    body.innerHTML = `<p class="small-text">${e.message || 'Unable to load user details.'}</p>`;
+  }
+}
+
+function closeAdminDrawer() {
+  const drawer = document.getElementById('admin-drawer');
+  const backdrop = document.getElementById('admin-drawer-backdrop');
+  drawer.classList.remove('open');
+  backdrop.classList.remove('open');
+  setTimeout(() => {
+    const body = document.getElementById('admin-drawer-body');
+    if (body && !drawer.classList.contains('open')) body.innerHTML = '';
+  }, 300);
+  drawerUserId = null;
 }
 
 function showEditUserModal(user) {
@@ -370,6 +666,7 @@ async function deleteUser(id) {
     return;
   }
   showToast('User deleted successfully', 'success');
+  if (drawerUserId === id) closeAdminDrawer();
   await loadAdminUsers();
   selectedAdminUser = null;
   renderProfilePanel(null);
@@ -574,7 +871,7 @@ function renderRideScheduleGrid() {
             .map((ride) => {
               const statusClass = `status-${ride.status}`;
               const pickup = formatLocationLabel(ride.pickupLocation);
-              const riderLink = ride.riderId ? `<a href="#" data-user="${ride.riderId}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a>` : ride.riderName;
+              const riderLink = ride.riderId ? `<span data-user="${ride.riderId}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span>` : ride.riderName;
               const offsetClass = ride.offset === 'mid' ? 'offset-mid' : '';
               return `<span class="ride-chip ${statusClass} ${offsetClass}"><span>${riderLink}</span><span class="time">${formatTimeOnly(ride.requestedTime)}</span><span class="small-text">${pickup}</span></span>`;
             })
@@ -823,11 +1120,11 @@ function renderDailySchedule() {
       activeShifts.forEach(s => {
         const emp = employees.find(e => e.id === s.employeeId);
         const name = emp?.name || 'Unknown';
-        const clickable = emp ? `<a href="#" data-user="${emp.id}" class="admin-user-link">${name}</a>` : name;
+        const clickable = emp ? `<span data-user="${emp.id}" class="clickable-name">${name}</span>` : name;
         html += `<span class="schedule-slot shift">${clickable}</span>`;
       });
       slotRides.forEach(r => {
-        const riderLink = r.riderId ? `<a href="#" data-user="${r.riderId}" class="admin-user-link">${r.riderName}</a>` : r.riderName;
+        const riderLink = r.riderId ? `<span data-user="${r.riderId}" class="clickable-name">${r.riderName}</span>` : r.riderName;
         const offsetClass = getSlotInfo(new Date(r.requestedTime)).offset === 'mid' ? 'offset-mid' : '';
         html += `<span class="schedule-slot ride ${offsetClass}">${riderLink} (${r.pickupLocation}→${r.dropoffLocation})</span>`;
       });
@@ -870,11 +1167,11 @@ function renderWeeklySchedule() {
       slotShifts.forEach((s) => {
         const emp = employees.find((e) => e.id === s.employeeId);
         const name = emp?.name || 'Unknown';
-        const clickable = emp ? `<a href="#" data-user="${emp.id}" data-email="${emp.email || ''}" class="admin-user-link">${name}</a>` : name;
+        const clickable = emp ? `<span data-user="${emp.id}" data-email="${emp.email || ''}" class="clickable-name">${name}</span>` : name;
         cellParts.push(`<span class="schedule-slot shift">${clickable}</span>`);
       });
       slotRides.forEach((r) => {
-        const clickable = r.riderId ? `<a href="#" data-user="${r.riderId}" data-email="${r.riderEmail || ''}" class="admin-user-link">${r.riderName}</a>` : r.riderName;
+        const clickable = r.riderId ? `<span data-user="${r.riderId}" data-email="${r.riderEmail || ''}" class="clickable-name">${r.riderName}</span>` : r.riderName;
         const offsetClass = getSlotInfo(new Date(r.requestedTime)).offset === 'mid' ? 'offset-mid' : '';
         cellParts.push(`<span class="schedule-slot ride ${offsetClass}">${clickable}</span>`);
       });
@@ -1116,6 +1413,183 @@ function buildCancelButton(ride, onDone) {
   return btn;
 }
 
+function buildKebabMenu(ride, onDone) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'kebab-menu-wrapper';
+
+  const btn = document.createElement('button');
+  btn.className = 'kebab-btn';
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">more_vert</span>';
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'kebab-dropdown';
+
+  // Edit option — always visible
+  const editBtn = document.createElement('button');
+  editBtn.className = 'edit-option';
+  editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">edit</span> Edit';
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
+    dropdown.classList.remove('open');
+    showEditRideModal(ride, onDone);
+  };
+  dropdown.appendChild(editBtn);
+
+  // Delete option — hidden for terminal statuses
+  const terminalStatuses = ['completed', 'no_show', 'cancelled', 'denied'];
+  if (!terminalStatuses.includes(ride.status)) {
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-option';
+    deleteBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete';
+    deleteBtn.onclick = async (e) => {
+      e.stopPropagation();
+      dropdown.classList.remove('open');
+      const confirmed = await showConfirmModal({
+        title: 'Delete Ride',
+        message: 'Delete this ride? This cannot be undone.',
+        confirmLabel: 'Delete Ride',
+        cancelLabel: 'Keep Ride',
+        type: 'danger'
+      });
+      if (!confirmed) return;
+      const res = await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || 'Failed to delete', 'error');
+      } else {
+        showToast('Ride deleted', 'success');
+      }
+      if (onDone) await onDone();
+    };
+    dropdown.appendChild(deleteBtn);
+  }
+
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    // Close any other open kebab menus
+    document.querySelectorAll('.kebab-dropdown.open').forEach((d) => { if (d !== dropdown) d.classList.remove('open'); });
+    dropdown.classList.toggle('open');
+  };
+
+  // Close on outside click
+  const closeHandler = (e) => {
+    if (!wrapper.contains(e.target)) {
+      dropdown.classList.remove('open');
+      document.removeEventListener('click', closeHandler);
+    }
+  };
+  btn.addEventListener('click', () => {
+    setTimeout(() => document.addEventListener('click', closeHandler), 0);
+  });
+
+  wrapper.appendChild(btn);
+  wrapper.appendChild(dropdown);
+  return wrapper;
+}
+
+async function showEditRideModal(ride, onDone) {
+  // Fetch locations for dropdowns
+  let locations = [];
+  try {
+    const locRes = await fetch('/api/locations');
+    locations = await locRes.json();
+  } catch { /* fallback empty */ }
+
+  const buildOptions = (selected) => {
+    let html = '<option value="">Select location</option>';
+    locations.forEach((loc) => {
+      const label = typeof loc === 'string' ? loc : (loc.label || loc.value);
+      if (!label) return;
+      html += `<option value="${label}" ${label === selected ? 'selected' : ''}>${label}</option>`;
+    });
+    // If current value isn't in the list, add it
+    if (selected && !locations.some((l) => (typeof l === 'string' ? l : (l.label || l.value)) === selected)) {
+      html += `<option value="${selected}" selected>${selected}</option>`;
+    }
+    return html;
+  };
+
+  const currentTime = ride.requestedTime ? new Date(ride.requestedTime).toISOString().slice(0, 16) : '';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay show';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;">
+      <h3>Edit Ride</h3>
+      <label>Pickup Location
+        <select id="edit-ride-pickup">${buildOptions(ride.pickupLocation)}</select>
+      </label>
+      <label>Dropoff Location
+        <select id="edit-ride-dropoff">${buildOptions(ride.dropoffLocation)}</select>
+      </label>
+      <label>Requested Time
+        <input type="datetime-local" id="edit-ride-time" value="${currentTime}">
+      </label>
+      <label>Rider Notes
+        <textarea id="edit-ride-notes" rows="2">${ride.notes || ''}</textarea>
+      </label>
+      <hr style="margin:16px 0; border:none; border-top:1px solid var(--border);">
+      <label>Change Notes <span style="color:#c62828;">*</span>
+        <textarea id="edit-ride-change-notes" rows="2" placeholder="Describe what changed and why..."></textarea>
+      </label>
+      <label>Initials <span style="color:#c62828;">*</span>
+        <input type="text" id="edit-ride-initials" maxlength="5" placeholder="Your initials" style="max-width:120px;">
+      </label>
+      <div id="edit-ride-message" class="small-text" style="margin-top:8px;"></div>
+      <div class="flex-row" style="gap:8px; margin-top:12px;">
+        <button class="btn primary" id="edit-ride-save">Save</button>
+        <button class="btn secondary" id="edit-ride-cancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.classList.remove('show');
+    overlay.classList.add('hiding');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  overlay.querySelector('#edit-ride-cancel').onclick = close;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  overlay.querySelector('#edit-ride-save').onclick = async () => {
+    const msg = overlay.querySelector('#edit-ride-message');
+    msg.textContent = '';
+    const changeNotes = overlay.querySelector('#edit-ride-change-notes').value.trim();
+    const initials = overlay.querySelector('#edit-ride-initials').value.trim();
+    if (!changeNotes) { msg.textContent = 'Change notes are required'; msg.style.color = '#c62828'; return; }
+    if (!initials) { msg.textContent = 'Initials are required'; msg.style.color = '#c62828'; return; }
+
+    const body = {
+      pickupLocation: overlay.querySelector('#edit-ride-pickup').value,
+      dropoffLocation: overlay.querySelector('#edit-ride-dropoff').value,
+      requestedTime: overlay.querySelector('#edit-ride-time').value ? new Date(overlay.querySelector('#edit-ride-time').value).toISOString() : ride.requestedTime,
+      notes: overlay.querySelector('#edit-ride-notes').value,
+      changeNotes,
+      initials
+    };
+    try {
+      const res = await fetch(`/api/rides/${ride.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Update failed';
+        msg.style.color = '#c62828';
+        return;
+      }
+      showToast('Ride updated successfully', 'success');
+      close();
+      if (onDone) await onDone();
+    } catch {
+      msg.textContent = 'Network error';
+      msg.style.color = '#c62828';
+    }
+  };
+}
+
 function buildUnassignButton(ride, driverName, onDone) {
   const btn = document.createElement('button');
   btn.className = 'btn secondary';
@@ -1198,12 +1672,13 @@ function buildHistoryItem(ride) {
   item.className = 'item';
   const cancelledByOffice = ride.status === 'cancelled' && ride.cancelledBy === 'office';
   item.innerHTML = `
-    <div>${statusTag(ride.status)}${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+    <div>${statusTag(ride.status)}${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
     <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
     <div class="small-text">When: ${formatDate(ride.requestedTime)}</div>
     <div class="small-text">Misses: ${ride.consecutiveMisses || 0}</div>
     ${ride.vehicleId ? `<div class="small-text">Cart: ${vehicles.find(v => v.id === ride.vehicleId)?.name || ride.vehicleId}</div>` : ''}
   `;
+  item.appendChild(buildKebabMenu(ride, () => loadRides()));
   return item;
 }
 
@@ -1226,7 +1701,7 @@ function renderRideLists() {
     const item = document.createElement('div');
     item.className = 'item ride-needs-action';
     item.innerHTML = `
-      <div><strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div><span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
       <div class="ride-hint">Needs driver assignment</div>
@@ -1251,18 +1726,18 @@ function renderRideLists() {
     item.className = 'item';
     const terminated = ride.consecutiveMisses >= 5;
     item.innerHTML = `
-      <div><span class="status-tag pending">Pending</span> <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong> (${ride.riderEmail})</div>
+      <div><span class="status-tag pending">Pending</span> <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span> (${ride.riderEmail})</div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text">Requested: ${formatDate(ride.requestedTime)}</div>
       ${terminated ? '<div class="alert">SERVICE TERMINATED after five consecutive no-shows.</div>' : ''}
       <div class="flex-row">
-        <button class="btn primary" ${terminated ? 'disabled' : ''}>Approve</button>
-        <button class="btn" data-role="deny">Deny</button>
+        <button class="btn success" ${terminated ? 'disabled' : ''}>Approve</button>
+        <button class="btn danger" data-role="deny">Deny</button>
       </div>
     `;
-    item.querySelector('.btn.primary').onclick = () => updateRide(`/api/rides/${ride.id}/approve`);
+    item.querySelector('.btn.success').onclick = () => updateRide(`/api/rides/${ride.id}/approve`);
     item.querySelector('[data-role="deny"]').onclick = () => updateRide(`/api/rides/${ride.id}/deny`);
-    item.querySelector('.flex-row').appendChild(buildCancelButton(ride, () => loadRides()));
+    item.appendChild(buildKebabMenu(ride, () => loadRides()));
     pendingEl.appendChild(item);
   });
   document.getElementById('pending-list').style.display = pending.length ? '' : 'none';
@@ -1279,9 +1754,9 @@ function renderRideLists() {
     }
     const driverName = employees.find((e) => e.id === ride.assignedDriverId)?.name || 'Unassigned';
     const rideVehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name) : null;
-    const driverDisplay = ride.assignedDriverId ? `<span class="ride-driver-prominent">${driverName}</span>` : driverName;
+    const driverDisplay = ride.assignedDriverId ? `<span class="ride-driver-prominent clickable-name" data-user="${ride.assignedDriverId}">${driverName}</span>` : driverName;
     item.innerHTML = `
-      <div>${statusTag(ride.status)} <strong><a href="#" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div>${statusTag(ride.status)} <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text ride-meta">When: ${formatDate(ride.requestedTime)} · Driver: ${driverDisplay}${rideVehicleName ? ` · Cart: ${rideVehicleName}` : ''}</div>
       ${ride.status === 'approved' && !ride.assignedDriverId ? '<div class="ride-hint">Needs driver assignment</div>' : ''}
@@ -1308,14 +1783,12 @@ function renderRideLists() {
       actionRow.className = 'ride-actions-compact';
       const unassignBtn = buildUnassignButton(ride, driverName, () => loadRides());
       unassignBtn.classList.add('small');
-      const cancelBtn = buildCancelButton(ride, () => loadRides());
-      cancelBtn.classList.add('small');
       actionRow.appendChild(unassignBtn);
       actionRow.appendChild(buildReassignDropdown(ride, ride.assignedDriverId, () => loadRides()));
-      actionRow.appendChild(cancelBtn);
       item.appendChild(actionRow);
     }
 
+    item.appendChild(buildKebabMenu(ride, () => loadRides()));
     approvedEl.appendChild(item);
   });
   document.getElementById('approved-list').style.display = (rideFilterText && !approved.length) ? 'none' : '';
@@ -1418,15 +1891,6 @@ function renderRideLists() {
     countEl.textContent = rideFilterText ? `${totalShown} match${totalShown !== 1 ? 'es' : ''}` : '';
   }
 
-  // Wire profile links
-  document.querySelectorAll('.admin-user-link').forEach((a) => {
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      const id = a.dataset.user;
-      const email = a.dataset.email;
-      openProfileById(id || email);
-    });
-  });
 }
 
 async function updateRide(url, body = null) {
@@ -1515,7 +1979,7 @@ function renderDriverDashboard() {
 
     card.innerHTML = `
       <span class="driver-status-dot ${emp.active ? 'active' : 'inactive'}"></span>
-      <span class="driver-card-name">${emp.name}</span>
+      <span class="driver-card-name clickable-name" data-user="${emp.id}">${emp.name}</span>
       <span class="driver-card-info">${emp.active ? 'Clocked In' : 'Clocked Out'} &mdash; ${rideCount} ${rideCount === 1 ? 'ride' : 'rides'} today${currentStatus ? ' &mdash; ' + currentStatus : ''}</span>
     `;
     card.onclick = () => {
@@ -1568,7 +2032,7 @@ function renderDriverDetail() {
         const item = document.createElement('div');
         item.className = 'item';
         item.innerHTML = `
-          <div><strong>${ride.riderName}</strong></div>
+          <div><span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
           <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
           <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
         `;
@@ -1606,7 +2070,7 @@ function renderDriverDetail() {
     const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || 'Unknown') : null;
     const rideInfo = document.createElement('div');
     rideInfo.innerHTML = `
-      <div>${statusTag(ride.status)} <strong><a href="#" data-user="${ride.riderId || ''}" class="admin-user-link">${ride.riderName}</a></strong></div>
+      <div>${statusTag(ride.status)} <span data-user="${ride.riderId || ''}" class="clickable-name">${ride.riderName}</span></div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       ${ride.notes ? `<div class="small-text">Notes: ${ride.notes}</div>` : ''}
       <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
@@ -1757,9 +2221,9 @@ function renderDriverDetail() {
         adminActions.appendChild(buildUnassignButton(ride, driver.name, () => loadRides()));
         adminActions.appendChild(buildReassignDropdown(ride, driver.id, () => loadRides()));
       }
-      adminActions.appendChild(buildCancelButton(ride, () => loadRides()));
       item.appendChild(adminActions);
     }
+    item.appendChild(buildKebabMenu(ride, () => loadRides()));
     list.appendChild(item);
   });
 }
@@ -1816,32 +2280,31 @@ function renderAllActiveRides() {
     const driverName = ride.assignedDriverId
       ? (employees.find((e) => e.id === ride.assignedDriverId)?.name || 'Unknown')
       : 'Unassigned';
+    const driverClickable = ride.assignedDriverId ? `<span class="clickable-name" data-user="${ride.assignedDriverId}">${driverName}</span>` : driverName;
     item.innerHTML = `
       <div>
         ${statusTag(ride.status)}
-        <strong>${ride.riderName}</strong>
+        <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span>
       </div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-      <div class="small-text">Time: ${formatDate(ride.requestedTime)} | Driver: ${driverName}</div>
+      <div class="small-text">Time: ${formatDate(ride.requestedTime)} | Driver: ${driverClickable}</div>
     `;
     if (ride.assignedDriverId) {
-      const viewLink = document.createElement('a');
-      viewLink.href = '#';
+      const viewLink = document.createElement('span');
       viewLink.className = 'small-text';
-      viewLink.style.fontWeight = '700';
-      viewLink.style.color = 'var(--cardinal)';
-      viewLink.textContent = 'View driver';
+      viewLink.style.cssText = 'font-weight:700; color:var(--cardinal); cursor:pointer;';
+      viewLink.textContent = 'View in dispatch';
       viewLink.onclick = (e) => {
-        e.preventDefault();
+        e.stopPropagation();
         selectedDriverId = ride.assignedDriverId;
         renderDriverConsole();
         document.getElementById('driver-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
       item.appendChild(viewLink);
-      item.appendChild(buildCancelButton(ride, () => loadRides()));
     } else {
       item.appendChild(buildAssignDropdown(ride, () => loadRides()));
     }
+    item.appendChild(buildKebabMenu(ride, () => loadRides()));
     list.appendChild(item);
   });
 }
@@ -2040,7 +2503,7 @@ function buildContactPill(protocol, phone, icon, label) {
 
 function openProfileById(id) {
   if (!id) {
-    loadUserProfile(currentUser?.id);
+    openAdminDrawer(currentUser?.id);
     return;
   }
   let targetId = id;
@@ -2048,7 +2511,7 @@ function openProfileById(id) {
     const found = adminUsers.find((u) => u.id === id || u.email === id || u.username === id);
     if (found) targetId = found.id;
   }
-  loadUserProfile(targetId);
+  openAdminDrawer(targetId);
 }
 
 function showRulesModal() {
@@ -2623,13 +3086,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof window.applyDevOnlyVisibility === 'function') {
     await window.applyDevOnlyVisibility(document);
   }
-  // Global profile link handler
+  // Global profile link handler (clickable name tokens)
   document.addEventListener('click', (e) => {
-    const link = e.target.closest('.admin-user-link');
-    if (link) {
+    const link = e.target.closest('.clickable-name');
+    if (link && (link.dataset.user || link.dataset.email)) {
       e.preventDefault();
+      e.stopPropagation();
       const id = link.dataset.user;
-      openProfileById(id);
+      const email = link.dataset.email;
+      openProfileById(id || email);
     }
   });
 
@@ -2667,6 +3132,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (adminFilterInput) {
     adminFilterInput.addEventListener('input', debounce(filterAdminUsers, 300));
   }
+
+  // Admin drawer close events
+  const drawerCloseBtn = document.getElementById('admin-drawer-close');
+  if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeAdminDrawer);
+  const drawerBackdrop = document.getElementById('admin-drawer-backdrop');
+  if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeAdminDrawer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('admin-drawer')?.classList.contains('open')) {
+      closeAdminDrawer();
+    }
+  });
 
   await loadEmployees();
   await loadShifts();

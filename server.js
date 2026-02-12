@@ -127,6 +127,8 @@ async function runMigrations() {
     `ALTER TABLE rides ADD COLUMN IF NOT EXISTS vehicle_id TEXT REFERENCES vehicles(id);`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ;`,
+    `ALTER TABLE ride_events ADD COLUMN IF NOT EXISTS notes TEXT;`,
+    `ALTER TABLE ride_events ADD COLUMN IF NOT EXISTS initials TEXT;`,
     `CREATE TABLE IF NOT EXISTS recurring_rides (
       id TEXT PRIMARY KEY,
       rider_id TEXT REFERENCES users(id) ON DELETE CASCADE,
@@ -248,10 +250,10 @@ async function setRiderMissCount(email, count) {
   );
 }
 
-async function addRideEvent(rideId, actorUserId, type) {
+async function addRideEvent(rideId, actorUserId, type, notes, initials) {
   await query(
-    `INSERT INTO ride_events (id, ride_id, actor_user_id, type) VALUES ($1, $2, $3, $4)`,
-    [generateId('event'), rideId, actorUserId || null, type]
+    `INSERT INTO ride_events (id, ride_id, actor_user_id, type, notes, initials) VALUES ($1, $2, $3, $4, $5, $6)`,
+    [generateId('event'), rideId, actorUserId || null, type, notes || null, initials || null]
   );
 }
 
@@ -649,7 +651,23 @@ app.get('/api/admin/users/:id/profile', requireOffice, async (req, res) => {
     past = mapped.filter((r) => ['completed','no_show','denied','cancelled'].includes(r.status));
   }
 
-  res.json({ user, upcoming, past });
+  let missCount = 0;
+  if (user.role === 'rider' && user.email) {
+    missCount = await getRiderMissCount(user.email);
+  }
+
+  res.json({ user, upcoming, past, missCount });
+});
+
+// Admin reset rider miss count
+app.post('/api/admin/users/:id/reset-miss-count', requireOffice, async (req, res) => {
+  const userRes = await query('SELECT id, name, email, role FROM users WHERE id = $1', [req.params.id]);
+  if (!userRes.rowCount) return res.status(404).json({ error: 'User not found' });
+  const user = userRes.rows[0];
+  if (user.role !== 'rider') return res.status(400).json({ error: 'Only rider accounts have a miss count' });
+  if (!user.email) return res.status(400).json({ error: 'Rider has no email on file' });
+  await setRiderMissCount(user.email, 0);
+  res.json({ success: true, missCount: 0 });
 });
 
 // Admin reset password for another user
@@ -841,8 +859,9 @@ app.post('/api/rides/:id/approve', requireOffice, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
-  const missCount = await getRiderMissCount(ride.rider_email);
-  if ((missCount || ride.consecutive_misses || 0) >= 5) {
+  const missCountRes = await query('SELECT count FROM rider_miss_counts WHERE email = $1', [ride.rider_email]);
+  const missCount = missCountRes.rows[0] != null ? missCountRes.rows[0].count : (ride.consecutive_misses || 0);
+  if (missCount >= 5) {
     return res.status(400).json({ error: 'SERVICE TERMINATED: rider has 5 consecutive no-shows' });
   }
   if (!isWithinServiceHours(ride.requested_time)) {
@@ -975,6 +994,37 @@ app.post('/api/rides/:id/reassign', requireOffice, async (req, res) => {
     [driverId, ride.id]
   );
   await addRideEvent(ride.id, req.session.userId, 'reassigned');
+  res.json(mapRide(result.rows[0]));
+});
+
+app.put('/api/rides/:id', requireOffice, async (req, res) => {
+  const { pickupLocation, dropoffLocation, requestedTime, notes, changeNotes, initials } = req.body;
+  if (!changeNotes || !changeNotes.trim()) return res.status(400).json({ error: 'Change notes are required' });
+  if (!initials || !initials.trim()) return res.status(400).json({ error: 'Initials are required' });
+
+  const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
+  const ride = rideRes.rows[0];
+  if (!ride) return res.status(404).json({ error: 'Ride not found' });
+
+  const updates = [];
+  const values = [];
+  let idx = 1;
+  if (pickupLocation !== undefined) { updates.push(`pickup_location = $${idx++}`); values.push(pickupLocation); }
+  if (dropoffLocation !== undefined) { updates.push(`dropoff_location = $${idx++}`); values.push(dropoffLocation); }
+  if (requestedTime !== undefined) { updates.push(`requested_time = $${idx++}`); values.push(requestedTime); }
+  if (notes !== undefined) { updates.push(`notes = $${idx++}`); values.push(notes); }
+  updates.push(`updated_at = NOW()`);
+
+  if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
+
+  values.push(req.params.id);
+  const result = await query(
+    `UPDATE rides SET ${updates.join(', ')} WHERE id = $${idx}
+     RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
+               requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, cancelled_by, vehicle_id`,
+    values
+  );
+  await addRideEvent(ride.id, req.session.userId, 'edited', changeNotes.trim(), initials.trim());
   res.json(mapRide(result.rows[0]));
 });
 

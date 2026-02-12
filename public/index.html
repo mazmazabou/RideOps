@@ -20,13 +20,13 @@
         <span class="nav-icon"><span class="material-symbols-outlined">groups</span></span><span class="nav-label">Staff &amp; Shifts</span>
       </button>
       <button class="nav-btn" data-target="rides-panel" title="Ride Requests">
-        <span class="nav-icon"><span class="material-symbols-outlined">directions_car</span></span><span class="nav-label">Ride Requests</span>
+        <span class="nav-icon"><span class="material-symbols-outlined">taxi_alert</span></span><span class="nav-label">Ride Requests</span>
       </button>
       <button class="nav-btn" data-target="driver-panel" title="Dispatch &amp; Monitoring">
         <span class="nav-icon"><span class="material-symbols-outlined">cell_tower</span></span><span class="nav-label">Dispatch &amp; Monitoring</span>
       </button>
       <button class="nav-btn" data-target="fleet-panel" title="Fleet">
-        <span class="nav-icon"><span class="material-symbols-outlined">local_shipping</span></span><span class="nav-label">Fleet</span>
+        <span class="nav-icon"><span class="material-symbols-outlined">traffic_jam</span></span><span class="nav-label">Fleet</span>
       </button>
       <button class="nav-btn" data-target="analytics-panel" title="Analytics">
         <span class="nav-icon"><span class="material-symbols-outlined">bar_chart</span></span><span class="nav-label">Analytics</span>
@@ -224,16 +224,16 @@
             <h3>Users</h3>
             <div class="small-text">Manage riders, drivers, and office accounts. You cannot delete your own office account.</div>
             <div class="table-responsive">
-              <table class="grid-table" id="admin-users-table">
+              <table class="admin-table" id="admin-users-table">
                 <thead>
                   <tr>
                     <th>Name</th>
                     <th>Username</th>
                     <th>Role</th>
-                    <th>USC Email</th>
                     <th>USC ID</th>
                     <th>Phone</th>
-                    <th>Actions</th>
+                    <th></th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -264,6 +264,17 @@
           </div>
         </div>
       </section>
+
+      <div id="admin-drawer-backdrop" class="admin-drawer-backdrop"></div>
+      <aside id="admin-drawer" class="admin-drawer">
+        <div class="admin-drawer-header">
+          <h3 id="admin-drawer-title">User Details</h3>
+          <button class="admin-drawer-close" id="admin-drawer-close">
+            <span class="material-symbols-outlined">cancel</span>
+          </button>
+        </div>
+        <div class="admin-drawer-body" id="admin-drawer-body"></div>
+      </aside>
 
       <section class="panel tab-panel" id="profile-panel">
         <h2>User Profile</h2>
@@ -330,10 +341,6 @@
           <div class="card">
             <h3 id="dart-wrapped-title">DART Wrapped</h3>
             <div id="dart-wrapped-content"></div>
-          </div>
-          <div class="card">
-            <h3>Budget Forecast</h3>
-            <p class="small-text">Budget forecasting features are coming soon. After meetings with transportation managers, this section will include cost-per-ride analysis, projected demand, and funding justification reports.</p>
           </div>
         </div>
       </section>
