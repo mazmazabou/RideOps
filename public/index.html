@@ -5,402 +5,350 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Operations Console</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="/css/rideops-theme.css">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="/demo-config.js"></script>
 </head>
-<body class="layout-fluid">
-  <div class="page">
-    <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark" style="background: var(--tblr-primary);">
-      <div class="container-fluid">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-controls="sidebar-menu" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
+<body>
+  <div class="shell">
+    <aside class="side-nav">
+      <div class="brand">
+        <div class="brand-title">USC DART Ops</div>
+        <div class="brand-sub">Dispatch + Driver</div>
+        <div class="brand-collapsed">DT</div>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">&laquo;</button>
+      </div>
+      <button class="nav-btn active" data-target="staff-panel" title="Staff &amp; Shifts">
+        <span class="nav-icon"><span class="material-symbols-outlined">groups</span></span><span class="nav-label">Staff &amp; Shifts</span>
+      </button>
+      <button class="nav-btn" data-target="rides-panel" title="Ride Requests">
+        <span class="nav-icon"><span class="material-symbols-outlined">taxi_alert</span></span><span class="nav-label">Ride Requests</span>
+      </button>
+      <button class="nav-btn" data-target="driver-panel" title="Dispatch &amp; Monitoring">
+        <span class="nav-icon"><span class="material-symbols-outlined">cell_tower</span></span><span class="nav-label">Dispatch &amp; Monitoring</span>
+      </button>
+      <button class="nav-btn" data-target="fleet-panel" title="Fleet">
+        <span class="nav-icon"><span class="material-symbols-outlined">traffic_jam</span></span><span class="nav-label">Fleet</span>
+      </button>
+      <button class="nav-btn" data-target="analytics-panel" title="Analytics">
+        <span class="nav-icon"><span class="material-symbols-outlined">bar_chart</span></span><span class="nav-label">Analytics</span>
+      </button>
+      <button class="nav-btn" data-target="admin-panel" title="Admin Settings">
+        <span class="nav-icon"><span class="material-symbols-outlined">settings</span></span><span class="nav-label">Admin Settings</span>
+      </button>
+      <div class="sidebar-footer">
+        <button class="sidebar-footer-user" onclick="showTab('profile-panel')" title="Profile">
+          <span class="footer-user-icon"><span class="material-symbols-outlined">person</span></span>
+          <span class="footer-user-name" id="sidebar-user-name">Office</span>
         </button>
-        <h1 class="navbar-brand navbar-brand-autodark">
-          <span class="brand-title" style="font-size:1.1rem;">RideOps</span>
-        </h1>
-        <div class="collapse navbar-collapse" id="sidebar-menu">
-          <ul class="navbar-nav pt-lg-3">
-            <li class="nav-item">
-              <a class="nav-link active" href="#" data-target="staff-panel" title="Staff &amp; Shifts">
-                <span class="nav-link-icon"><i class="ti ti-users"></i></span>
-                <span class="nav-link-title">Staff &amp; Shifts</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#" data-target="rides-panel" title="Ride Requests">
-                <span class="nav-link-icon"><i class="ti ti-car"></i></span>
-                <span class="nav-link-title">Ride Requests</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#" data-target="driver-panel" title="Dispatch &amp; Monitoring">
-                <span class="nav-link-icon"><i class="ti ti-broadcast"></i></span>
-                <span class="nav-link-title">Dispatch &amp; Monitoring</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#" data-target="fleet-panel" title="Fleet">
-                <span class="nav-link-icon"><i class="ti ti-car-garage"></i></span>
-                <span class="nav-link-title">Fleet</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#" data-target="analytics-panel" title="Analytics">
-                <span class="nav-link-icon"><i class="ti ti-chart-bar"></i></span>
-                <span class="nav-link-title">Analytics</span>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#" data-target="admin-panel" title="Admin Settings">
-                <span class="nav-link-icon"><i class="ti ti-settings"></i></span>
-                <span class="nav-link-title">Admin Settings</span>
-              </a>
-            </li>
-          </ul>
-          <div class="mt-auto pt-3 border-top border-white border-opacity-25">
-            <div class="d-flex align-items-center gap-2 px-2 pb-2">
-              <a href="#" class="d-flex align-items-center gap-2 text-white text-decoration-none" onclick="showTab('profile-panel'); return false;" title="Profile">
-                <i class="ti ti-user"></i>
-                <span id="sidebar-user-name">Office</span>
-              </a>
-              <a href="#" class="ms-auto text-white opacity-75" onclick="showRulesModal(); return false;" title="Program Rules"><i class="ti ti-file-text"></i></a>
-              <a href="#" class="text-white opacity-75" onclick="logout(); return false;" title="Logout"><i class="ti ti-logout"></i></a>
-            </div>
-          </div>
-        </div>
+        <button class="sidebar-footer-btn" onclick="showRulesModal()" title="Program Rules"><span class="material-symbols-outlined">description</span></button>
+        <button class="sidebar-footer-btn" onclick="logout()" title="Logout"><span class="material-symbols-outlined">logout</span></button>
       </div>
     </aside>
 
-    <div class="page-wrapper">
-      <div class="page-header d-print-none">
-        <div class="container-xl">
-          <div class="page-pretitle" id="header-subtitle">Dispatch + Driver tools for Campus Transportation</div>
-          <h2 class="page-title" id="header-title">Operations Console</h2>
+    <main class="content-area">
+      <header class="header">
+        <div>
+          <h1 id="header-title">USC DART Operations Console</h1>
+          <p id="header-subtitle">Dispatch + Driver tools for Disabled Access To Road Transportation</p>
         </div>
-      </div>
+      </header>
 
-      <div class="page-body">
-        <div class="container-xl">
-
-          <!-- ========== Staff & Shifts Panel ========== -->
-          <section class="tab-panel active" id="staff-panel">
-            <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Staff &amp; Shifts</h3></div>
-            </div>
-            <!-- Employee bar -->
-            <div class="card mb-3"><div class="card-body"><div id="employee-bar" class="employee-bar"></div></div></div>
-            <!-- FullCalendar -->
-            <div class="card mb-3"><div class="card-body">
-              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                <div class="d-flex align-items-center gap-2">
-                  <label class="form-label m-0">Filter:</label>
-                  <select id="shift-filter-employee" class="form-select form-select-sm" style="width:200px;">
-                    <option value="all">All Drivers</option>
-                  </select>
-                </div>
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="shift-show-rides" checked>
-                  <label class="form-check-label" for="shift-show-rides">Show rides</label>
-                </div>
-              </div>
-              <div id="shift-calendar"></div>
-            </div></div>
-          </section>
-
-          <!-- ========== Ride Requests Panel ========== -->
-          <section class="tab-panel" id="rides-panel">
-            <div class="card mb-3">
-              <div class="card-header">
-                <h3 class="card-title">Ride Requests</h3>
-                <div class="card-actions">
-                  <ul class="nav nav-tabs card-header-tabs">
-                    <li class="nav-item"><a class="nav-link active" href="#" data-subtarget="rides-active-view">Active Rides</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#" data-subtarget="rides-calendar-view">Calendar</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#" data-subtarget="rides-history-view">History</a></li>
-                  </ul>
-                </div>
+      <section class="panel tab-panel active" id="staff-panel">
+        <h2>Staff &amp; Shifts</h2>
+        <div class="sub-tabs">
+          <button class="sub-tab active" data-subtarget="staff-schedule-view">Schedule</button>
+          <button class="sub-tab" data-subtarget="staff-shifts-view">Edit Shifts</button>
+        </div>
+        <div class="sub-panel" id="staff-schedule-view">
+          <div class="card"><div id="employee-bar" class="employee-bar"></div></div>
+          <div class="card">
+            <div class="card-header-row">
+              <h3>Schedule View</h3>
+              <div class="schedule-toggle">
+                <button class="btn toggle-btn active" data-schedule-mode="weekly" onclick="setScheduleMode('weekly')">Weekly</button>
+                <button class="btn toggle-btn" data-schedule-mode="daily" onclick="setScheduleMode('daily')">Daily</button>
               </div>
             </div>
-            <div class="sub-panel" id="rides-active-view">
-              <div class="rides-filter-bar">
-                <input type="text" class="form-control" id="ride-filter-input" placeholder="Search rides by name, location, or status...">
-                <span class="ride-filter-count" id="ride-filter-count"></span>
+            <div class="schedule-nav">
+              <div class="nav-left">
+                <button class="btn" onclick="changeScheduleWeek(-1)">&laquo; Prev Week</button>
+                <button class="btn" onclick="changeScheduleDay(-1)">&lt; Prev Day</button>
               </div>
-              <div class="card mb-3" id="sample-rides-card" data-dev-only hidden aria-hidden="true">
-                <div class="card-body"><button id="load-sample-rides" class="btn btn-outline-secondary">Load Sample Rides (Dev)</button></div>
-              </div>
-              <div class="card mb-3" id="unassigned-list">
-                <div class="card-header"><h3 class="card-title">Unassigned Rides (Today)</h3></div>
-                <div class="card-body"><div class="list" id="unassigned-items"></div></div>
-              </div>
-              <div class="card mb-3" id="pending-list">
-                <div class="card-header"><h3 class="card-title">Pending Requests</h3></div>
-                <div class="card-body"><div class="list" id="pending-items"></div></div>
-              </div>
-              <div class="card mb-3" id="approved-list">
-                <div class="card-header"><h3 class="card-title">Approved / Scheduled</h3></div>
-                <div class="card-body"><div class="list" id="approved-items"></div></div>
+              <input type="date" id="schedule-date" onchange="onScheduleDateChange()">
+              <div class="nav-right">
+                <button class="btn" onclick="changeScheduleDay(1)">Next Day &gt;</button>
+                <button class="btn" onclick="changeScheduleWeek(1)">Next Week &raquo;</button>
               </div>
             </div>
-            <div class="sub-panel" id="rides-calendar-view" style="display:none;">
-              <div class="card">
-                <div class="card-body">
-                  <h3 class="card-title">Weekly Ride Schedule</h3>
-                  <p class="small-text">Color-coded ride grid (08:00-19:00, Mon-Fri).</p>
-                  <div class="schedule-nav">
-                    <div class="nav-left"><button class="btn btn-sm btn-outline-secondary" id="ride-week-prev" type="button">&laquo; Prev Week</button></div>
-                    <div class="small-text" id="ride-week-label"></div>
-                    <div class="nav-right"><button class="btn btn-sm btn-outline-secondary" id="ride-week-next" type="button">Next Week &raquo;</button></div>
-                  </div>
-                  <div id="ride-schedule-grid"></div>
-                </div>
-              </div>
+            <div id="day-schedule" class="day-schedule"></div>
+            <div class="schedule-legend">
+              <span class="legend-item"><span class="legend-color shift"></span> Driver on shift</span>
+              <span class="legend-item"><span class="legend-color ride"></span> Scheduled ride</span>
             </div>
-            <div class="sub-panel" id="rides-history-view" style="display:none;">
-              <div class="mb-3">
-                <input type="text" class="form-control" id="history-filter-input" placeholder="Filter history by name, location, or status...">
-              </div>
-              <div class="card" id="history-list">
-                <div class="card-header"><h3 class="card-title">Completed &amp; No-Show History</h3></div>
-                <div class="card-body"><div class="list" id="history-items"></div></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- ========== Dispatch & Monitoring Panel ========== -->
-          <section class="tab-panel" id="driver-panel">
-            <h2 class="page-title mb-3">Dispatch &amp; Monitoring</h2>
-            <div class="row row-deck row-cards mb-3">
-              <div class="col-sm-6 col-lg-3">
-                <div class="card card-sm"><div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <span class="bg-primary text-white avatar me-3"><i class="ti ti-steering-wheel"></i></span>
-                    <div><div class="text-secondary">Drivers Active</div><div class="h1 mb-0" id="dispatch-active-drivers">0</div></div>
-                  </div>
-                </div></div>
-              </div>
-              <div class="col-sm-6 col-lg-3">
-                <div class="card card-sm"><div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <span class="bg-info text-white avatar me-3"><i class="ti ti-car"></i></span>
-                    <div><div class="text-secondary">Active Rides</div><div class="h1 mb-0" id="dispatch-active-rides">0</div></div>
-                  </div>
-                </div></div>
-              </div>
-              <div class="col-sm-6 col-lg-3">
-                <div class="card card-sm"><div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <span class="bg-warning text-white avatar me-3"><i class="ti ti-clock"></i></span>
-                    <div><div class="text-secondary">Awaiting Assignment</div><div class="h1 mb-0" id="dispatch-pending-rides">0</div></div>
-                  </div>
-                </div></div>
-              </div>
-              <div class="col-sm-6 col-lg-3">
-                <div class="card card-sm"><div class="card-body">
-                  <div class="d-flex align-items-center">
-                    <span class="bg-success text-white avatar me-3"><i class="ti ti-circle-check"></i></span>
-                    <div><div class="text-secondary">Completed Today</div><div class="h1 mb-0" id="dispatch-completed-today">0</div></div>
-                  </div>
-                </div></div>
-              </div>
-            </div>
-            <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">Active Drivers</h3></div>
-              <div class="card-body"><div id="driver-dashboard" class="driver-dashboard"></div></div>
-            </div>
-            <div class="card mb-3" id="driver-detail" style="display:none;">
-              <div class="card-header">
-                <h3 class="card-title" id="driver-detail-title">Driver: &mdash;</h3>
-                <div class="card-actions"><button class="btn btn-outline-secondary btn-sm" id="admin-clock-toggle">Clock In</button></div>
-              </div>
-              <div class="card-body"><div class="list" id="driver-ride-list"></div></div>
-            </div>
-            <div class="card mb-3">
-              <div class="card-body">
-                <div class="toggle-header" onclick="toggleAllActiveRides(this)">
-                  <h3 class="card-title m-0">All Active Rides <span id="active-rides-count"></span></h3>
-                  <button class="toggle-btn-slim" type="button">&#9656;</button>
-                </div>
-                <div id="all-active-rides" style="display:none;">
-                  <div class="list" id="all-active-rides-list"></div>
-                </div>
-              </div>
-            </div>
-            <div class="card mb-3">
-              <div class="card-header"><h3 class="card-title">USC Campus Map</h3></div>
-              <div class="card-body">
-                <div class="map-wrapper office-map">
-                  <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
-                </div>
-                <div class="mt-2"><a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- ========== Admin Settings Panel ========== -->
-          <section class="tab-panel" id="admin-panel">
-            <div class="card mb-3">
-              <div class="card-header">
-                <h3 class="card-title">Admin Settings</h3>
-                <div class="card-actions">
-                  <ul class="nav nav-tabs card-header-tabs">
-                    <li class="nav-item"><a class="nav-link active" href="#" data-subtarget="admin-users-view">Users</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#" data-subtarget="admin-create-view">Create User</a></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div class="sub-panel" id="admin-users-view">
-              <div class="rides-filter-bar">
-                <input type="text" class="form-control" id="admin-user-filter" placeholder="Search by name, email, phone, USC ID, or role...">
-                <span class="ride-filter-count" id="admin-user-filter-count"></span>
-              </div>
-              <div class="card">
-                <div class="card-header">
-                  <h3 class="card-title">Users</h3>
-                  <p class="card-subtitle">Manage riders, drivers, and office accounts. You cannot delete your own office account.</p>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-vcenter card-table" id="admin-users-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>USC ID</th>
-                        <th>Phone</th>
-                        <th></th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            <div class="sub-panel" id="admin-create-view" style="display:none;">
-              <div class="card">
-                <div class="card-body">
-                  <h3 class="card-title">Create User</h3>
-                  <div id="admin-email-status" class="small-text mb-2"></div>
-                  <div class="form-grid">
-                    <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" id="admin-new-name" required></div>
-                    <div class="mb-3"><label class="form-label">USC Email</label><input type="email" class="form-control" id="admin-new-email" required></div>
-                    <div class="mb-3"><label class="form-label">Phone</label><input type="tel" class="form-control" id="admin-new-phone"></div>
-                    <div class="mb-3"><label class="form-label">USC ID (10 digits)</label><input type="text" class="form-control" id="admin-new-uscid" maxlength="10" required></div>
-                    <div class="mb-3"><label class="form-label">Role</label>
-                      <select class="form-select" id="admin-new-role">
-                        <option value="rider">rider</option>
-                        <option value="driver">driver</option>
-                        <option value="office">office</option>
-                      </select>
-                    </div>
-                    <div class="mb-3"><label class="form-label">Temp Password</label><input type="password" class="form-control" id="admin-new-password" required></div>
-                  </div>
-                  <button class="btn btn-primary" id="admin-create-btn" type="button">Create User</button>
-                  <div id="admin-create-message" class="small-text mt-2"></div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- ========== Admin Drawer (Offcanvas) ========== -->
-          <div class="offcanvas offcanvas-end" tabindex="-1" id="admin-drawer">
-            <div class="offcanvas-header">
-              <h3 class="offcanvas-title" id="admin-drawer-title">User Details</h3>
-              <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close" id="admin-drawer-close"></button>
-            </div>
-            <div class="offcanvas-body" id="admin-drawer-body"></div>
           </div>
-
-          <!-- ========== Profile Panel ========== -->
-          <section class="tab-panel" id="profile-panel">
-            <h2 class="page-title mb-3">User Profile</h2>
-            <div id="admin-profile-content" class="card"><div class="card-body"></div></div>
-          </section>
-
-          <!-- ========== Fleet Panel ========== -->
-          <section class="tab-panel" id="fleet-panel">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <h2 class="page-title m-0">Fleet Management</h2>
-              <button class="btn btn-primary" id="add-vehicle-btn" type="button"><i class="ti ti-plus"></i> Add Vehicle</button>
-            </div>
-            <div id="vehicles-grid" class="vehicles-grid"></div>
-          </section>
-
-          <!-- ========== Analytics Panel ========== -->
-          <section class="tab-panel" id="analytics-panel">
-            <div class="card mb-3">
-              <div class="card-header">
-                <h3 class="card-title">Analytics &amp; Reports</h3>
-                <div class="card-actions">
-                  <ul class="nav nav-tabs card-header-tabs">
-                    <li class="nav-item"><a class="nav-link active" href="#" data-subtarget="analytics-dashboard-view">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#" data-subtarget="analytics-hotspots-view">Hotspots</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#" data-subtarget="analytics-milestones-view">Milestones</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#" data-subtarget="analytics-reports-view">Reports</a></li>
-                  </ul>
-                </div>
+        </div>
+        <div class="sub-panel" id="staff-shifts-view" style="display:none;">
+          <div class="card">
+            <h3>Add/Edit Shifts</h3>
+            <p class="small-text">Click and drag on the grid to add shifts. Click existing shifts to remove.</p>
+            <label>Employee
+              <div class="flex-row">
+                <select id="shift-employee"></select>
+                <button class="btn secondary" id="shift-employee-profile" type="button">View Profile</button>
               </div>
-            </div>
+            </label>
+            <div id="shift-grid" class="shift-grid"></div>
+          </div>
+        </div>
+      </section>
 
-            <div class="sub-panel" id="analytics-dashboard-view">
-              <div class="card mb-3">
-                <div class="card-body">
-                  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <h3 class="card-title m-0">Overview</h3>
-                    <div class="analytics-date-range">
-                      <label class="inline-label">From <input type="date" class="form-control form-control-sm" id="analytics-from"></label>
-                      <label class="inline-label">To <input type="date" class="form-control form-control-sm" id="analytics-to"></label>
-                      <button class="btn btn-sm btn-outline-secondary" id="analytics-refresh-btn" type="button">Refresh</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="kpi-grid" id="analytics-kpi-grid"></div>
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Rides by Day of Week</h3><div id="chart-dow"></div></div></div>
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Rides by Hour</h3><div id="chart-hour"></div></div></div>
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Daily Volume (Recent)</h3><div id="chart-daily"></div></div></div>
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Status Breakdown</h3><div id="chart-status"></div></div></div>
-            </div>
-
-            <div class="sub-panel" id="analytics-hotspots-view" style="display:none;">
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Top Pickup Locations</h3><div id="hotspot-pickups"></div></div></div>
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Top Dropoff Locations</h3><div id="hotspot-dropoffs"></div></div></div>
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Most Popular Routes</h3><div id="hotspot-routes"></div></div></div>
-            </div>
-
-            <div class="sub-panel" id="analytics-milestones-view" style="display:none;">
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Driver Milestones</h3><div id="driver-milestones"></div></div></div>
-              <div class="card mb-3"><div class="card-body"><h3 class="card-title">Rider Milestones</h3><div id="rider-milestones"></div></div></div>
-            </div>
-
-            <div class="sub-panel" id="analytics-reports-view" style="display:none;">
-              <div class="card mb-3">
-                <div class="card-header">
-                  <h3 class="card-title">Semester Report</h3>
-                  <div class="card-actions"><button class="btn btn-sm btn-outline-secondary" id="export-csv-btn" type="button">Export CSV</button></div>
-                </div>
-                <div class="card-body"><div id="semester-report-content"></div></div>
-              </div>
-              <div class="card mb-3">
-                <div class="card-body">
-                  <h3 class="card-title" id="dart-wrapped-title">DART Wrapped</h3>
-                  <div id="dart-wrapped-content"></div>
-                </div>
-              </div>
-            </div>
-          </section>
-
+      <section class="panel tab-panel" id="rides-panel">
+      <h2>Ride Requests</h2>
+      <div class="sub-tabs">
+        <button class="sub-tab active" data-subtarget="rides-active-view">Active Rides</button>
+        <button class="sub-tab" data-subtarget="rides-calendar-view">Calendar</button>
+        <button class="sub-tab" data-subtarget="rides-history-view">History</button>
+      </div>
+      <div class="sub-panel" id="rides-active-view">
+        <div class="rides-filter-bar">
+          <input type="text" id="ride-filter-input" placeholder="Search rides by name, location, or status...">
+          <span class="ride-filter-count" id="ride-filter-count"></span>
+        </div>
+        <div class="card" id="sample-rides-card" data-dev-only hidden aria-hidden="true">
+          <button id="load-sample-rides" class="btn secondary">Load Sample Rides (Dev)</button>
+        </div>
+        <div class="card" id="unassigned-list">
+          <h3>Unassigned Rides (Today)</h3>
+          <div class="list" id="unassigned-items"></div>
+        </div>
+        <div class="card" id="pending-list">
+          <h3>Pending Requests</h3>
+          <div class="list" id="pending-items"></div>
+        </div>
+        <div class="card" id="approved-list">
+          <h3>Approved / Scheduled</h3>
+          <div class="list" id="approved-items"></div>
         </div>
       </div>
-    </div>
+      <div class="sub-panel" id="rides-calendar-view" style="display:none;">
+        <div class="card">
+          <h3>Weekly Ride Schedule</h3>
+          <p class="small-text">Color-coded ride grid (08:00–19:00, Mon–Fri).</p>
+          <div class="schedule-nav">
+            <div class="nav-left">
+              <button class="btn" id="ride-week-prev" type="button">&laquo; Prev Week</button>
+            </div>
+            <div class="small-text" id="ride-week-label"></div>
+            <div class="nav-right">
+              <button class="btn" id="ride-week-next" type="button">Next Week &raquo;</button>
+            </div>
+          </div>
+          <div id="ride-schedule-grid"></div>
+        </div>
+      </div>
+      <div class="sub-panel" id="rides-history-view" style="display:none;">
+        <div style="margin-bottom:12px;">
+          <input type="text" id="history-filter-input" placeholder="Filter history by name, location, or status..." style="width:100%;">
+        </div>
+        <div class="card" id="history-list">
+          <h3>Completed &amp; No-Show History</h3>
+          <div class="list" id="history-items"></div>
+        </div>
+      </div>
+      </section>
+
+      <section class="panel tab-panel" id="driver-panel">
+        <h2>Dispatch &amp; Monitoring</h2>
+        <div class="dispatch-summary-card">
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-active-drivers">0</span>
+            <span class="stat-label">Drivers Active</span>
+          </div>
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-active-rides">0</span>
+            <span class="stat-label">Active Rides</span>
+          </div>
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-pending-rides">0</span>
+            <span class="stat-label">Awaiting Assignment</span>
+          </div>
+          <div class="summary-stat">
+            <span class="stat-number" id="dispatch-completed-today">0</span>
+            <span class="stat-label">Completed Today</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Active Drivers</h3>
+          <div id="driver-dashboard" class="driver-dashboard"></div>
+        </div>
+        <div class="card" id="driver-detail" style="display:none;">
+          <div class="card-header-row">
+            <h3 id="driver-detail-title">Driver: —</h3>
+            <div>
+              <button class="btn secondary" id="admin-clock-toggle">Clock In</button>
+            </div>
+          </div>
+          <div class="list" id="driver-ride-list"></div>
+        </div>
+        <div class="card">
+          <div class="toggle-header" onclick="toggleAllActiveRides(this)">
+            <h3>All Active Rides <span id="active-rides-count"></span></h3>
+            <button class="toggle-btn-slim" type="button">▸</button>
+          </div>
+          <div id="all-active-rides" style="display:none;">
+            <div class="list" id="all-active-rides-list"></div>
+          </div>
+        </div>
+        <div class="card">
+        <h3>USC Campus Map</h3>
+        <div class="map-wrapper office-map">
+          <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
+        </div>
+        <div class="map-actions">
+          <a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a>
+        </div>
+      </div>
+    </section>
+
+      <section class="panel tab-panel" id="admin-panel">
+        <h2>Admin Settings</h2>
+        <div class="sub-tabs">
+          <button class="sub-tab active" data-subtarget="admin-users-view">Users</button>
+          <button class="sub-tab" data-subtarget="admin-create-view">Create User</button>
+        </div>
+        <div class="sub-panel" id="admin-users-view">
+          <div class="rides-filter-bar">
+            <input type="text" id="admin-user-filter" placeholder="Search by name, email, phone, USC ID, or role...">
+            <span class="ride-filter-count" id="admin-user-filter-count"></span>
+          </div>
+          <div class="card">
+            <h3>Users</h3>
+            <div class="small-text">Manage riders, drivers, and office accounts. You cannot delete your own office account.</div>
+            <div class="table-responsive">
+              <table class="admin-table" id="admin-users-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>USC ID</th>
+                    <th>Phone</th>
+                    <th></th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="sub-panel" id="admin-create-view" style="display:none;">
+          <div class="card">
+            <h3>Create User</h3>
+            <div id="admin-email-status" class="small-text" style="margin-bottom:8px;"></div>
+            <div class="form-grid">
+              <label>Name<input type="text" id="admin-new-name" required></label>
+              <label>USC Email<input type="email" id="admin-new-email" required></label>
+              <label>Phone<input type="tel" id="admin-new-phone"></label>
+              <label>USC ID (10 digits)<input type="text" id="admin-new-uscid" maxlength="10" required></label>
+              <label>Role
+                <select id="admin-new-role">
+                  <option value="rider">rider</option>
+                  <option value="driver">driver</option>
+                  <option value="office">office</option>
+                </select>
+              </label>
+              <label>Temp Password<input type="password" id="admin-new-password" required></label>
+            </div>
+            <button class="btn primary" id="admin-create-btn" type="button">Create User</button>
+            <div id="admin-create-message" class="small-text"></div>
+          </div>
+        </div>
+      </section>
+
+      <div id="admin-drawer-backdrop" class="admin-drawer-backdrop"></div>
+      <aside id="admin-drawer" class="admin-drawer">
+        <div class="admin-drawer-header">
+          <h3 id="admin-drawer-title">User Details</h3>
+          <button class="admin-drawer-close" id="admin-drawer-close">
+            <span class="material-symbols-outlined">cancel</span>
+          </button>
+        </div>
+        <div class="admin-drawer-body" id="admin-drawer-body"></div>
+      </aside>
+
+      <section class="panel tab-panel" id="profile-panel">
+        <h2>User Profile</h2>
+        <div id="admin-profile-content" class="card"></div>
+      </section>
+
+      <section class="panel tab-panel" id="fleet-panel">
+        <h2>Fleet Management</h2>
+        <div class="card">
+          <div class="card-header-row">
+            <h3>Vehicles</h3>
+            <button class="btn primary small" id="add-vehicle-btn" type="button">Add Vehicle</button>
+          </div>
+        </div>
+        <div id="vehicles-grid" class="vehicles-grid"></div>
+      </section>
+
+      <section class="panel tab-panel" id="analytics-panel">
+        <h2>Analytics &amp; Reports</h2>
+        <div class="sub-tabs">
+          <button class="sub-tab active" data-subtarget="analytics-dashboard-view">Dashboard</button>
+          <button class="sub-tab" data-subtarget="analytics-hotspots-view">Hotspots</button>
+          <button class="sub-tab" data-subtarget="analytics-milestones-view">Milestones</button>
+          <button class="sub-tab" data-subtarget="analytics-reports-view">Reports</button>
+        </div>
+
+        <div class="sub-panel" id="analytics-dashboard-view">
+          <div class="card">
+            <div class="card-header-row">
+              <h3>Overview</h3>
+              <div class="analytics-date-range">
+                <label class="inline-label">From <input type="date" id="analytics-from"></label>
+                <label class="inline-label">To <input type="date" id="analytics-to"></label>
+                <button class="btn secondary small" id="analytics-refresh-btn" type="button">Refresh</button>
+              </div>
+            </div>
+          </div>
+          <div class="kpi-grid" id="analytics-kpi-grid"></div>
+          <div class="card"><h3>Rides by Day of Week</h3><div id="chart-dow"></div></div>
+          <div class="card"><h3>Rides by Hour</h3><div id="chart-hour"></div></div>
+          <div class="card"><h3>Daily Volume (Recent)</h3><div id="chart-daily"></div></div>
+          <div class="card"><h3>Status Breakdown</h3><div id="chart-status"></div></div>
+        </div>
+
+        <div class="sub-panel" id="analytics-hotspots-view" style="display:none;">
+          <div class="card"><h3>Top Pickup Locations</h3><div id="hotspot-pickups"></div></div>
+          <div class="card"><h3>Top Dropoff Locations</h3><div id="hotspot-dropoffs"></div></div>
+          <div class="card"><h3>Most Popular Routes</h3><div id="hotspot-routes"></div></div>
+        </div>
+
+        <div class="sub-panel" id="analytics-milestones-view" style="display:none;">
+          <div class="card"><h3>Driver Milestones</h3><div id="driver-milestones"></div></div>
+          <div class="card"><h3>Rider Milestones</h3><div id="rider-milestones"></div></div>
+        </div>
+
+        <div class="sub-panel" id="analytics-reports-view" style="display:none;">
+          <div class="card">
+            <div class="card-header-row">
+              <h3>Semester Report</h3>
+              <button class="btn secondary small" id="export-csv-btn" type="button">Export CSV</button>
+            </div>
+            <div id="semester-report-content"></div>
+          </div>
+          <div class="card">
+            <h3 id="dart-wrapped-title">DART Wrapped</h3>
+            <div id="dart-wrapped-content"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
-  <script src="/js/rideops-utils.js"></script>
-  <script src="/demo-config.js"></script>
+  <script src="/utils.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

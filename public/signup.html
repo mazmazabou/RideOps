@@ -5,65 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Create Account</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="/css/rideops-theme.css">
-</head>
-<body class="d-flex flex-column">
-  <div class="page page-center">
-    <div class="container container-tight py-4">
-      <div class="text-center mb-4">
-        <h2 class="m-0" style="color: var(--tblr-primary);">Create Rider Account</h2>
-        <p class="text-secondary mt-1">After signup, you'll land on the rider console.</p>
-      </div>
-      <div class="card card-md">
-        <div class="card-body">
-          <div id="error" class="alert alert-danger" style="display:none;"></div>
-          <div id="success" class="alert alert-success" style="display:none;"></div>
-          <form id="signup-form" autocomplete="off">
-            <div class="mb-3">
-              <label class="form-label" for="name">Full name</label>
-              <input type="text" class="form-control" id="name" required placeholder="e.g. Alex Trojan">
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="email">Email</label>
-              <input type="email" class="form-control" id="email" required placeholder="you@example.com">
-            </div>
-            <div class="text-secondary small mb-3" id="username-note">Username will be set to the part before @ in your email.</div>
-            <div class="row mb-3">
-              <div class="col">
-                <label class="form-label" for="phone">Phone (optional)</label>
-                <input type="tel" class="form-control" id="phone" placeholder="213-555-0123">
-              </div>
-              <div class="col">
-                <label class="form-label" for="uscid">USC ID (10 digits)</label>
-                <input type="text" class="form-control" id="uscid" placeholder="1234567890" maxlength="10">
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="password">Password</label>
-              <input type="password" class="form-control" id="password" required placeholder="At least 6 characters">
-            </div>
-            <div class="row">
-              <div class="col">
-                <button type="submit" class="btn btn-primary w-100">Sign Up</button>
-              </div>
-              <div class="col">
-                <a href="/login" class="btn btn-outline-secondary w-100">Back to Login</a>
-              </div>
-            </div>
-          </form>
-          <div id="disabled-message" class="alert alert-danger mt-3" style="display:none;"></div>
-        </div>
-      </div>
-      <div class="text-center mt-3">
-        <a href="/login" class="text-primary fw-bold text-decoration-none">Already have an account? Log in</a>
-      </div>
-    </div>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
-  <script src="/js/rideops-utils.js"></script>
+  <link rel="stylesheet" href="styles.css">
   <script src="/demo-config.js"></script>
+  <style>
+    body { background: radial-gradient(circle at 18% 18%, rgba(245,195,75,0.08), transparent 32%), #f9f6f2; margin: 0; }
+    .signup-container { max-width: 480px; margin: 32px auto; padding: 0 16px 32px; }
+    .signup-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 20px; }
+    h1 { margin: 0 0 12px; color: var(--cardinal); text-align: center; }
+    .hint { font-size: 0.9rem; color: var(--muted); text-align: center; margin-bottom: 16px; }
+    .error { display: none; background: #ffe6e6; color: #990000; border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+    .error.show { display: block; }
+    .success { display: none; background: #e8f7e8; color: #155724; border-radius: 8px; padding: 10px; margin-bottom: 12px; }
+    .success.show { display: block; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .form-row > div { flex: 1; min-width: 200px; }
+    .actions { margin-top: 12px; display: flex; gap: 8px; }
+    .actions .btn { flex: 1; }
+    .top-link { text-align: center; margin-top: 12px; }
+    .top-link a { color: var(--cardinal); font-weight: 700; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="signup-container">
+    <div class="signup-card">
+      <h1>Create Rider Account</h1>
+      <div class="hint">After signup, you'll land on the rider console.</div>
+      <div id="error" class="error"></div>
+      <div id="success" class="success"></div>
+      <form id="signup-form">
+        <label>Full name
+          <input type="text" id="name" required placeholder="e.g. Alex Trojan">
+        </label>
+        <label>Email
+          <input type="email" id="email" required placeholder="you@example.com">
+        </label>
+        <div class="note" id="username-note">Username will be set to the part before @ in your email.</div>
+        <div class="form-row">
+          <div>
+            <label>Phone (optional)
+              <input type="tel" id="phone" placeholder="213-555-0123">
+            </label>
+          </div>
+          <div>
+            <label>USC ID (10 digits)
+              <input type="text" id="uscid" placeholder="1234567890" maxlength="10">
+            </label>
+          </div>
+        </div>
+        <label>Password
+          <input type="password" id="password" required placeholder="At least 6 characters">
+        </label>
+        <div class="actions">
+          <button type="submit" class="btn primary">Sign Up</button>
+          <a href="/login" class="btn secondary" style="text-align:center; text-decoration:none;">Back to Login</a>
+        </div>
+      </form>
+      <div id="disabled-message" class="error"></div>
+    </div>
+    <div class="top-link"><a href="/login">Already have an account? Log in</a></div>
+  </div>
   <script>
     const emailInput = document.getElementById('email');
     const usernameNote = document.getElementById('username-note');
@@ -94,14 +94,14 @@
       const errorEl = document.getElementById('error');
       const successEl = document.getElementById('success');
       const disabledEl = document.getElementById('disabled-message');
-      errorEl.style.display = 'none';
-      successEl.style.display = 'none';
-      disabledEl.style.display = 'none';
+      errorEl.classList.remove('show');
+      successEl.classList.remove('show');
+      disabledEl.classList.remove('show');
 
       const allowed = await checkAllowed();
       if (!allowed) {
         disabledEl.textContent = 'Signup is currently disabled. Please contact the office.';
-        disabledEl.style.display = 'block';
+        disabledEl.classList.add('show');
         return;
       }
 
@@ -113,7 +113,7 @@
 
       if (!/^[0-9]{10}$/.test(uscid)) {
         errorEl.textContent = 'USC ID must be 10 digits.';
-        errorEl.style.display = 'block';
+        errorEl.classList.add('show');
         return;
       }
 
@@ -126,15 +126,15 @@
         const data = await res.json();
         if (!res.ok) {
           errorEl.textContent = data.error || 'Signup failed';
-          errorEl.style.display = 'block';
+          errorEl.classList.add('show');
           return;
         }
         successEl.textContent = 'Account created! Redirecting...';
-        successEl.style.display = 'block';
+        successEl.classList.add('show');
         setTimeout(() => { window.location.href = '/rider'; }, 600);
       } catch {
         errorEl.textContent = 'Network error. Please try again.';
-        errorEl.style.display = 'block';
+        errorEl.classList.add('show');
       }
     });
   </script>

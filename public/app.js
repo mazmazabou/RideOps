@@ -7,9 +7,9 @@ function showLoader(containerId, message = 'Loading...') {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = `
-    <div class="d-flex flex-column align-items-center justify-content-center py-4">
-      <div class="spinner-border text-primary mb-2" role="status"></div>
-      <p class="text-secondary">${message}</p>
+    <div class="loader">
+      <div class="loader-spinner"></div>
+      <p class="loader-text">${message}</p>
     </div>
   `;
 }
@@ -36,15 +36,15 @@ function statusLabel(status) {
 }
 
 const STATUS_ICONS = {
-  pending: 'clock', approved: 'circle-check', scheduled: 'calendar',
-  driver_on_the_way: 'car', driver_arrived_grace: 'map-pin',
-  completed: 'circle-check', no_show: 'alert-triangle', denied: 'ban', cancelled: 'x'
+  pending: 'schedule', approved: 'check_circle', scheduled: 'calendar_today',
+  driver_on_the_way: 'directions_car', driver_arrived_grace: 'person_pin_circle',
+  completed: 'check_circle', no_show: 'warning', denied: 'block', cancelled: 'cancel'
 };
 
 function statusTag(status) {
   const icon = STATUS_ICONS[status];
-  const iconHtml = icon ? `<i class="ti ti-${icon}"></i> ` : '';
-  return `<span class="badge badge-${status}">${iconHtml}${statusLabel(status)}</span>`;
+  const iconHtml = icon ? `<span class="material-symbols-outlined">${icon}</span>` : '';
+  return `<span class="status-tag ${status}">${iconHtml}${statusLabel(status)}</span>`;
 }
 
 // Debounce helper for search inputs
@@ -66,6 +66,7 @@ let shifts = [];
 let rides = [];
 let vehicles = [];
 let selectedDriverId = null;
+let scheduleMode = 'weekly';
 let adminUsers = [];
 let filteredAdminUsers = [];
 let selectedAdminUser = null;
@@ -84,13 +85,14 @@ async function loadTenantConfig() {
   document.title = tenantConfig.orgName + ' Operations Console';
   const brandTitle = document.querySelector('.brand-title');
   if (brandTitle) brandTitle.textContent = tenantConfig.orgShortName + ' Ops';
+  const brandCollapsed = document.querySelector('.brand-collapsed');
+  if (brandCollapsed) brandCollapsed.textContent = tenantConfig.orgInitials;
   const headerTitle = document.getElementById('header-title');
   if (headerTitle) headerTitle.textContent = tenantConfig.orgName + ' Operations Console';
   const headerSub = document.getElementById('header-subtitle');
   if (headerSub) headerSub.textContent = 'Dispatch + Driver tools for ' + tenantConfig.orgTagline;
   const wrappedTitle = document.getElementById('dart-wrapped-title');
   if (wrappedTitle) wrappedTitle.textContent = tenantConfig.orgShortName + ' Wrapped';
-  if (typeof window.loadTenantTheme === 'function') window.loadTenantTheme();
 }
 
 // ----- Auth -----
@@ -115,7 +117,7 @@ async function loadEmployees() {
     if (res.ok) employees = await res.json();
   } catch (e) { console.error('Failed to load employees', e); }
   renderEmployees();
-  populateShiftFilterSelect();
+  populateEmployeeSelects();
 }
 
 async function loadShifts() {
@@ -123,7 +125,7 @@ async function loadShifts() {
     const res = await fetch('/api/shifts');
     if (res.ok) shifts = await res.json();
   } catch (e) { console.error('Failed to load shifts', e); }
-  refreshShiftCalendar();
+  renderScheduleGrid();
 }
 
 async function loadRides() {
@@ -134,7 +136,6 @@ async function loadRides() {
   renderRideLists();
   renderRideScheduleGrid();
   renderDriverConsole();
-  refreshShiftCalendar();
 }
 
 async function loadVehicles() {
@@ -198,11 +199,11 @@ function renderAdminUsers(users) {
         <div class="admin-name-secondary">${u.email || ''}</div>
       </td>
       <td>${u.username || ''}</td>
-      <td><span class="badge">${u.role}</span></td>
+      <td><span class="role-badge role-${u.role}">${u.role}</span></td>
       <td>${u.usc_id || ''}</td>
       <td>${u.phone || ''}</td>
       <td></td>
-      <td><i class="ti ti-chevron-right text-secondary"></i></td>
+      <td><span class="material-symbols-outlined admin-chevron">chevron_right</span></td>
     `;
     // Insert kebab menu into the 6th cell
     const kebabCell = tr.querySelectorAll('td')[5];
@@ -219,27 +220,27 @@ function buildAdminKebabMenu(user) {
 
   const btn = document.createElement('button');
   btn.className = 'kebab-btn';
-  btn.innerHTML = '<i class="ti ti-dots-vertical" style="font-size:20px;"></i>';
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">more_vert</span>';
 
   const dropdown = document.createElement('div');
   dropdown.className = 'kebab-dropdown';
 
   const editBtn = document.createElement('button');
   editBtn.className = 'edit-option';
-  editBtn.innerHTML = '<i class="ti ti-edit" style="font-size:16px;"></i> Edit';
+  editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">edit</span> Edit';
   editBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); openAdminDrawer(user.id, 'edit'); };
   dropdown.appendChild(editBtn);
 
   const resetBtn = document.createElement('button');
   resetBtn.className = 'edit-option';
-  resetBtn.innerHTML = '<i class="ti ti-lock" style="font-size:16px;"></i> Reset Password';
+  resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">lock_reset</span> Reset Password';
   resetBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); openAdminDrawer(user.id, 'password'); };
   dropdown.appendChild(resetBtn);
 
   if (user.id !== currentUser.id) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-option';
-    deleteBtn.innerHTML = '<i class="ti ti-trash" style="font-size:16px;"></i> Delete';
+    deleteBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete';
     deleteBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); deleteUser(user.id); };
     dropdown.appendChild(deleteBtn);
   }
@@ -267,11 +268,13 @@ function buildAdminKebabMenu(user) {
 async function openAdminDrawer(userId, scrollTo) {
   drawerUserId = userId;
   const drawer = document.getElementById('admin-drawer');
+  const backdrop = document.getElementById('admin-drawer-backdrop');
   const body = document.getElementById('admin-drawer-body');
   const title = document.getElementById('admin-drawer-title');
 
-  bootstrap.Offcanvas.getOrCreateInstance(drawer).show();
-  body.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center py-4"><div class="spinner-border text-primary mb-2" role="status"></div><p class="text-secondary">Loading...</p></div>';
+  drawer.classList.add('open');
+  backdrop.classList.add('open');
+  body.innerHTML = '<div class="loader"><div class="loader-spinner"></div><p class="loader-text">Loading...</p></div>';
   title.textContent = 'User Details';
 
   try {
@@ -291,7 +294,7 @@ async function openAdminDrawer(userId, scrollTo) {
       <div class="drawer-avatar">${initial}</div>
       <div>
         <div style="font-weight:700; font-size:16px;">${user.name || ''}</div>
-        <div style="margin-top:2px;"><span class="badge">${user.role}</span></div>
+        <div style="margin-top:2px;"><span class="role-badge role-${user.role}">${user.role}</span></div>
         <div class="admin-name-secondary" style="margin-top:4px;">@${user.username || ''}</div>
       </div>
     </div>`;
@@ -304,7 +307,7 @@ async function openAdminDrawer(userId, scrollTo) {
         <div class="drawer-noshows-count">${missCount}</div>
         <div class="drawer-noshows-label">consecutive no-show${missCount !== 1 ? 's' : ''}</div>
         ${missCount >= 5 ? '<div class="small-text" style="font-weight:700; color:#c62828;">SERVICE TERMINATED</div>' : ''}
-        ${missCount > 0 ? '<button class="btn btn-outline-secondary btn-sm" id="drawer-reset-miss-count" style="margin-left:auto;">Reset</button>' : ''}
+        ${missCount > 0 ? '<button class="btn secondary small" id="drawer-reset-miss-count" style="margin-left:auto;">Reset</button>' : ''}
       </div>`;
     }
 
@@ -315,7 +318,7 @@ async function openAdminDrawer(userId, scrollTo) {
       <div class="drawer-field"><div class="drawer-field-label">USC ID</div><div class="drawer-field-value">${user.usc_id || '—'}</div></div>
       <div class="drawer-field"><div class="drawer-field-label">Phone</div><div class="drawer-field-value">${user.phone || '—'}</div></div>
       ${user.role === 'driver' ? `<div class="drawer-field"><div class="drawer-field-label">Status</div><div class="drawer-field-value">${user.active ? '<span style="color:#28a745; font-weight:700;">Clocked In</span>' : '<span style="color:#dc3545;">Clocked Out</span>'}</div></div>` : ''}
-      <button class="btn btn-outline-secondary btn-sm" id="drawer-edit-toggle" style="margin-top:4px;">Edit</button>
+      <button class="btn secondary small" id="drawer-edit-toggle" style="margin-top:4px;">Edit</button>
     </div>`;
 
     // Edit section (hidden)
@@ -334,8 +337,8 @@ async function openAdminDrawer(userId, scrollTo) {
       </label>
       <div id="drawer-edit-message" class="small-text" style="margin-top:8px;"></div>
       <div class="flex-row" style="gap:8px; margin-top:12px;">
-        <button class="btn btn-primary" id="drawer-edit-save">Save</button>
-        <button class="btn btn-outline-secondary" id="drawer-edit-cancel">Cancel</button>
+        <button class="btn primary" id="drawer-edit-save">Save</button>
+        <button class="btn secondary" id="drawer-edit-cancel">Cancel</button>
       </div>
     </div>`;
 
@@ -365,10 +368,10 @@ async function openAdminDrawer(userId, scrollTo) {
         <div class="small-text" style="font-weight:700;">Temporary password (email not configured):</div>
         <div class="flex-row" style="gap:8px; margin-top:4px;">
           <code id="drawer-pw-display" style="background:#f5f5f5; padding:4px 8px; border-radius:4px; font-size:14px;"></code>
-          <button class="btn btn-outline-secondary btn-sm" id="drawer-pw-copy">Copy</button>
+          <button class="btn secondary small" id="drawer-pw-copy">Copy</button>
         </div>
       </div>
-      <button class="btn btn-primary btn-sm" id="drawer-pw-reset" style="margin-top:8px;">Reset Password</button>
+      <button class="btn primary small" id="drawer-pw-reset" style="margin-top:8px;">Reset Password</button>
     </div>`;
 
     // Danger zone
@@ -377,7 +380,7 @@ async function openAdminDrawer(userId, scrollTo) {
         <div class="drawer-danger-zone">
           <div class="drawer-section-title" style="color:#c62828;">Danger Zone</div>
           <p class="small-text" style="margin:0 0 12px 0;">Permanently delete this user and all associated data.</p>
-          <button class="btn btn-danger btn-sm" id="drawer-delete-btn">Delete User</button>
+          <button class="btn danger small" id="drawer-delete-btn">Delete User</button>
         </div>
       </div>`;
     }
@@ -498,56 +501,57 @@ async function openAdminDrawer(userId, scrollTo) {
 
 function closeAdminDrawer() {
   const drawer = document.getElementById('admin-drawer');
-  const offcanvas = bootstrap.Offcanvas.getInstance(drawer);
-  if (offcanvas) offcanvas.hide();
+  const backdrop = document.getElementById('admin-drawer-backdrop');
+  drawer.classList.remove('open');
+  backdrop.classList.remove('open');
+  setTimeout(() => {
+    const body = document.getElementById('admin-drawer-body');
+    if (body && !drawer.classList.contains('open')) body.innerHTML = '';
+  }, 300);
   drawerUserId = null;
 }
 
 function showEditUserModal(user) {
-  const modalEl = document.createElement('div');
-  modalEl.className = 'modal modal-blur fade';
-  modalEl.tabIndex = -1;
-  modalEl.innerHTML = `
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Edit User: ${user.name || user.username}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" id="edit-user-name" value="${user.name || ''}"></div>
-          <div class="mb-3"><label class="form-label">USC Email</label><input type="email" class="form-control" id="edit-user-email" value="${user.email || ''}"></div>
-          <div class="mb-3"><label class="form-label">Phone</label><input type="tel" class="form-control" id="edit-user-phone" value="${user.phone || ''}"></div>
-          <div class="mb-3"><label class="form-label">USC ID</label><input type="text" class="form-control" id="edit-user-uscid" value="${user.usc_id || ''}" maxlength="10"></div>
-          <div class="mb-3"><label class="form-label">Role</label>
-            <select class="form-select" id="edit-user-role">
-              <option value="rider" ${user.role === 'rider' ? 'selected' : ''}>rider</option>
-              <option value="driver" ${user.role === 'driver' ? 'selected' : ''}>driver</option>
-              <option value="office" ${user.role === 'office' ? 'selected' : ''}>office</option>
-            </select>
-          </div>
-          <div id="edit-user-message" class="small-text"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="edit-user-save">Save</button>
-        </div>
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay show';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3>Edit User: ${user.name || user.username}</h3>
+      <label>Name<input type="text" id="edit-user-name" value="${user.name || ''}"></label>
+      <label>USC Email<input type="email" id="edit-user-email" value="${user.email || ''}"></label>
+      <label>Phone<input type="tel" id="edit-user-phone" value="${user.phone || ''}"></label>
+      <label>USC ID<input type="text" id="edit-user-uscid" value="${user.usc_id || ''}" maxlength="10"></label>
+      <label>Role
+        <select id="edit-user-role">
+          <option value="rider" ${user.role === 'rider' ? 'selected' : ''}>rider</option>
+          <option value="driver" ${user.role === 'driver' ? 'selected' : ''}>driver</option>
+          <option value="office" ${user.role === 'office' ? 'selected' : ''}>office</option>
+        </select>
+      </label>
+      <div id="edit-user-message" class="small-text" style="margin-top:8px;"></div>
+      <div class="flex-row" style="gap:8px; margin-top:12px;">
+        <button class="btn primary" id="edit-user-save">Save</button>
+        <button class="btn secondary" id="edit-user-cancel">Cancel</button>
       </div>
     </div>
   `;
-  document.body.appendChild(modalEl);
-  const modal = new bootstrap.Modal(modalEl);
-  modal.show();
-  modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
-  modalEl.querySelector('#edit-user-save').onclick = async () => {
-    const msg = modalEl.querySelector('#edit-user-message');
+  document.body.appendChild(overlay);
+  const close = () => {
+    overlay.classList.remove('show');
+    overlay.classList.add('hiding');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  overlay.querySelector('#edit-user-cancel').onclick = close;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('#edit-user-save').onclick = async () => {
+    const msg = overlay.querySelector('#edit-user-message');
     msg.textContent = '';
     const body = {
-      name: modalEl.querySelector('#edit-user-name').value.trim(),
-      email: modalEl.querySelector('#edit-user-email').value.trim(),
-      phone: modalEl.querySelector('#edit-user-phone').value.trim(),
-      uscId: modalEl.querySelector('#edit-user-uscid').value.trim(),
-      role: modalEl.querySelector('#edit-user-role').value
+      name: overlay.querySelector('#edit-user-name').value.trim(),
+      email: overlay.querySelector('#edit-user-email').value.trim(),
+      phone: overlay.querySelector('#edit-user-phone').value.trim(),
+      uscId: overlay.querySelector('#edit-user-uscid').value.trim(),
+      role: overlay.querySelector('#edit-user-role').value
     };
     try {
       const res = await fetch(`/api/admin/users/${user.id}`, {
@@ -562,7 +566,7 @@ function showEditUserModal(user) {
         return;
       }
       showToast('User updated successfully', 'success');
-      modal.hide();
+      close();
       await loadAdminUsers();
     } catch {
       msg.textContent = 'Network error';
@@ -572,42 +576,38 @@ function showEditUserModal(user) {
 }
 
 function resetUserPassword(userId, userName) {
-  const modalEl = document.createElement('div');
-  modalEl.className = 'modal modal-blur fade';
-  modalEl.tabIndex = -1;
-  modalEl.innerHTML = `
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Reset Password: ${userName}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay show';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3>Reset Password: ${userName}</h3>
+      <p class="small-text">Enter a temporary password. The user will be required to change it on next login.</p>
+      <label>New Password (min 8 chars)<input type="password" id="reset-pw-input"></label>
+      <div id="reset-pw-message" class="small-text" style="margin-top:8px;"></div>
+      <div id="reset-pw-result" style="display:none; margin-top:8px;">
+        <div class="small-text" style="font-weight:700;">Temporary password (email not configured):</div>
+        <div class="flex-row" style="gap:8px; margin-top:4px;">
+          <code id="reset-pw-display" style="background:#f5f5f5; padding:4px 8px; border-radius:4px; font-size:14px;"></code>
+          <button class="btn secondary small" id="reset-pw-copy">Copy</button>
         </div>
-        <div class="modal-body">
-          <p class="text-secondary">Enter a temporary password. The user will be required to change it on next login.</p>
-          <div class="mb-3"><label class="form-label">New Password (min 8 chars)</label><input type="password" class="form-control" id="reset-pw-input"></div>
-          <div id="reset-pw-message" class="small-text"></div>
-          <div id="reset-pw-result" style="display:none; margin-top:8px;">
-            <div class="small-text fw-bold">Temporary password (email not configured):</div>
-            <div class="d-flex gap-2 mt-1">
-              <code id="reset-pw-display" style="background:#f5f5f5; padding:4px 8px; border-radius:4px; font-size:14px;"></code>
-              <button class="btn btn-outline-secondary btn-sm" id="reset-pw-copy">Copy</button>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="reset-pw-confirm">Reset Password</button>
-        </div>
+      </div>
+      <div class="flex-row" style="gap:8px; margin-top:12px;">
+        <button class="btn primary" id="reset-pw-confirm">Reset Password</button>
+        <button class="btn secondary" id="reset-pw-cancel">Cancel</button>
       </div>
     </div>
   `;
-  document.body.appendChild(modalEl);
-  const modal = new bootstrap.Modal(modalEl);
-  modal.show();
-  modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
-  modalEl.querySelector('#reset-pw-confirm').onclick = async () => {
-    const msg = modalEl.querySelector('#reset-pw-message');
-    const pw = modalEl.querySelector('#reset-pw-input').value;
+  document.body.appendChild(overlay);
+  const close = () => {
+    overlay.classList.remove('show');
+    overlay.classList.add('hiding');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  overlay.querySelector('#reset-pw-cancel').onclick = close;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('#reset-pw-confirm').onclick = async () => {
+    const msg = overlay.querySelector('#reset-pw-message');
+    const pw = overlay.querySelector('#reset-pw-input').value;
     msg.textContent = '';
     msg.style.color = '';
     if (!pw || pw.length < 8) {
@@ -629,18 +629,18 @@ function resetUserPassword(userId, userName) {
       }
       if (data.emailSent) {
         showToast('Password reset. Notification email sent.', 'success');
-        modal.hide();
+        close();
       } else {
         msg.textContent = 'Password reset successfully.';
         msg.style.color = '#228b22';
-        const resultDiv = modalEl.querySelector('#reset-pw-result');
+        const resultDiv = overlay.querySelector('#reset-pw-result');
         resultDiv.style.display = 'block';
-        modalEl.querySelector('#reset-pw-display').textContent = pw;
-        modalEl.querySelector('#reset-pw-copy').onclick = () => {
+        overlay.querySelector('#reset-pw-display').textContent = pw;
+        overlay.querySelector('#reset-pw-copy').onclick = () => {
           navigator.clipboard.writeText(pw).then(() => showToast('Copied to clipboard', 'success'));
         };
-        modalEl.querySelector('#reset-pw-confirm').style.display = 'none';
-        modalEl.querySelector('#reset-pw-input').closest('.mb-3').style.display = 'none';
+        overlay.querySelector('#reset-pw-confirm').style.display = 'none';
+        overlay.querySelector('#reset-pw-input').parentElement.style.display = 'none';
       }
     } catch {
       msg.textContent = 'Network error';
@@ -717,7 +717,7 @@ async function createAdminUser() {
             <strong>Username:</strong> ${safeUser}<br>
             <strong>Password:</strong> ${safePw}
           </div>
-          <button class="btn btn-outline-secondary btn-sm" style="margin-top:6px;" onclick="navigator.clipboard.writeText('${clipText}').then(()=>showToast('Credentials copied','success'))">Copy Credentials</button>`;
+          <button class="btn secondary small" style="margin-top:6px;" onclick="navigator.clipboard.writeText('${clipText}').then(()=>showToast('Credentials copied','success'))">Copy Credentials</button>`;
       }
     }
     await loadAdminUsers();
@@ -761,18 +761,15 @@ async function clockEmployee(id, isIn) {
   await loadRides();
 }
 
-function populateShiftFilterSelect() {
-  const select = document.getElementById('shift-filter-employee');
-  if (!select) return;
-  const prev = select.value;
-  select.innerHTML = '<option value="all">All Drivers</option>';
+function populateEmployeeSelects() {
+  const select = document.getElementById('shift-employee');
+  select.innerHTML = '';
   employees.forEach((emp) => {
     const opt = document.createElement('option');
     opt.value = emp.id;
     opt.textContent = emp.name;
     select.appendChild(opt);
   });
-  if (prev) select.value = prev;
 }
 
 // ----- Schedule Grid -----
@@ -784,6 +781,33 @@ function generateTimeSlots() {
   }
   slots.push('19:00');
   return slots;
+}
+
+function getCurrentWeekDates() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  const weekDates = [];
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  for (let i = 0; i < 5; i++) {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + i);
+    weekDates.push({
+      dayName: dayNames[i],
+      date: date,
+      dateStr: date.toISOString().split('T')[0],
+      displayStr: `${dayNames[i]} (${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()})`
+    });
+  }
+  return weekDates;
+}
+
+function renderScheduleGrid() {
+  renderShiftGrid();
 }
 
 function renderRideScheduleGrid() {
@@ -819,12 +843,12 @@ function renderRideScheduleGrid() {
 
   if (!Object.keys(slotMap).length) {
     showEmptyState(grid, {
-      icon: 'calendar',
+      icon: 'calendar_today',
       title: 'No rides on the calendar',
       message: 'Approved and scheduled rides will appear here. Try switching to the Active Rides tab to approve pending requests.',
       actionLabel: 'Go to Active Rides',
       actionHandler: () => {
-        const activeTab = document.querySelector('#rides-panel .nav-link[data-subtarget="rides-active-view"]');
+        const activeTab = document.querySelector('#rides-panel .sub-tab[data-subtarget="rides-active-view"]');
         if (activeTab) activeTab.click();
       }
     });
@@ -861,11 +885,50 @@ function renderRideScheduleGrid() {
   grid.innerHTML = html;
 }
 
+// ----- Daily Schedule View (Shifts + Rides) -----
+function initScheduleDate() {
+  const dateInput = document.getElementById('schedule-date');
+  dateInput.value = formatDateInputLocal(new Date());
+  renderSchedule();
+}
+
+function changeScheduleDay(delta) {
+  const dateInput = document.getElementById('schedule-date');
+  const current = getSelectedDate();
+  current.setDate(current.getDate() + delta);
+  dateInput.value = formatDateInputLocal(current);
+  renderSchedule();
+  renderShiftGrid();
+}
+
+function changeScheduleWeek(deltaWeeks) {
+  const dateInput = document.getElementById('schedule-date');
+  const current = getSelectedDate();
+  current.setDate(current.getDate() + deltaWeeks * 7);
+  dateInput.value = formatDateInputLocal(current);
+  renderSchedule();
+  renderShiftGrid();
+}
+
+function onScheduleDateChange() {
+  renderSchedule();
+  renderShiftGrid();
+}
+
+function renderSchedule() {
+  if (scheduleMode === 'daily') {
+    renderDailySchedule();
+  } else {
+    renderWeeklySchedule();
+  }
+}
+
 async function loadUserProfile(userId) {
   const content = document.getElementById('admin-profile-content');
   if (!content) return;
   content.innerHTML = 'Loading...';
-  showTab('profile-panel');
+  const profileTab = document.querySelector('.nav-btn[data-target="profile-panel"]');
+  if (profileTab) profileTab.click();
   try {
     let data;
     if (currentUser?.role === 'office') {
@@ -927,7 +990,7 @@ function renderProfilePanel(data) {
       <label>Current Password<input type="password" id="profile-pw-current"></label>
       <label>New Password (min 8 chars)<input type="password" id="profile-pw-new"></label>
       <label>Confirm New Password<input type="password" id="profile-pw-confirm"></label>
-      <button class="btn btn-outline-secondary" id="profile-pw-btn">Update Password</button>
+      <button class="btn secondary" id="profile-pw-btn">Update Password</button>
       <div id="profile-pw-message" class="small-text" style="margin-top:8px;"></div>
     </div>
   ` : '';
@@ -940,7 +1003,7 @@ function renderProfilePanel(data) {
       <div class="small-text">Phone: ${user.phone || ''}</div>
     </div>
     <div class="flex-row" style="gap:12px; margin:10px 0;">
-      <button class="btn btn-primary" onclick="renderProfileEdit()">Edit Name/Phone</button>
+      <button class="btn primary" onclick="renderProfileEdit()">Edit Name/Phone</button>
     </div>
     ${user.role !== 'office' ? `<div>
       <h4>Upcoming Rides</h4>
@@ -999,8 +1062,8 @@ function renderProfileEdit() {
       <div class="small-text">USC Email: ${selectedAdminUser.email || ''} | Username: ${selectedAdminUser.username}</div>
     </div>
     <div class="flex-row" style="gap:8px; margin-top:8px;">
-      <button class="btn btn-primary" onclick="saveAdminProfile('${selectedAdminUser.id}')">Save</button>
-      <button class="btn btn-outline-secondary" onclick="loadUserProfile('${selectedAdminUser.id}')">Cancel</button>
+      <button class="btn primary" onclick="saveAdminProfile('${selectedAdminUser.id}')">Save</button>
+      <button class="btn secondary" onclick="loadUserProfile('${selectedAdminUser.id}')">Cancel</button>
     </div>
     <div id="admin-profile-message" class="small-text"></div>
   `;
@@ -1028,354 +1091,211 @@ async function saveAdminProfile(userId) {
     if (msg) msg.textContent = 'Network error';
   }
 }
-// ----- FullCalendar for Staff & Shifts -----
-let shiftCalendar = null;
-let shiftFilterEmployeeId = 'all';
-let showRidesOnCalendar = true;
+function renderDailySchedule() {
+  const container = document.getElementById('day-schedule');
+  const dateInput = document.getElementById('schedule-date');
+  const selectedDate = getSelectedDate();
+  const dayOfWeek = (selectedDate.getDay() + 6) % 7; // Convert to Mon=0
+  const dateStr = formatDateInputLocal(selectedDate);
 
-const DRIVER_COLORS = [
-  '#4682B4', '#D2691E', '#2E8B57', '#8B008B', '#B8860B',
-  '#4169E1', '#C71585', '#008080', '#CD853F', '#6A5ACD'
-];
+  const timeSlots = generateTimeSlots();
+  let html = '';
 
-function driverColor(driverId) {
-  let hash = 0;
-  for (let i = 0; i < driverId.length; i++) hash = ((hash << 5) - hash + driverId.charCodeAt(i)) | 0;
-  return DRIVER_COLORS[Math.abs(hash) % DRIVER_COLORS.length];
-}
+  timeSlots.forEach(slot => {
+    // Find shifts covering this time slot
+    const activeShifts = shifts.filter(s =>
+      s.dayOfWeek === dayOfWeek && s.startTime <= slot && s.endTime > slot
+    );
 
-function shiftsToEvents(viewStart, viewEnd) {
-  const events = [];
-  const filtered = shiftFilterEmployeeId === 'all'
-    ? shifts
-    : shifts.filter(s => s.employeeId === shiftFilterEmployeeId);
+    // Find rides at this time
+    const slotRides = rides.filter(r => {
+      if (!isRideOnDate(r, selectedDate)) return false;
+      const rideTime = new Date(r.requestedTime);
+      const rideSlot = getSlotInfo(rideTime).slot;
+      return rideSlot === slot && isRenderableRideStatus(r.status);
+    });
 
-  const start = new Date(viewStart);
-  const end = new Date(viewEnd);
-
-  for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-    const jsDay = d.getDay();
-    if (jsDay === 0 || jsDay === 6) continue; // skip weekends
-    const ourDay = (jsDay + 6) % 7; // Mon=0
-
-    const dateStr = formatDateInputLocal(d);
-    filtered.forEach(shift => {
-      if (shift.dayOfWeek !== ourDay) return;
-      const emp = employees.find(e => e.id === shift.employeeId);
-      const name = emp?.name || 'Unknown';
-      // shift.startTime may be "HH:MM" or "HH:MM:SS" from Postgres TIME
-      const sTime = shift.startTime.length <= 5 ? shift.startTime + ':00' : shift.startTime;
-      const eTime = shift.endTime.length <= 5 ? shift.endTime + ':00' : shift.endTime;
-      events.push({
-        id: shift.id + '_' + dateStr,
-        title: name,
-        start: dateStr + 'T' + sTime,
-        end: dateStr + 'T' + eTime,
-        color: driverColor(shift.employeeId),
-        editable: true,
-        extendedProps: {
-          type: 'shift',
-          shiftId: shift.id,
-          employeeId: shift.employeeId,
-          dayOfWeek: shift.dayOfWeek
-        }
+    if (activeShifts.length || slotRides.length) {
+      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots">`;
+      activeShifts.forEach(s => {
+        const emp = employees.find(e => e.id === s.employeeId);
+        const name = emp?.name || 'Unknown';
+        const clickable = emp ? `<span data-user="${emp.id}" class="clickable-name">${name}</span>` : name;
+        html += `<span class="schedule-slot shift">${clickable}</span>`;
       });
-    });
-  }
-  return events;
-}
-
-function ridesToEvents(viewStart, viewEnd) {
-  if (!showRidesOnCalendar) return [];
-  const events = [];
-  const start = new Date(viewStart);
-  const end = new Date(viewEnd);
-
-  rides.forEach(ride => {
-    if (!ride.requestedTime || !isRenderableRideStatus(ride.status)) return;
-    const rideDate = new Date(ride.requestedTime);
-    if (rideDate < start || rideDate > end) return;
-
-    const endDate = new Date(rideDate.getTime() + 30 * 60 * 1000);
-    events.push({
-      id: 'ride_' + ride.id,
-      title: (ride.riderName || 'Rider') + ' - ' + (ride.pickupLocation || ''),
-      start: rideDate.toISOString(),
-      end: endDate.toISOString(),
-      color: '#cce5ff',
-      textColor: '#004085',
-      borderColor: '#004085',
-      editable: false,
-      extendedProps: { type: 'ride', rideId: ride.id }
-    });
-  });
-  return events;
-}
-
-function initShiftCalendar() {
-  const calendarEl = document.getElementById('shift-calendar');
-  if (!calendarEl) return;
-
-  shiftCalendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'timeGridWeek',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'timeGridWeek,timeGridDay'
-    },
-    slotMinTime: '06:00:00',
-    slotMaxTime: '22:00:00',
-    slotDuration: '00:30:00',
-    weekends: false,
-    allDaySlot: false,
-    nowIndicator: true,
-    editable: true,
-    selectable: true,
-    selectMirror: true,
-    height: 'auto',
-    events: function(info, successCallback) {
-      const all = [
-        ...shiftsToEvents(info.start, info.end),
-        ...ridesToEvents(info.start, info.end)
-      ];
-      successCallback(all);
-    },
-    select: function(info) {
-      openAddShiftModal(info);
-      shiftCalendar.unselect();
-    },
-    eventClick: function(info) {
-      if (info.event.extendedProps.type === 'shift') {
-        openEditShiftModal(info.event);
-      }
-    },
-    eventDrop: function(info) {
-      if (info.event.extendedProps.type !== 'shift') { info.revert(); return; }
-      handleShiftDragOrResize(info);
-    },
-    eventResize: function(info) {
-      if (info.event.extendedProps.type !== 'shift') { info.revert(); return; }
-      handleShiftDragOrResize(info);
-    },
-    eventDidMount: function(info) {
-      if (info.event.extendedProps.type === 'ride') {
-        info.el.style.borderStyle = 'dashed';
-        info.el.style.opacity = '0.75';
-      }
+      slotRides.forEach(r => {
+        const riderLink = r.riderId ? `<span data-user="${r.riderId}" class="clickable-name">${r.riderName}</span>` : r.riderName;
+        const offsetClass = getSlotInfo(new Date(r.requestedTime)).offset === 'mid' ? 'offset-mid' : '';
+        html += `<span class="schedule-slot ride ${offsetClass}">${riderLink} (${r.pickupLocation}→${r.dropoffLocation})</span>`;
+      });
+      html += '</div></div>';
+    } else {
+      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots"></div></div>`;
     }
   });
 
-  shiftCalendar.render();
+  container.innerHTML = html;
 }
 
-function refreshShiftCalendar() {
-  if (shiftCalendar) shiftCalendar.refetchEvents();
+function renderWeeklySchedule() {
+  const container = document.getElementById('day-schedule');
+  const selectedDate = getSelectedDate();
+  const weekDates = getWeekDates(selectedDate);
+  const timeSlots = generateTimeSlots();
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  let html = '<div class="weekly-table-wrapper"><table class="grid-table ride-schedule-table"><thead><tr><th class="time-col">Time</th>';
+  days.forEach((day, idx) => {
+    const dateLabel = formatShortDate(weekDates[idx]);
+    html += `<th>${day} (${dateLabel})</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  timeSlots.forEach((slot) => {
+    html += `<tr><td class="time-col">${slot}</td>`;
+    days.forEach((_, idx) => {
+      const slotShifts = shifts.filter((s) => s.dayOfWeek === idx && s.startTime <= slot && s.endTime > slot);
+      const dateStr = formatDateInputLocal(weekDates[idx]);
+      const slotRides = rides.filter((r) => {
+        if (!isRideOnDate(r, weekDates[idx])) return false;
+        const rideTime = new Date(r.requestedTime);
+        const rideSlot = getSlotInfo(rideTime).slot;
+        return rideSlot === slot && isRenderableRideStatus(r.status);
+      });
+
+      const cellParts = [];
+      slotShifts.forEach((s) => {
+        const emp = employees.find((e) => e.id === s.employeeId);
+        const name = emp?.name || 'Unknown';
+        const clickable = emp ? `<span data-user="${emp.id}" data-email="${emp.email || ''}" class="clickable-name">${name}</span>` : name;
+        cellParts.push(`<span class="schedule-slot shift">${clickable}</span>`);
+      });
+      slotRides.forEach((r) => {
+        const clickable = r.riderId ? `<span data-user="${r.riderId}" data-email="${r.riderEmail || ''}" class="clickable-name">${r.riderName}</span>` : r.riderName;
+        const offsetClass = getSlotInfo(new Date(r.requestedTime)).offset === 'mid' ? 'offset-mid' : '';
+        cellParts.push(`<span class="schedule-slot ride ${offsetClass}">${clickable}</span>`);
+      });
+      const cellContent = cellParts.length ? `<div class="cell-stack">${cellParts.join('')}</div>` : '';
+      html += `<td>${cellContent}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  container.innerHTML = html;
 }
 
-async function handleShiftDragOrResize(info) {
-  const event = info.event;
-  const shiftId = event.extendedProps.shiftId;
-  const newStart = event.start;
-  const newEnd = event.end;
-  const jsDay = newStart.getDay();
+function setScheduleMode(mode) {
+  scheduleMode = mode;
+  updateScheduleToggleUI();
+  renderSchedule();
+}
 
-  if (jsDay === 0 || jsDay === 6) { info.revert(); return; }
+function updateScheduleToggleUI() {
+  document.querySelectorAll('[data-schedule-mode]').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.scheduleMode === scheduleMode);
+  });
+}
 
-  const newDayOfWeek = (jsDay + 6) % 7;
-  const startTime = String(newStart.getHours()).padStart(2, '0') + ':' + String(newStart.getMinutes()).padStart(2, '0');
-  const endTime = String(newEnd.getHours()).padStart(2, '0') + ':' + String(newEnd.getMinutes()).padStart(2, '0');
+// ----- Interactive Shift Grid -----
+let shiftGridDragging = false;
+let shiftGridStart = null;
 
-  try {
-    const res = await fetch(`/api/shifts/${shiftId}`, {
-      method: 'PUT',
+function renderShiftGrid() {
+  const grid = document.getElementById('shift-grid');
+  const timeSlots = generateTimeSlots();
+  const selectedDate = getSelectedDate();
+  const weekDates = getWeekDates(selectedDate);
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const empId = document.getElementById('shift-employee').value;
+
+  let html = '<div class="header-cell"></div>';
+  days.forEach((d, idx) => {
+    const dateLabel = formatShortDate(weekDates[idx]);
+    html += `<div class="header-cell">${d} (${dateLabel})</div>`;
+  });
+
+  timeSlots.forEach((slot, rowIdx) => {
+    html += `<div class="time-cell">${slot}</div>`;
+    days.forEach((_, dayIdx) => {
+      const hasShift = shifts.some(s => s.employeeId === empId && s.dayOfWeek === dayIdx && s.startTime <= slot && s.endTime > slot);
+      html += `<div class="grid-cell${hasShift ? ' has-shift' : ''}" data-day="${dayIdx}" data-slot="${slot}" data-row="${rowIdx}"></div>`;
+    });
+  });
+
+  grid.innerHTML = html;
+
+  // Add drag listeners
+  grid.querySelectorAll('.grid-cell').forEach(cell => {
+    cell.addEventListener('mousedown', onShiftGridMouseDown);
+    cell.addEventListener('mouseenter', onShiftGridMouseEnter);
+    cell.addEventListener('click', onShiftGridClick);
+  });
+}
+
+function onShiftGridMouseDown(e) {
+  shiftGridDragging = true;
+  shiftGridStart = { day: e.target.dataset.day, row: parseInt(e.target.dataset.row) };
+  e.target.classList.add('selected');
+}
+
+function onShiftGridMouseEnter(e) {
+  if (!shiftGridDragging || !shiftGridStart) return;
+  const grid = document.getElementById('shift-grid');
+  grid.querySelectorAll('.grid-cell.selected').forEach(c => c.classList.remove('selected'));
+
+  const currentRow = parseInt(e.target.dataset.row);
+  const day = shiftGridStart.day;
+  const minRow = Math.min(shiftGridStart.row, currentRow);
+  const maxRow = Math.max(shiftGridStart.row, currentRow);
+
+  grid.querySelectorAll(`.grid-cell[data-day="${day}"]`).forEach(cell => {
+    const row = parseInt(cell.dataset.row);
+    if (row >= minRow && row <= maxRow) cell.classList.add('selected');
+  });
+}
+
+async function onShiftGridClick(e) {
+  if (e.target.classList.contains('has-shift')) {
+    // Remove shift on click
+    const empId = document.getElementById('shift-employee').value;
+    const day = parseInt(e.target.dataset.day);
+    const slot = e.target.dataset.slot;
+    const shiftToRemove = shifts.find(s => s.employeeId === empId && s.dayOfWeek === day && s.startTime <= slot && s.endTime > slot);
+    if (shiftToRemove) {
+      await fetch(`/api/shifts/${shiftToRemove.id}`, { method: 'DELETE' });
+      await loadShifts();
+    }
+  }
+}
+
+document.addEventListener('mouseup', async () => {
+  if (!shiftGridDragging) return;
+  shiftGridDragging = false;
+
+  const grid = document.getElementById('shift-grid');
+  const selected = Array.from(grid.querySelectorAll('.grid-cell.selected')).filter(c => !c.classList.contains('has-shift'));
+
+  if (selected.length) {
+    const empId = document.getElementById('shift-employee').value;
+    const day = parseInt(selected[0].dataset.day);
+    const slots = selected.map(c => c.dataset.slot).sort();
+    const startTime = slots[0];
+    const timeSlots = generateTimeSlots();
+    const lastIdx = timeSlots.indexOf(slots[slots.length - 1]);
+    const endTime = timeSlots[lastIdx + 1] || '19:00';
+
+    await fetch('/api/shifts', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dayOfWeek: newDayOfWeek, startTime, endTime })
+      body: JSON.stringify({ employeeId: empId, dayOfWeek: day, startTime, endTime })
     });
-    if (!res.ok) {
-      info.revert();
-      const data = await res.json().catch(() => ({}));
-      showToast(data.error || 'Failed to update shift', 'error');
-      return;
-    }
     await loadShifts();
-  } catch {
-    info.revert();
-    showToast('Failed to update shift', 'error');
   }
-}
 
-function openAddShiftModal(selectionInfo) {
-  const jsDay = selectionInfo.start.getDay();
-  const ourDay = (jsDay + 6) % 7;
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const startTime = String(selectionInfo.start.getHours()).padStart(2, '0') + ':' + String(selectionInfo.start.getMinutes()).padStart(2, '0');
-  const endTime = String(selectionInfo.end.getHours()).padStart(2, '0') + ':' + String(selectionInfo.end.getMinutes()).padStart(2, '0');
-
-  const empOptions = employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-
-  const modal = document.createElement('div');
-  modal.className = 'modal modal-blur fade show';
-  modal.style.display = 'block';
-  modal.style.background = 'rgba(0,0,0,0.4)';
-  modal.innerHTML = `
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Add Shift</h5>
-          <button type="button" class="btn-close" data-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Driver</label>
-            <select class="form-select" id="modal-shift-employee">${empOptions}</select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Day</label>
-            <input class="form-control" value="${dayNames[ourDay] || 'Unknown'}" readonly>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Start Time</label>
-            <input type="time" class="form-control" id="modal-shift-start" value="${startTime}">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">End Time</label>
-            <input type="time" class="form-control" id="modal-shift-end" value="${endTime}">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn" data-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary" id="modal-shift-save">Save</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const close = () => modal.remove();
-  modal.querySelectorAll('[data-dismiss="modal"]').forEach(el => el.addEventListener('click', close));
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-
-  document.getElementById('modal-shift-save').addEventListener('click', async () => {
-    const employeeId = document.getElementById('modal-shift-employee').value;
-    const start = document.getElementById('modal-shift-start').value;
-    const end = document.getElementById('modal-shift-end').value;
-    if (!employeeId || !start || !end) return;
-
-    try {
-      const res = await fetch('/api/shifts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId, dayOfWeek: ourDay, startTime: start, endTime: end })
-      });
-      if (res.ok) {
-        await loadShifts();
-        showToast('Shift created');
-      } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || 'Failed to create shift', 'error');
-      }
-    } catch {
-      showToast('Failed to create shift', 'error');
-    }
-    close();
-  });
-}
-
-function openEditShiftModal(fcEvent) {
-  const props = fcEvent.extendedProps;
-  const shiftId = props.shiftId;
-  const shift = shifts.find(s => s.id === shiftId);
-  if (!shift) return;
-
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const empOptions = employees.map(e =>
-    `<option value="${e.id}" ${e.id === shift.employeeId ? 'selected' : ''}>${e.name}</option>`
-  ).join('');
-
-  const modal = document.createElement('div');
-  modal.className = 'modal modal-blur fade show';
-  modal.style.display = 'block';
-  modal.style.background = 'rgba(0,0,0,0.4)';
-  modal.innerHTML = `
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Shift</h5>
-          <button type="button" class="btn-close" data-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Driver</label>
-            <select class="form-select" id="modal-edit-employee">${empOptions}</select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Day</label>
-            <input class="form-control" value="${dayNames[shift.dayOfWeek] || 'Unknown'}" readonly>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Start Time</label>
-            <input type="time" class="form-control" id="modal-edit-start" value="${shift.startTime}">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">End Time</label>
-            <input type="time" class="form-control" id="modal-edit-end" value="${shift.endTime}">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-danger" id="modal-edit-delete">Delete</button>
-          <button class="btn" data-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary" id="modal-edit-save">Save</button>
-        </div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  const close = () => modal.remove();
-  modal.querySelectorAll('[data-dismiss="modal"]').forEach(el => el.addEventListener('click', close));
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-
-  document.getElementById('modal-edit-save').addEventListener('click', async () => {
-    const employeeId = document.getElementById('modal-edit-employee').value;
-    const startTime = document.getElementById('modal-edit-start').value;
-    const endTime = document.getElementById('modal-edit-end').value;
-    if (!employeeId || !startTime || !endTime) return;
-
-    try {
-      const res = await fetch(`/api/shifts/${shiftId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId, startTime, endTime })
-      });
-      if (res.ok) {
-        await loadShifts();
-        showToast('Shift updated');
-      } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || 'Failed to update shift', 'error');
-      }
-    } catch {
-      showToast('Failed to update shift', 'error');
-    }
-    close();
-  });
-
-  document.getElementById('modal-edit-delete').addEventListener('click', async () => {
-    if (!confirm('Delete this shift?')) return;
-    try {
-      const res = await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' });
-      if (res.ok) {
-        await loadShifts();
-        showToast('Shift deleted');
-      } else {
-        showToast('Failed to delete shift', 'error');
-      }
-    } catch {
-      showToast('Failed to delete shift', 'error');
-    }
-    close();
-  });
-}
+  grid.querySelectorAll('.grid-cell.selected').forEach(c => c.classList.remove('selected'));
+  shiftGridStart = null;
+});
 
 // ----- Ride Filter -----
 let rideFilterText = '';
@@ -1470,7 +1390,7 @@ function buildReassignDropdown(ride, excludeDriverId, onDone) {
 
 function buildCancelButton(ride, onDone) {
   const btn = document.createElement('button');
-  btn.className = 'btn btn-danger';
+  btn.className = 'btn danger';
   btn.textContent = 'Cancel';
   btn.onclick = async () => {
     const confirmed = await showConfirmModal({
@@ -1499,7 +1419,7 @@ function buildKebabMenu(ride, onDone) {
 
   const btn = document.createElement('button');
   btn.className = 'kebab-btn';
-  btn.innerHTML = '<i class="ti ti-dots-vertical" style="font-size:20px;"></i>';
+  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">more_vert</span>';
 
   const dropdown = document.createElement('div');
   dropdown.className = 'kebab-dropdown';
@@ -1507,7 +1427,7 @@ function buildKebabMenu(ride, onDone) {
   // Edit option — always visible
   const editBtn = document.createElement('button');
   editBtn.className = 'edit-option';
-  editBtn.innerHTML = '<i class="ti ti-edit" style="font-size:16px;"></i> Edit';
+  editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">edit</span> Edit';
   editBtn.onclick = (e) => {
     e.stopPropagation();
     dropdown.classList.remove('open');
@@ -1520,7 +1440,7 @@ function buildKebabMenu(ride, onDone) {
   if (!terminalStatuses.includes(ride.status)) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-option';
-    deleteBtn.innerHTML = '<i class="ti ti-trash" style="font-size:16px;"></i> Delete';
+    deleteBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete';
     deleteBtn.onclick = async (e) => {
       e.stopPropagation();
       dropdown.classList.remove('open');
@@ -1591,51 +1511,60 @@ async function showEditRideModal(ride, onDone) {
 
   const currentTime = ride.requestedTime ? new Date(ride.requestedTime).toISOString().slice(0, 16) : '';
 
-  const modalEl = document.createElement('div');
-  modalEl.className = 'modal modal-blur fade';
-  modalEl.tabIndex = -1;
-  modalEl.innerHTML = `
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Ride</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3"><label class="form-label">Pickup Location</label><select class="form-select" id="edit-ride-pickup">${buildOptions(ride.pickupLocation)}</select></div>
-          <div class="mb-3"><label class="form-label">Dropoff Location</label><select class="form-select" id="edit-ride-dropoff">${buildOptions(ride.dropoffLocation)}</select></div>
-          <div class="mb-3"><label class="form-label">Requested Time</label><input type="datetime-local" class="form-control" id="edit-ride-time" value="${currentTime}"></div>
-          <div class="mb-3"><label class="form-label">Rider Notes</label><textarea class="form-control" id="edit-ride-notes" rows="2">${ride.notes || ''}</textarea></div>
-          <hr>
-          <div class="mb-3"><label class="form-label">Change Notes <span class="text-danger">*</span></label><textarea class="form-control" id="edit-ride-change-notes" rows="2" placeholder="Describe what changed and why..."></textarea></div>
-          <div class="mb-3"><label class="form-label">Initials <span class="text-danger">*</span></label><input type="text" class="form-control" id="edit-ride-initials" maxlength="5" placeholder="Your initials" style="max-width:120px;"></div>
-          <div id="edit-ride-message" class="small-text"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="edit-ride-save">Save</button>
-        </div>
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay show';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:520px;">
+      <h3>Edit Ride</h3>
+      <label>Pickup Location
+        <select id="edit-ride-pickup">${buildOptions(ride.pickupLocation)}</select>
+      </label>
+      <label>Dropoff Location
+        <select id="edit-ride-dropoff">${buildOptions(ride.dropoffLocation)}</select>
+      </label>
+      <label>Requested Time
+        <input type="datetime-local" id="edit-ride-time" value="${currentTime}">
+      </label>
+      <label>Rider Notes
+        <textarea id="edit-ride-notes" rows="2">${ride.notes || ''}</textarea>
+      </label>
+      <hr style="margin:16px 0; border:none; border-top:1px solid var(--border);">
+      <label>Change Notes <span style="color:#c62828;">*</span>
+        <textarea id="edit-ride-change-notes" rows="2" placeholder="Describe what changed and why..."></textarea>
+      </label>
+      <label>Initials <span style="color:#c62828;">*</span>
+        <input type="text" id="edit-ride-initials" maxlength="5" placeholder="Your initials" style="max-width:120px;">
+      </label>
+      <div id="edit-ride-message" class="small-text" style="margin-top:8px;"></div>
+      <div class="flex-row" style="gap:8px; margin-top:12px;">
+        <button class="btn primary" id="edit-ride-save">Save</button>
+        <button class="btn secondary" id="edit-ride-cancel">Cancel</button>
       </div>
     </div>
   `;
-  document.body.appendChild(modalEl);
-  const modal = new bootstrap.Modal(modalEl);
-  modal.show();
-  modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+  document.body.appendChild(overlay);
 
-  modalEl.querySelector('#edit-ride-save').onclick = async () => {
-    const msg = modalEl.querySelector('#edit-ride-message');
+  const close = () => {
+    overlay.classList.remove('show');
+    overlay.classList.add('hiding');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  overlay.querySelector('#edit-ride-cancel').onclick = close;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  overlay.querySelector('#edit-ride-save').onclick = async () => {
+    const msg = overlay.querySelector('#edit-ride-message');
     msg.textContent = '';
-    const changeNotes = modalEl.querySelector('#edit-ride-change-notes').value.trim();
-    const initials = modalEl.querySelector('#edit-ride-initials').value.trim();
+    const changeNotes = overlay.querySelector('#edit-ride-change-notes').value.trim();
+    const initials = overlay.querySelector('#edit-ride-initials').value.trim();
     if (!changeNotes) { msg.textContent = 'Change notes are required'; msg.style.color = '#c62828'; return; }
     if (!initials) { msg.textContent = 'Initials are required'; msg.style.color = '#c62828'; return; }
 
     const body = {
-      pickupLocation: modalEl.querySelector('#edit-ride-pickup').value,
-      dropoffLocation: modalEl.querySelector('#edit-ride-dropoff').value,
-      requestedTime: modalEl.querySelector('#edit-ride-time').value ? new Date(modalEl.querySelector('#edit-ride-time').value).toISOString() : ride.requestedTime,
-      notes: modalEl.querySelector('#edit-ride-notes').value,
+      pickupLocation: overlay.querySelector('#edit-ride-pickup').value,
+      dropoffLocation: overlay.querySelector('#edit-ride-dropoff').value,
+      requestedTime: overlay.querySelector('#edit-ride-time').value ? new Date(overlay.querySelector('#edit-ride-time').value).toISOString() : ride.requestedTime,
+      notes: overlay.querySelector('#edit-ride-notes').value,
       changeNotes,
       initials
     };
@@ -1652,7 +1581,7 @@ async function showEditRideModal(ride, onDone) {
         return;
       }
       showToast('Ride updated successfully', 'success');
-      modal.hide();
+      close();
       if (onDone) await onDone();
     } catch {
       msg.textContent = 'Network error';
@@ -1663,7 +1592,7 @@ async function showEditRideModal(ride, onDone) {
 
 function buildUnassignButton(ride, driverName, onDone) {
   const btn = document.createElement('button');
-  btn.className = 'btn btn-outline-secondary';
+  btn.className = 'btn secondary';
   btn.textContent = 'Unassign';
   btn.onclick = async () => {
     const confirmed = await showConfirmModal({
@@ -1695,42 +1624,33 @@ function buildWarningBanner(driverName) {
 
 function showVehiclePromptModal() {
   return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const box = document.createElement('div');
+    box.className = 'modal-box';
     const availableVehicles = vehicles.filter(v => v.status === 'available');
     const vehOpts = availableVehicles.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-    const modalEl = document.createElement('div');
-    modalEl.className = 'modal modal-blur fade';
-    modalEl.tabIndex = -1;
-    modalEl.innerHTML = `
-      <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Select Vehicle</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p class="text-secondary">A vehicle must be recorded for this ride. Please select one:</p>
-            <select class="form-select" id="vehicle-prompt-select">
-              <option value="">Choose a cart...</option>${vehOpts}
-            </select>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal" id="vehicle-prompt-cancel">Cancel</button>
-            <button type="button" class="btn btn-primary" id="vehicle-prompt-confirm">Confirm</button>
-          </div>
-        </div>
+    box.innerHTML = `
+      <h3>Select Vehicle</h3>
+      <p>A vehicle must be recorded for this ride. Please select one:</p>
+      <select id="vehicle-prompt-select" style="width:100%;padding:0.5rem;margin:0.5rem 0;border:1px solid #ddd;border-radius:4px;">
+        <option value="">Choose a cart...</option>${vehOpts}
+      </select>
+      <div class="modal-actions">
+        <button class="btn" id="vehicle-prompt-cancel">Cancel</button>
+        <button class="btn primary" id="vehicle-prompt-confirm">Confirm</button>
       </div>
     `;
-    document.body.appendChild(modalEl);
-    const modal = new bootstrap.Modal(modalEl);
-    let resolved = false;
-    const cleanup = (val) => { if (resolved) return; resolved = true; modal.hide(); resolve(val); };
-    modalEl.addEventListener('hidden.bs.modal', () => { if (!resolved) { resolved = true; resolve(null); } modalEl.remove(); });
-    modalEl.querySelector('#vehicle-prompt-confirm').onclick = () => {
-      const val = modalEl.querySelector('#vehicle-prompt-select').value;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const cleanup = (val) => { document.body.removeChild(overlay); resolve(val); };
+    document.getElementById('vehicle-prompt-cancel').onclick = () => cleanup(null);
+    document.getElementById('vehicle-prompt-confirm').onclick = () => {
+      const val = document.getElementById('vehicle-prompt-select').value;
       if (!val) { showToast('Please select a vehicle', 'warning'); return; }
       cleanup(val);
     };
-    modal.show();
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
   });
 }
 
@@ -1806,16 +1726,16 @@ function renderRideLists() {
     item.className = 'item';
     const terminated = ride.consecutiveMisses >= 5;
     item.innerHTML = `
-      <div><span class="badge badge-pending"><i class="ti ti-clock"></i> Pending</span> <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span> (${ride.riderEmail})</div>
+      <div><span class="status-tag pending">Pending</span> <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span> (${ride.riderEmail})</div>
       <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
       <div class="small-text">Requested: ${formatDate(ride.requestedTime)}</div>
-      ${terminated ? '<div class="alert alert-danger">SERVICE TERMINATED after five consecutive no-shows.</div>' : ''}
-      <div class="d-flex gap-2">
-        <button class="btn btn-success" ${terminated ? 'disabled' : ''}>Approve</button>
-        <button class="btn btn-danger" data-role="deny">Deny</button>
+      ${terminated ? '<div class="alert">SERVICE TERMINATED after five consecutive no-shows.</div>' : ''}
+      <div class="flex-row">
+        <button class="btn success" ${terminated ? 'disabled' : ''}>Approve</button>
+        <button class="btn danger" data-role="deny">Deny</button>
       </div>
     `;
-    item.querySelector('.btn.btn-success').onclick = () => updateRide(`/api/rides/${ride.id}/approve`);
+    item.querySelector('.btn.success').onclick = () => updateRide(`/api/rides/${ride.id}/approve`);
     item.querySelector('[data-role="deny"]').onclick = () => updateRide(`/api/rides/${ride.id}/deny`);
     item.appendChild(buildKebabMenu(ride, () => loadRides()));
     pendingEl.appendChild(item);
@@ -2096,7 +2016,7 @@ function renderDriverDetail() {
   detail.style.display = 'block';
   title.textContent = `Driver: ${driver.name}`;
   clockBtn.textContent = driver.active ? 'Clock Out' : 'Clock In';
-  clockBtn.className = driver.active ? 'btn btn-outline-secondary btn-sm' : 'btn btn-primary btn-sm';
+  clockBtn.className = driver.active ? 'btn secondary' : 'btn primary';
   clockBtn.onclick = () => adminClockToggle(driver);
 
   list.innerHTML = '';
@@ -2117,7 +2037,7 @@ function renderDriverDetail() {
           <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
         `;
         const claimBtn = document.createElement('button');
-        claimBtn.className = 'btn btn-primary';
+        claimBtn.className = 'btn primary';
         claimBtn.textContent = 'Claim Ride';
         claimBtn.onclick = () => claimRide(ride.id, driver.id);
         item.appendChild(claimBtn);
@@ -2214,7 +2134,7 @@ function renderDriverDetail() {
       actions.style.flexWrap = 'wrap';
 
       const onWayBtn = document.createElement('button');
-      onWayBtn.className = 'btn btn-primary';
+      onWayBtn.className = 'btn primary';
       onWayBtn.textContent = 'On My Way';
       onWayBtn.onclick = async () => {
         if (!ride.vehicleId) {
@@ -2232,13 +2152,13 @@ function renderDriverDetail() {
       actions.appendChild(onWayBtn);
 
       const hereBtn = document.createElement('button');
-      hereBtn.className = 'btn btn-outline-secondary';
+      hereBtn.className = 'btn secondary';
       hereBtn.textContent = "I'm Here";
       hereBtn.onclick = () => updateRide(`/api/rides/${ride.id}/here`);
       actions.appendChild(hereBtn);
 
       const completeBtn = document.createElement('button');
-      completeBtn.className = 'btn btn-primary';
+      completeBtn.className = 'btn primary';
       completeBtn.textContent = 'Complete';
       completeBtn.onclick = async () => {
         if (!ride.vehicleId) {
@@ -2266,7 +2186,7 @@ function renderDriverDetail() {
       actions.appendChild(completeBtn);
 
       const noShowBtn = document.createElement('button');
-      noShowBtn.className = 'btn btn-danger';
+      noShowBtn.className = 'btn danger';
       noShowBtn.textContent = 'No-Show';
       const { canNoShow } = graceInfo;
       noShowBtn.disabled = !canNoShow;
@@ -2482,6 +2402,12 @@ function parseDateInputLocal(value) {
   return new Date(y, m - 1, d);
 }
 
+function getSelectedDate() {
+  const input = document.getElementById('schedule-date');
+  const parsed = parseDateInputLocal(input?.value);
+  return parsed || new Date();
+}
+
 function getWeekDates(selectedDate) {
   const date = new Date(selectedDate);
   const jsDay = date.getDay(); // 0=Sun
@@ -2589,84 +2515,79 @@ function openProfileById(id) {
 }
 
 function showRulesModal() {
-  const modalEl = document.createElement('div');
-  modalEl.className = 'modal modal-blur fade';
-  modalEl.tabIndex = -1;
-  modalEl.innerHTML = `
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Program Rules &amp; Guidelines</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <ul style="padding-left:20px; line-height:1.8;" class="text-secondary">
-            <li>${tenantConfig?.orgShortName || 'DART'} is a free service provided by USC Transportation to assist USC students, faculty and staff with mobility issues in getting around campus. Service is available at UPC during the Fall and Spring semesters only, between 8:00am\u20137:00pm, Monday\u2013Friday.</li>
-            <li>${tenantConfig?.orgShortName || 'DART'} vehicles (golf carts) are not city-street legal and cannot leave campus. Service is NOT available to off-campus housing, off-campus parking structures, the USC Village, etc.</li>
-            <li>Riders must be able to independently get in and out of a standard golf cart. Drivers cannot assist with lifting/carrying medical equipment (crutches, wheelchairs, etc.). A wheelchair-accessible golf cart is available upon request.</li>
-            <li>Due to high demand, drivers cannot wait more than five (5) minutes past a scheduled pick-up time. After that grace period, they may leave to continue other assignments.</li>
-            <li>Service is automatically terminated after five (5) consecutive missed pick-ups.</li>
-          </ul>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
-        </div>
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width:600px;">
+      <div class="modal-title">Program Rules &amp; Guidelines</div>
+      <ul style="padding-left:20px; line-height:1.8; color:var(--muted); font-size:14px;">
+        <li>${tenantConfig?.orgShortName || 'DART'} is a free service provided by USC Transportation to assist USC students, faculty and staff with mobility issues in getting around campus. Service is available at UPC during the Fall and Spring semesters only, between 8:00am\u20137:00pm, Monday\u2013Friday.</li>
+        <li>${tenantConfig?.orgShortName || 'DART'} vehicles (golf carts) are not city-street legal and cannot leave campus. Service is NOT available to off-campus housing, off-campus parking structures, the USC Village, etc.</li>
+        <li>Riders must be able to independently get in and out of a standard golf cart. Drivers cannot assist with lifting/carrying medical equipment (crutches, wheelchairs, etc.). A wheelchair-accessible golf cart is available upon request.</li>
+        <li>Due to high demand, drivers cannot wait more than five (5) minutes past a scheduled pick-up time. After that grace period, they may leave to continue other assignments.</li>
+        <li>Service is automatically terminated after five (5) consecutive missed pick-ups.</li>
+      </ul>
+      <div class="modal-actions">
+        <button class="btn primary modal-close-btn">Close</button>
       </div>
     </div>
   `;
-  document.body.appendChild(modalEl);
-  const modal = new bootstrap.Modal(modalEl);
-  modal.show();
-  modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove());
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  const close = () => {
+    overlay.classList.remove('show');
+    overlay.classList.add('hiding');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  overlay.querySelector('.modal-close-btn').onclick = close;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
 
 function initSubTabs() {
-  document.querySelectorAll('.nav-link[data-subtarget]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const strip = btn.closest('.nav');
-      if (strip) {
-        strip.querySelectorAll('.nav-link').forEach((b) => b.classList.remove('active'));
-      }
-      btn.classList.add('active');
-      const panel = btn.closest('.tab-panel') || btn.closest('.card')?.parentElement;
-      if (panel) {
-        panel.querySelectorAll(':scope > .sub-panel, :scope .sub-panel').forEach((p) => {
-          if (p.closest('.tab-panel') === panel || !p.closest('.tab-panel')) p.style.display = 'none';
-        });
-      }
-      const target = document.getElementById(btn.dataset.subtarget);
-      if (target) target.style.display = 'block';
+  document.querySelectorAll('.sub-tabs').forEach((strip) => {
+    strip.querySelectorAll('.sub-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        strip.querySelectorAll('.sub-tab').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const panel = strip.closest('.tab-panel') || strip.parentElement;
+        panel.querySelectorAll(':scope > .sub-panel').forEach((p) => p.style.display = 'none');
+        const target = document.getElementById(btn.dataset.subtarget);
+        if (target) target.style.display = 'block';
+      });
     });
   });
 }
 
+function toggleSidebar() {
+  const shell = document.querySelector('.shell');
+  const nav = document.querySelector('.side-nav');
+  const btn = document.querySelector('.sidebar-toggle');
+  const collapsed = nav.classList.toggle('collapsed');
+  shell.classList.toggle('sidebar-collapsed', collapsed);
+  btn.textContent = collapsed ? '\u00BB' : '\u00AB';
+  localStorage.setItem('dart-sidebar-collapsed', collapsed ? '1' : '');
+}
+
 function initTabs() {
-  const buttons = document.querySelectorAll('.nav-link[data-target]');
+  const buttons = document.querySelectorAll('.nav-btn[data-target]');
   const panels = document.querySelectorAll('.tab-panel');
   buttons.forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
+    btn.addEventListener('click', () => {
       buttons.forEach((b) => b.classList.remove('active'));
       panels.forEach((p) => p.classList.remove('active'));
       btn.classList.add('active');
       const panel = document.getElementById(btn.dataset.target);
       if (panel) panel.classList.add('active');
-      // Collapse sidebar on mobile after nav click
-      const sidebarMenu = document.getElementById('sidebar-menu');
-      if (sidebarMenu && sidebarMenu.classList.contains('show')) {
-        bootstrap.Collapse.getInstance(sidebarMenu)?.hide();
-      }
     });
   });
 }
 
 function showTab(panelId) {
-  const buttons = document.querySelectorAll('.nav-link[data-target]');
+  const buttons = document.querySelectorAll('.nav-btn[data-target]');
   const panels = document.querySelectorAll('.tab-panel');
   buttons.forEach((b) => b.classList.remove('active'));
   panels.forEach((p) => p.classList.remove('active'));
-  const matchBtn = document.querySelector(`.nav-link[data-target="${panelId}"]`);
+  const matchBtn = document.querySelector(`.nav-btn[data-target="${panelId}"]`);
   if (matchBtn) matchBtn.classList.add('active');
   const panel = document.getElementById(panelId);
   if (panel) panel.classList.add('active');
@@ -2790,13 +2711,13 @@ function renderVehicleCards(vehicles) {
     const escapedName = (v.name||'').replace(/'/g, "\\'");
     let actionButtons;
     if (v.status === 'retired') {
-      actionButtons = `<button class="btn btn-outline-secondary btn-sm" onclick="reactivateVehicle('${v.id}', '${escapedName}')">Reactivate</button>`;
+      actionButtons = `<button class="btn secondary small" onclick="reactivateVehicle('${v.id}', '${escapedName}')">Reactivate</button>`;
     } else if (v.rideCount > 0) {
-      actionButtons = `<button class="btn btn-outline-secondary btn-sm" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
-        <button class="btn btn-outline-secondary btn-sm" onclick="retireVehicle('${v.id}', '${escapedName}')">Retire</button>`;
+      actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
+        <button class="btn secondary small" onclick="retireVehicle('${v.id}', '${escapedName}')">Retire</button>`;
     } else {
-      actionButtons = `<button class="btn btn-outline-secondary btn-sm" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteVehicle('${v.id}', '${escapedName}')">Delete</button>`;
+      actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
+        <button class="btn danger small" onclick="deleteVehicle('${v.id}', '${escapedName}')">Delete</button>`;
     }
     return `<div class="vehicle-card${overdueClass}${retiredClass}">
       <div class="vehicle-name">${v.name}${retiredBadge}</div>
@@ -3179,6 +3100,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initTabs();
   initSubTabs();
+  // Restore sidebar collapsed state
+  if (localStorage.getItem('dart-sidebar-collapsed') === '1') {
+    document.querySelector('.side-nav')?.classList.add('collapsed');
+    document.querySelector('.shell')?.classList.add('sidebar-collapsed');
+    const sidebarBtn = document.querySelector('.sidebar-toggle');
+    if (sidebarBtn) sidebarBtn.textContent = '\u00BB';
+  }
   await initForms();
 
   // Ride filter input
@@ -3205,15 +3133,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     adminFilterInput.addEventListener('input', debounce(filterAdminUsers, 300));
   }
 
-  // Admin drawer cleanup on hide (offcanvas handles close/backdrop/escape natively)
-  const adminDrawerEl = document.getElementById('admin-drawer');
-  if (adminDrawerEl) {
-    adminDrawerEl.addEventListener('hidden.bs.offcanvas', () => {
-      const body = document.getElementById('admin-drawer-body');
-      if (body) body.innerHTML = '';
-      drawerUserId = null;
-    });
-  }
+  // Admin drawer close events
+  const drawerCloseBtn = document.getElementById('admin-drawer-close');
+  if (drawerCloseBtn) drawerCloseBtn.addEventListener('click', closeAdminDrawer);
+  const drawerBackdrop = document.getElementById('admin-drawer-backdrop');
+  if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeAdminDrawer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('admin-drawer')?.classList.contains('open')) {
+      closeAdminDrawer();
+    }
+  });
 
   await loadEmployees();
   await loadShifts();
@@ -3225,15 +3154,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (currentUser?.id) {
     await loadUserProfile(currentUser.id);
   }
-  initShiftCalendar();
-  document.getElementById('shift-filter-employee')?.addEventListener('change', (e) => {
-    shiftFilterEmployeeId = e.target.value;
-    refreshShiftCalendar();
-  });
-  document.getElementById('shift-show-rides')?.addEventListener('change', (e) => {
-    showRidesOnCalendar = e.target.checked;
-    refreshShiftCalendar();
-  });
+  initScheduleDate();
+  updateScheduleToggleUI();
+
+  // Re-render shift grid when employee changes
+  document.getElementById('shift-employee').addEventListener('change', renderShiftGrid);
+  const shiftProfileBtn = document.getElementById('shift-employee-profile');
+  if (shiftProfileBtn) {
+    shiftProfileBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('shift-employee').value;
+      openProfileById(id);
+    });
+  }
 
   const createBtn = document.getElementById('admin-create-btn');
   if (createBtn) createBtn.addEventListener('click', createAdminUser);
@@ -3250,7 +3183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const exportCsvBtn = document.getElementById('export-csv-btn');
   if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportSemesterCSV);
 
-  const analyticsNavBtn = document.querySelector('.nav-link[data-target="analytics-panel"]');
+  const analyticsNavBtn = document.querySelector('.nav-btn[data-target="analytics-panel"]');
   if (analyticsNavBtn) {
     analyticsNavBtn.addEventListener('click', () => {
       if (!analyticsLoaded) {
@@ -3262,7 +3195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Fleet: lazy load vehicles on first tab click
   let fleetLoaded = false;
-  const fleetNavBtn = document.querySelector('.nav-link[data-target="fleet-panel"]');
+  const fleetNavBtn = document.querySelector('.nav-btn[data-target="fleet-panel"]');
   if (fleetNavBtn) {
     fleetNavBtn.addEventListener('click', () => {
       if (!fleetLoaded) {
@@ -3275,5 +3208,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(loadRides, 5000);
   setInterval(loadVehicles, 15000);
   setInterval(renderDriverConsole, 1000);
-  setInterval(refreshShiftCalendar, 5000);
+  setInterval(renderSchedule, 5000);
 });

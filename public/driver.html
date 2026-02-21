@@ -5,96 +5,549 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Driver Console</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="/css/rideops-theme.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="/demo-config.js"></script>
+  <style>
+    body { margin: 0; padding: 0; background: #f5f5f5; }
+    .driver-header { background: #990000; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .driver-header h1 { margin: 0; font-size: 1.25rem; }
+    .driver-content { padding: 1rem; max-width: 600px; margin: 0 auto; }
+    .status-bar { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+    .status-bar .status.active { color: #228b22; font-weight: bold; }
+    .status-bar .status.inactive { color: #990000; font-weight: bold; }
+    .section { background: white; border-radius: 8px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+    .section-header { background: #ffcc00; color: #333; padding: 0.75rem 1rem; font-weight: bold; }
+    .section-content { padding: 1rem; }
+    .ride-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #fafafa; }
+    .ride-card:last-child { margin-bottom: 0; }
+    .ride-card .rider-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .ride-card .route { margin-bottom: 0.5rem; }
+    .ride-card .time { color: #666; font-size: 0.9rem; margin-bottom: 0.75rem; }
+    .vehicle-select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .ride-card .status-badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+    .ride-card .status-badge.scheduled { background: #d4edda; color: #155724; }
+    .ride-card .status-badge.driver_on_the_way { background: #fff3cd; color: #856404; }
+    .ride-card .status-badge.driver_arrived_grace { background: #cce5ff; color: #004085; }
+    .ride-card .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .ride-card .actions button { flex: 1; min-width: 100px; padding: 0.75rem; font-size: 0.9rem; }
+    .grace-timer { background: #fff3cd; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.75rem; font-size: 0.9rem; }
+    .no-vehicle-warning { background: #fff3cd; color: #856404; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .empty-message { color: #666; text-align: center; padding: 2rem; }
+    .btn-logout { background: transparent; border: 1px solid white; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .map-section iframe { width: 100%; height: 360px; border: none; border-radius: 4px; }
+  </style>
 </head>
-<body class="d-flex flex-column">
-  <header class="navbar navbar-expand-md" data-bs-theme="dark" style="background: var(--tblr-primary);">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">
-        <span id="driver-brand" style="font-size:1.1rem;">RideOps Driver</span>
-      </a>
-      <div class="d-flex align-items-center gap-2">
-        <span class="text-white small" id="user-name"></span>
-        <a href="#" class="text-white opacity-75" onclick="logout(); return false;" title="Logout"><i class="ti ti-logout"></i></a>
+<body>
+  <header class="driver-header">
+    <div><h1 id="driver-brand">DART Driver</h1><div id="user-name"></div></div>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </header>
+  <div class="driver-content">
+    <div class="status-bar">
+      <div>Status: <span id="clock-status" class="status inactive">Clocked Out</span></div>
+      <button id="clock-btn" class="btn primary" onclick="toggleClock()">Clock In</button>
+    </div>
+    <div class="section">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>My Rides Today</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('my-rides', this)">▾</button>
+      </div>
+      <div class="section-content" id="my-rides"></div>
+    </div>
+    <div class="section" id="available-section">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Available to Claim</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('available-rides', this)">▾</button>
+      </div>
+      <div class="section-content" id="available-rides"></div>
+    </div>
+    <div class="section map-section">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Campus Map</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('driver-map-box', this)">▾</button>
+      </div>
+      <div class="section-content" id="driver-map-box">
+        <iframe class="driver-map" src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
+        <div class="map-actions">
+          <a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a>
+        </div>
       </div>
     </div>
-  </header>
-
-  <div class="page-body">
-    <div class="mobile-shell py-3">
-
-      <!-- Clock In/Out Card -->
-      <div class="card card-status-top border-secondary mb-3" id="clock-card">
-        <div class="card-body d-flex justify-content-between align-items-center">
-          <div>Status: <span id="clock-status" class="text-danger fw-bold">Clocked Out</span></div>
-          <button id="clock-btn" class="btn btn-primary" onclick="toggleClock()">Clock In</button>
-        </div>
+    <div class="section">
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>My Account <span id="account-summary" style="font-weight:400;font-size:0.85rem;color:#666;margin-left:8px;"></span></span>
+        <button class="toggle-btn-slim" id="profile-toggle" type="button" onclick="toggleProfileEdit()">▸</button>
       </div>
-
-      <!-- My Rides Today -->
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3 class="card-title m-0">My Rides Today</h3>
-          <button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('my-rides', this)">&#9662;</button>
-        </div>
-        <div class="card-body" id="my-rides"></div>
+      <div class="section-content" id="profile-content" style="display:none;">
+        <label>USC ID (read-only)
+          <input type="text" id="profile-uscid" readonly>
+        </label>
+        <label>USC Email (read-only)
+          <input type="email" id="profile-email" readonly>
+        </label>
+        <label>Username (read-only)
+          <input type="text" id="profile-username" readonly>
+        </label>
+        <label>Full Name
+          <input type="text" id="profile-name">
+        </label>
+        <label>Phone
+          <input type="tel" id="profile-phone">
+        </label>
+        <button class="btn primary" onclick="saveProfile()">Save Changes</button>
+        <div id="profile-message" class="small-text"></div>
+        <hr style="margin:16px 0; border:none; border-top:1px solid #ddd;">
+        <h4 style="margin:0 0 8px;">Change Password</h4>
+        <label>Current Password<input type="password" id="pw-current"></label>
+        <label>New Password (min 8 chars)<input type="password" id="pw-new"></label>
+        <label>Confirm New Password<input type="password" id="pw-confirm"></label>
+        <button class="btn secondary" onclick="changePassword()">Update Password</button>
+        <div id="pw-message" class="small-text"></div>
       </div>
-
-      <!-- Available to Claim -->
-      <div class="card mb-3" id="available-section">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3 class="card-title m-0">Available to Claim</h3>
-          <button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('available-rides', this)">&#9662;</button>
-        </div>
-        <div class="card-body" id="available-rides"></div>
-      </div>
-
-      <!-- Campus Map -->
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3 class="card-title m-0">Campus Map</h3>
-          <button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('driver-map-box', this)">&#9662;</button>
-        </div>
-        <div class="card-body" id="driver-map-box">
-          <div class="map-wrapper office-map">
-            <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
-          </div>
-          <div class="mt-2"><a class="text-primary" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a></div>
-        </div>
-      </div>
-
-      <!-- My Account -->
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h3 class="card-title m-0">My Account <span id="account-summary" class="fw-normal text-secondary small ms-2"></span></h3>
-          <button class="toggle-btn-slim" id="profile-toggle" type="button" onclick="toggleProfileEdit()">&#9656;</button>
-        </div>
-        <div class="card-body" id="profile-content" style="display:none;">
-          <div class="mb-3"><label class="form-label">USC ID (read-only)</label><input type="text" class="form-control" id="profile-uscid" readonly></div>
-          <div class="mb-3"><label class="form-label">USC Email (read-only)</label><input type="email" class="form-control" id="profile-email" readonly></div>
-          <div class="mb-3"><label class="form-label">Username (read-only)</label><input type="text" class="form-control" id="profile-username" readonly></div>
-          <div class="mb-3"><label class="form-label">Full Name</label><input type="text" class="form-control" id="profile-name"></div>
-          <div class="mb-3"><label class="form-label">Phone</label><input type="tel" class="form-control" id="profile-phone"></div>
-          <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
-          <div id="profile-message" class="small-text mt-2"></div>
-          <hr>
-          <h4 class="mt-3 mb-2">Change Password</h4>
-          <div class="mb-3"><label class="form-label">Current Password</label><input type="password" class="form-control" id="pw-current"></div>
-          <div class="mb-3"><label class="form-label">New Password (min 8 chars)</label><input type="password" class="form-control" id="pw-new"></div>
-          <div class="mb-3"><label class="form-label">Confirm New Password</label><input type="password" class="form-control" id="pw-confirm"></div>
-          <button class="btn btn-outline-secondary" onclick="changePassword()">Update Password</button>
-          <div id="pw-message" class="small-text mt-2"></div>
-        </div>
-      </div>
-
     </div>
   </div>
+  <script src="/utils.js"></script>
+  <script>
+    let currentUser = null;
+    let employees = [];
+    let rides = [];
+    let vehicles = [];
 
-  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
-  <script src="/js/rideops-utils.js"></script>
-  <script src="/demo-config.js"></script>
-  <script src="/js/driver.js"></script>
+    const ACTIVE_STATUSES = ['driver_on_the_way', 'driver_arrived_grace'];
+    const ASSIGNED_OPEN_STATUSES = ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'];
+
+    fetch('/api/tenant-config').then(r=>r.ok?r.json():null).then(c=>{
+      if(!c)return;
+      document.title=c.orgShortName+' Driver';
+      const b=document.getElementById('driver-brand');if(b)b.textContent=c.orgShortName+' Driver';
+    }).catch(()=>{});
+
+    function todayLocal() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function pluralize(count, word) {
+      return `${word}${count === 1 ? '' : 's'}`;
+    }
+
+    function getContactIconSvg(type) {
+      if (type === 'phone') {
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.7 15.7 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2 11.2 11.2 0 0 0 3.5.6 1 1 0 0 1 1 1V21a1 1 0 0 1-1 1C10.9 22 2 13.1 2 2a1 1 0 0 1 1-1h3.4a1 1 0 0 1 1 1 11.2 11.2 0 0 0 .6 3.5 1 1 0 0 1-.2 1L6.6 8.7z"/></svg>';
+      }
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 7.2L20 6H4l8 5.2z"/></svg>';
+    }
+
+    function buildContactPill(phone, protocol, label, iconType) {
+      const href = phone ? `${protocol}:${phone}` : '#';
+      const onMissingPhone = phone
+        ? ''
+        : 'onclick="event.preventDefault();showToast(\'No phone number available\',\'warning\')"';
+      return `<a class="contact-pill" href="${href}" ${onMissingPhone}><span class="icon">${getContactIconSvg(iconType)}</span><span>${label}</span></a>`;
+    }
+
+    async function init() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          window.location.href = '/login';
+          return;
+        }
+        currentUser = await res.json();
+        document.getElementById('user-name').textContent = currentUser.name;
+        await loadProfile();
+        await loadData();
+        setInterval(loadData, 3000);
+        setInterval(updateGraceTimers, 1000);
+      } catch {
+        window.location.href = '/login';
+      }
+    }
+
+    async function loadData() {
+      const [empRes, ridesRes, vehRes] = await Promise.all([fetch('/api/employees'), fetch('/api/rides'), fetch('/api/vehicles')]);
+      employees = await empRes.json();
+      rides = await ridesRes.json();
+      vehicles = await vehRes.json();
+      render();
+    }
+
+    async function loadProfile() {
+      try {
+        const res = await fetch('/api/me');
+        const me = await res.json();
+        document.getElementById('profile-uscid').value = me.usc_id || '';
+        document.getElementById('profile-email').value = me.email || '';
+        document.getElementById('profile-username').value = me.username || '';
+        document.getElementById('profile-name').value = me.name || '';
+        document.getElementById('profile-phone').value = me.phone || '';
+        const summaryEl = document.getElementById('account-summary');
+        if (summaryEl) {
+          const nm = me.name || '';
+          const em = me.email || '';
+          summaryEl.textContent = nm && em ? '\u2014 ' + nm + ' \u00b7 ' + em : nm ? '\u2014 ' + nm : '';
+        }
+      } catch {}
+
+      const saveBtn = document.getElementById('profile-save');
+      if (saveBtn) saveBtn.onclick = saveProfile;
+    }
+
+    async function saveProfile() {
+      const msg = document.getElementById('profile-message');
+      msg.textContent = '';
+      const name = document.getElementById('profile-name').value.trim();
+      const phone = document.getElementById('profile-phone').value.trim();
+      const res = await fetch('/api/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Could not save profile';
+        return;
+      }
+      msg.textContent = 'Saved!';
+      document.getElementById('user-name').textContent = data.name;
+      const summaryEl = document.getElementById('account-summary');
+      if (summaryEl) {
+        const nm = data.name || '';
+        const em = document.getElementById('profile-email').value || '';
+        summaryEl.textContent = nm && em ? '\u2014 ' + nm + ' \u00b7 ' + em : nm ? '\u2014 ' + nm : '';
+      }
+      toggleProfileEdit(true);
+    }
+
+    async function changePassword() {
+      const msg = document.getElementById('pw-message');
+      msg.textContent = '';
+      msg.style.color = '';
+      const currentPassword = document.getElementById('pw-current').value;
+      const newPassword = document.getElementById('pw-new').value;
+      const confirm = document.getElementById('pw-confirm').value;
+      if (!currentPassword || !newPassword || !confirm) {
+        msg.textContent = 'All fields are required.';
+        msg.style.color = '#c62828';
+        return;
+      }
+      if (newPassword.length < 8) {
+        msg.textContent = 'New password must be at least 8 characters.';
+        msg.style.color = '#c62828';
+        return;
+      }
+      if (newPassword !== confirm) {
+        msg.textContent = 'Passwords do not match.';
+        msg.style.color = '#c62828';
+        return;
+      }
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          msg.textContent = data.error || 'Failed to change password';
+          msg.style.color = '#c62828';
+          return;
+        }
+        msg.textContent = 'Password updated successfully!';
+        msg.style.color = '#228b22';
+        document.getElementById('pw-current').value = '';
+        document.getElementById('pw-new').value = '';
+        document.getElementById('pw-confirm').value = '';
+      } catch {
+        msg.textContent = 'Connection error';
+        msg.style.color = '#c62828';
+      }
+    }
+
+    function toggleProfileEdit(forceClose) {
+      const content = document.getElementById('profile-content');
+      const btn = document.getElementById('profile-toggle');
+      if (!content || !btn) return;
+      const isOpen = content.style.display !== 'none';
+      if (forceClose || isOpen) {
+        content.style.display = 'none';
+        btn.textContent = '▸';
+      } else {
+        content.style.display = 'block';
+        btn.textContent = '▾';
+      }
+    }
+
+    function toggleDriverSection(id, btn) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const isHidden = el.style.display === 'none';
+      el.style.display = isHidden ? 'block' : 'none';
+      if (btn) btn.textContent = isHidden ? '▾' : '▸';
+    }
+
+    function render() {
+      const me = employees.find((e) => e.id === currentUser.id);
+      const isActive = me?.active || false;
+      document.getElementById('clock-status').textContent = isActive ? 'Clocked In' : 'Clocked Out';
+      document.getElementById('clock-status').className = `status ${isActive ? 'active' : 'inactive'}`;
+      document.getElementById('clock-btn').textContent = isActive ? 'Clock Out' : 'Clock In';
+      document.getElementById('clock-btn').className = `btn ${isActive ? 'secondary' : 'primary'}`;
+
+      const today = todayLocal();
+      const actionableStatuses = ['scheduled', 'driver_on_the_way', 'driver_arrived_grace', 'completed', 'no_show'];
+      const myRides = rides.filter(
+        (r) => r.assignedDriverId === currentUser.id && r.requestedTime?.startsWith(today) && actionableStatuses.includes(r.status)
+      );
+
+      const myRidesEl = document.getElementById('my-rides');
+      if (!myRides.length) {
+        showEmptyState(myRidesEl, {
+          icon: 'inbox',
+          title: 'No rides assigned today',
+          message: 'Your next assignments will appear here when dispatch adds them.'
+        });
+      } else {
+        myRidesEl.innerHTML = myRides.map((r) => renderRide(r, true)).join('');
+      }
+
+      const availableSection = document.getElementById('available-section');
+      const availableEl = document.getElementById('available-rides');
+      if (!isActive) {
+        availableSection.style.display = 'none';
+      } else {
+        availableSection.style.display = 'block';
+        const availableRides = rides.filter((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
+        if (!availableRides.length) {
+          showEmptyState(availableEl, {
+            icon: 'inbox',
+            title: 'No rides available',
+            message: 'Approved rides with no assigned driver will show up here.'
+          });
+        } else {
+          availableEl.innerHTML = availableRides.map((r) => renderRide(r, false)).join('');
+        }
+      }
+    }
+
+    function renderRide(ride, assigned) {
+      const labels = {
+        approved: 'Available',
+        scheduled: 'Scheduled',
+        driver_on_the_way: 'On The Way',
+        driver_arrived_grace: 'Waiting',
+        completed: 'Completed',
+        no_show: 'No-Show'
+      };
+      let grace = '';
+      let actions = '';
+      if (ride.status === 'driver_arrived_grace' && ride.graceStartTime) {
+        grace = `<div class="grace-timer" data-grace="${ride.graceStartTime}"></div>`;
+      }
+      if (assigned) {
+        if (ride.status === 'scheduled') {
+          const vehOpts = vehicles.filter(v => v.status === 'available').map(v =>
+            `<option value="${v.id}" ${v.id === ride.vehicleId ? 'selected' : ''}>${v.name}</option>`
+          ).join('');
+          const hasVehicle = !!ride.vehicleId;
+          const noVehWarn = hasVehicle ? '' : '<div class="no-vehicle-warning">Select a cart before starting</div>';
+          actions = `<select id="veh-sched-${ride.id}" class="vehicle-select" onchange="setVehicle('${ride.id}', this.value)">
+            <option value="">${hasVehicle ? 'Change cart...' : 'Select cart...'}</option>${vehOpts}
+          </select>${noVehWarn}<button class="btn primary" onclick="startRide('${ride.id}')">On My Way</button>`;
+        } else if (ride.status === 'driver_on_the_way') {
+          const vehChangeOpts = vehicles.filter(v => v.status === 'available').map(v =>
+            `<option value="${v.id}" ${v.id === ride.vehicleId ? 'selected' : ''}>${v.name}</option>`
+          ).join('');
+          const vehicleChange = `<select class="vehicle-select" onchange="setVehicle('${ride.id}', this.value)">
+            <option value="">Change cart...</option>${vehChangeOpts}
+          </select>`;
+          actions = `${vehicleChange}<button class="btn secondary" onclick="action('${ride.id}','here')">I'm Here</button><button class="btn primary" onclick="action('${ride.id}','complete')">Complete</button>`;
+        } else if (ride.status === 'driver_arrived_grace') {
+          const canNoShow = (Date.now() - new Date(ride.graceStartTime).getTime()) / 1000 >= 300;
+          actions = `<button class="btn primary" onclick="action('${ride.id}','complete')">Complete</button><button class="btn danger" onclick="action('${ride.id}','no-show')" ${canNoShow ? '' : 'disabled'}>No-Show</button>`;
+        }
+      } else {
+        const vehOpts = vehicles.filter(v => v.status === 'available').map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+        actions = `<select id="veh-${ride.id}" class="vehicle-select"><option value="">Select cart...</option>${vehOpts}</select><button class="btn primary" onclick="claim('${ride.id}')">Claim</button>`;
+      }
+
+      // Urgency indicator
+      let urgencyClass = '';
+      let urgencyLabel = '';
+      if (ride.requestedTime && !['completed', 'no_show'].includes(ride.status)) {
+        const diffMs = new Date(ride.requestedTime).getTime() - Date.now();
+        const diffMin = Math.round(diffMs / 60000);
+        if (diffMin >= 0 && diffMin <= 15) {
+          urgencyClass = 'urgent';
+          urgencyLabel = `<div class="ride-urgency urgent"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">schedule</span> In ${diffMin} min</div>`;
+        } else if (diffMin > 15 && diffMin <= 30) {
+          urgencyClass = 'soon';
+          urgencyLabel = `<div class="ride-urgency soon">In ${diffMin} min</div>`;
+        }
+      }
+
+      const phone = ride.riderPhone || '';
+      const contactRow = `<div class="contact-row">${buildContactPill(phone, 'tel', 'Call', 'phone')}${buildContactPill(phone, 'sms', 'SMS', 'sms')}</div>`;
+      const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || '') : '';
+      const vehicleLine = vehicleName ? `<div class="time">Vehicle: ${vehicleName}</div>` : '';
+      return `<div class="ride-card ${urgencyClass}">${urgencyLabel}<div class="status-badge ${ride.status}">${labels[ride.status] || ride.status}</div><div class="rider-name">${ride.riderName}</div><div class="route">${ride.pickupLocation} → ${ride.dropoffLocation}</div><div class="time">${new Date(ride.requestedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>${vehicleLine}${contactRow}${grace}${actions ? `<div class="actions">${actions}</div>` : ''}</div>`;
+    }
+
+    function updateGraceTimers() {
+      document.querySelectorAll('.grace-timer').forEach((el) => {
+        const elapsed = (Date.now() - new Date(el.dataset.grace).getTime()) / 1000;
+        const remaining = Math.max(0, 300 - elapsed);
+        if (remaining <= 0) {
+          el.textContent = 'Rider did not show \u2014 you may mark no-show';
+          el.style.background = '#f8d7da';
+          const btn = el.closest('.ride-card')?.querySelector('.btn.danger');
+          if (btn) btn.disabled = false;
+        } else {
+          el.textContent = `Waiting for rider (${Math.floor(remaining / 60)}:${String(Math.floor(remaining % 60)).padStart(2, '0')})`;
+        }
+      });
+    }
+
+    async function toggleClock() {
+      const me = employees.find((e) => e.id === currentUser.id);
+      if (!me) return;
+
+      if (me.active) {
+        const activeRideCount = rides.filter((r) => r.assignedDriverId === currentUser.id && ACTIVE_STATUSES.includes(r.status)).length;
+        const assignedRideCount = rides.filter((r) => r.assignedDriverId === currentUser.id && ASSIGNED_OPEN_STATUSES.includes(r.status)).length;
+        let message = 'Are you sure you want to clock out?';
+        if (activeRideCount > 0) {
+          message = `You have ${activeRideCount} active ${pluralize(activeRideCount, 'ride')}. Clock out anyway?`;
+        } else if (assignedRideCount > 0) {
+          message = `You still have ${assignedRideCount} assigned ${pluralize(assignedRideCount, 'ride')}. Clock out anyway?`;
+        }
+        const confirmed = await showConfirmModal({
+          title: 'Clock Out',
+          message,
+          confirmLabel: 'Clock Out',
+          cancelLabel: 'Stay Clocked In',
+          type: 'warning'
+        });
+        if (!confirmed) return;
+      }
+
+      const endpoint = me.active ? 'clock-out' : 'clock-in';
+      const response = await fetch(`/api/employees/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: currentUser.id })
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        showToast(err.error || 'Could not update clock status', 'error');
+        return;
+      }
+      await loadData();
+    }
+
+    async function claim(id) {
+      const vehSelect = document.getElementById(`veh-${id}`);
+      const vehicleId = vehSelect?.value || null;
+      const body = vehicleId ? JSON.stringify({ vehicleId }) : '{}';
+      const response = await fetch(`/api/rides/${id}/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        showToast(err.error || 'Failed to claim ride', 'error');
+      } else {
+        showToast('Ride claimed successfully', 'success');
+      }
+      await loadData();
+    }
+
+    async function action(id, act) {
+      if (act === 'complete') {
+        const confirmed = await showConfirmModal({
+          title: 'Complete Ride',
+          message: 'Mark this ride as completed?',
+          confirmLabel: 'Complete',
+          cancelLabel: 'Keep Open',
+          type: 'warning'
+        });
+        if (!confirmed) return;
+      }
+
+      if (act === 'no-show') {
+        const confirmed = await showConfirmModal({
+          title: 'Confirm No-Show',
+          message: 'Mark this rider as a no-show? This increases their no-show count.',
+          confirmLabel: 'Mark No-Show',
+          cancelLabel: 'Go Back',
+          type: 'danger'
+        });
+        if (!confirmed) return;
+      }
+
+      const response = await fetch(`/api/rides/${id}/${act}`, { method: 'POST' });
+      if (!response.ok) {
+        const err = await response.json();
+        showToast(err.error || 'Action failed', 'error');
+      } else {
+        const messages = {
+          'on-the-way': 'Marked as on the way',
+          here: 'Marked as arrived',
+          complete: 'Ride completed',
+          'no-show': 'Marked as no-show'
+        };
+        showToast(messages[act] || 'Action completed', 'success');
+      }
+      await loadData();
+    }
+
+    async function startRide(id) {
+      const selectEl = document.getElementById(`veh-sched-${id}`);
+      const ride = rides.find(r => r.id === id);
+      const vehicleId = selectEl?.value || ride?.vehicleId || null;
+      if (!vehicleId) {
+        showToast('Please select a cart before starting this ride', 'warning');
+        if (selectEl) selectEl.focus();
+        return;
+      }
+      const response = await fetch(`/api/rides/${id}/on-the-way`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicleId })
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        showToast(err.error || 'Could not start ride', 'error');
+      } else {
+        showToast('Marked as on the way', 'success');
+      }
+      await loadData();
+    }
+
+    async function setVehicle(rideId, vehicleId) {
+      if (!vehicleId) return;
+      const response = await fetch(`/api/rides/${rideId}/set-vehicle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicleId })
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        showToast(err.error || 'Could not set vehicle', 'error');
+      } else {
+        const veh = vehicles.find(v => v.id === vehicleId);
+        showToast(`Vehicle set to ${veh?.name || 'cart'}`, 'success');
+      }
+      await loadData();
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+
+    init();
+  </script>
 </body>
 </html>

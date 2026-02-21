@@ -5,66 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/css/tabler.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-  <link rel="stylesheet" href="/css/rideops-theme.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="/demo-config.js"></script>
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
+    .login-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 100%; max-width: 360px; border-bottom: 3px solid #FFCC00; }
+    .login-card h2 { margin-top: 0; color: #990000; text-align: center; }
+    .login-card input { width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; margin-top: 0.25rem; box-sizing: border-box; }
+    .login-card button { width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 1rem; }
+    .login-error { color: #990000; background: #ffe6e6; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; display: none; }
+    .login-error.show { display: block; }
+    .login-hint { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.85rem; color: #666; }
+  </style>
 </head>
-<body class="d-flex flex-column">
-  <div class="page page-center">
-    <div class="container container-tight py-4">
-      <div class="text-center mb-4">
-        <a href="/" class="navbar-brand navbar-brand-autodark">
-          <h2 id="login-brand" class="m-0" style="color: var(--tblr-primary);">RideOps</h2>
-        </a>
-        <p id="login-tagline" class="text-secondary mt-1">Campus Transportation Management</p>
+<body>
+  <header class="header"><div><h1 id="login-brand">USC DART</h1><p id="login-tagline">Disabled Access To Road Transportation</p></div></header>
+  <div class="login-container">
+    <div class="login-card">
+      <h2>Sign In</h2>
+      <div id="login-error" class="login-error"></div>
+      <form id="login-form">
+        <label>Username<input type="text" id="username" required autocomplete="username"></label>
+        <label>Password<input type="password" id="password" required autocomplete="current-password"></label>
+        <button type="submit" class="btn primary">Sign In</button>
+      </form>
+      <div id="change-password-form" style="display:none;">
+        <p class="small-text" style="color:#990000; font-weight:700;">You must change your password before continuing.</p>
+        <label>Current Password<input type="password" id="cp-current" required autocomplete="current-password"></label>
+        <label>New Password (min 8 chars)<input type="password" id="cp-new" required autocomplete="new-password"></label>
+        <label>Confirm New Password<input type="password" id="cp-confirm" required autocomplete="new-password"></label>
+        <button type="button" id="cp-submit" class="btn primary">Change Password</button>
+        <div id="cp-message" class="small-text" style="margin-top:8px;"></div>
       </div>
-      <div class="card card-md">
-        <div class="card-body">
-          <h2 class="h2 text-center mb-4">Sign In</h2>
-          <div id="login-error" class="alert alert-danger" style="display:none;"></div>
-          <form id="login-form" autocomplete="off">
-            <div class="mb-3">
-              <label class="form-label" for="username">Username</label>
-              <input type="text" class="form-control" id="username" required autocomplete="username" placeholder="Enter your username">
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="password">Password</label>
-              <input type="password" class="form-control" id="password" required autocomplete="current-password" placeholder="Enter your password">
-            </div>
-            <div class="form-footer">
-              <button type="submit" class="btn btn-primary w-100">Sign In</button>
-            </div>
-          </form>
-          <div id="change-password-form" style="display:none;">
-            <div class="alert alert-warning mt-3">You must change your password before continuing.</div>
-            <div class="mb-3">
-              <label class="form-label" for="cp-current">Current Password</label>
-              <input type="password" class="form-control" id="cp-current" required autocomplete="current-password">
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="cp-new">New Password (min 8 chars)</label>
-              <input type="password" class="form-control" id="cp-new" required autocomplete="new-password">
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="cp-confirm">Confirm New Password</label>
-              <input type="password" class="form-control" id="cp-confirm" required autocomplete="new-password">
-            </div>
-            <button type="button" id="cp-submit" class="btn btn-primary w-100">Change Password</button>
-            <div id="cp-message" class="small-text mt-2"></div>
-          </div>
-        </div>
-      </div>
-      <div class="text-center text-secondary mt-3" data-dev-only hidden aria-hidden="true">
-        <strong>Test accounts:</strong><br>Drivers: mazen, jason, jocelin, olivia<br>Office: office<br>Riders: sarah, tom<br>Password: dart123
-      </div>
-      <div id="signup-link" style="display:none; text-align:center; margin-top:1rem;">
-        <a href="/signup" class="text-primary fw-bold text-decoration-none">New rider? Create an account</a>
+      <div class="login-hint" data-dev-only hidden aria-hidden="true"><strong>Test accounts:</strong><br>Drivers: mazen, jason, jocelin, olivia<br>Office: office<br>Riders: sarah, tom<br>Password: dart123</div>
+      <div id="signup-link" style="display:none; text-align:center; margin-top:1rem; font-size:0.9rem;">
+        <a href="/signup" style="color:#990000; font-weight:700; text-decoration:none;">New rider? Create an account</a>
       </div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
-  <script src="/js/rideops-utils.js"></script>
-  <script src="/demo-config.js"></script>
+  <script src="/utils.js"></script>
   <script>
     (async () => {
       if (typeof window.applyDevOnlyVisibility === 'function') {
@@ -105,14 +85,14 @@
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errorEl = document.getElementById('login-error');
-      errorEl.style.display = 'none';
+      errorEl.classList.remove('show');
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value })
         });
-        if (!res.ok) { const data = await res.json(); errorEl.textContent = data.error || 'Login failed'; errorEl.style.display = 'block'; return; }
+        if (!res.ok) { const data = await res.json(); errorEl.textContent = data.error || 'Login failed'; errorEl.classList.add('show'); return; }
         const user = await res.json();
         loginUserData = user;
         if (user.mustChangePassword) {
@@ -122,7 +102,7 @@
           return;
         }
         redirectByRole(user.role);
-      } catch { errorEl.textContent = 'Connection error'; errorEl.style.display = 'block'; }
+      } catch { errorEl.textContent = 'Connection error'; errorEl.classList.add('show'); }
     });
 
     document.getElementById('cp-submit').addEventListener('click', async () => {
