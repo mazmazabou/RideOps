@@ -773,7 +773,7 @@ app.get('/demo-config.js', (req, res) => {
   res.send(`
     (function() {
       var s = document.createElement('style');
-      s.textContent = 'body { padding-top: 40px !important; } .driver-header { top: 40px !important; }';
+      s.textContent = 'body { padding-top: 40px !important; } .navbar { top: 40px !important; }';
       document.head.appendChild(s);
 
       window.addEventListener('DOMContentLoaded', function() {
@@ -853,6 +853,42 @@ app.delete('/api/shifts/:id', requireOffice, async (req, res) => {
   const result = await query(`DELETE FROM shifts WHERE id = $1 RETURNING id`, [id]);
   if (!result.rowCount) return res.status(404).json({ error: 'Shift not found' });
   res.json({ id });
+});
+
+app.put('/api/shifts/:id', requireOffice, async (req, res) => {
+  const { id } = req.params;
+  const { employeeId, dayOfWeek, startTime, endTime } = req.body;
+
+  // Validate dayOfWeek if provided (0-4, Mon-Fri)
+  if (dayOfWeek !== undefined && (dayOfWeek < 0 || dayOfWeek > 4)) {
+    return res.status(400).json({ error: 'dayOfWeek must be 0-4 (Mon-Fri)' });
+  }
+  // Validate time format if provided
+  const timeRe = /^\d{2}:\d{2}$/;
+  if (startTime !== undefined && !timeRe.test(startTime)) {
+    return res.status(400).json({ error: 'Invalid startTime format (HH:MM)' });
+  }
+  if (endTime !== undefined && !timeRe.test(endTime)) {
+    return res.status(400).json({ error: 'Invalid endTime format (HH:MM)' });
+  }
+  // Validate employeeId exists if provided
+  if (employeeId !== undefined) {
+    const empResult = await query(`SELECT id FROM users WHERE id = $1 AND role = 'driver'`, [employeeId]);
+    if (!empResult.rowCount) return res.status(400).json({ error: 'Employee not found' });
+  }
+
+  const result = await query(
+    `UPDATE shifts SET
+       employee_id = COALESCE($2, employee_id),
+       day_of_week = COALESCE($3, day_of_week),
+       start_time  = COALESCE($4, start_time),
+       end_time    = COALESCE($5, end_time)
+     WHERE id = $1
+     RETURNING *`,
+    [id, employeeId ?? null, dayOfWeek ?? null, startTime ?? null, endTime ?? null]
+  );
+  if (!result.rowCount) return res.status(404).json({ error: 'Shift not found' });
+  res.json(result.rows[0]);
 });
 
 // ----- Ride endpoints -----

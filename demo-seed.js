@@ -24,13 +24,13 @@ async function seedDemoData(pool) {
   // ----- Shifts (weekly schedule) -----
   const shifts = [
     // Mazen: Mon-Fri 8:00-12:00
-    ...([1,2,3,4,5].map(d => ({ id: generateId('shift'), employeeId: 'emp1', day: d, start: '08:00', end: '12:00' }))),
+    ...([0,1,2,3,4].map(d => ({ id: generateId('shift'), employeeId: 'emp1', day: d, start: '08:00', end: '12:00' }))),
     // Jason: Mon-Fri 12:00-17:00
-    ...([1,2,3,4,5].map(d => ({ id: generateId('shift'), employeeId: 'emp2', day: d, start: '12:00', end: '17:00' }))),
+    ...([0,1,2,3,4].map(d => ({ id: generateId('shift'), employeeId: 'emp2', day: d, start: '12:00', end: '17:00' }))),
     // Jocelin: Mon/Wed/Fri 9:00-14:00
-    ...([1,3,5].map(d => ({ id: generateId('shift'), employeeId: 'emp3', day: d, start: '09:00', end: '14:00' }))),
+    ...([0,2,4].map(d => ({ id: generateId('shift'), employeeId: 'emp3', day: d, start: '09:00', end: '14:00' }))),
     // Olivia: Tue/Thu 10:00-16:00
-    ...([2,4].map(d => ({ id: generateId('shift'), employeeId: 'emp4', day: d, start: '10:00', end: '16:00' })))
+    ...([1,3].map(d => ({ id: generateId('shift'), employeeId: 'emp4', day: d, start: '10:00', end: '16:00' })))
   ];
 
   for (const s of shifts) {
