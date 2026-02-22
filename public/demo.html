@@ -5,152 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RideOps Demo</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css">
+  <link rel="stylesheet" href="/css/rideops-theme.css">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      color: #064e3b;
-    }
-    .demo-container {
-      max-width: 780px;
-      width: 100%;
-      text-align: center;
-    }
-    .demo-logo {
-      font-size: 48px;
-      margin-bottom: 8px;
-    }
-    h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #065f46;
-      margin-bottom: 8px;
-      letter-spacing: -0.5px;
-    }
-    .demo-subtitle {
-      font-size: 1.1rem;
-      color: #047857;
-      margin-bottom: 40px;
-      line-height: 1.5;
-    }
-    .role-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-bottom: 48px;
-    }
-    .role-card {
-      background: white;
-      border-radius: 16px;
-      padding: 28px 20px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-      border: 2px solid transparent;
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-    .role-card:hover {
-      transform: translateY(-4px);
-      border-color: #059669;
-      box-shadow: 0 8px 32px rgba(5, 150, 105, 0.15);
-    }
-    .role-icon {
-      width: 56px;
-      height: 56px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      margin-bottom: 4px;
-    }
-    .role-icon.office { background: #ede9fe; }
-    .role-icon.driver { background: #fef3c7; }
-    .role-icon.rider { background: #dbeafe; }
-    .role-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #064e3b;
-    }
-    .role-desc {
-      font-size: 0.85rem;
-      color: #6b7280;
-      line-height: 1.5;
-      flex: 1;
-    }
-    .role-btn {
-      display: inline-block;
-      margin-top: 12px;
-      padding: 10px 28px;
-      background: #059669;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-      width: 100%;
-    }
-    .role-btn:hover { background: #047857; }
-    .role-btn:disabled {
-      background: #9ca3af;
-      cursor: wait;
-    }
-    .demo-footer {
-      font-size: 0.85rem;
-      color: #6b7280;
-    }
-    .demo-footer a {
-      color: #059669;
-      text-decoration: none;
-      font-weight: 600;
-    }
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--color-page-bg); }
+    .demo-wrap { width: 100%; max-width: 480px; padding: 24px; }
+    .demo-header { text-align: center; margin-bottom: 28px; }
+    .demo-brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 8px; }
+    .demo-brand .ro-brand-icon { width: 40px; height: 40px; font-size: 14px; }
+    .demo-brand-text { font-size: 22px; font-weight: 800; color: var(--color-text); }
+    .demo-subtitle { font-size: 13px; color: var(--color-text-secondary); }
+    .demo-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; transition: background 0.1s; }
+    .demo-row:hover { background: var(--color-surface-hover); }
+    .demo-row-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .demo-row-icon i { font-size: 22px; }
+    .demo-row-icon--office { background: rgba(99,102,241,0.1); color: #6366F1; }
+    .demo-row-icon--driver { background: rgba(245,158,11,0.1); color: #F59E0B; }
+    .demo-row-icon--rider { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .demo-row-text { flex: 1; min-width: 0; }
+    .demo-row-title { font-size: 14px; font-weight: 700; color: var(--color-text); }
+    .demo-row-desc { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+    .demo-row-chevron { color: var(--color-text-muted); font-size: 18px; flex-shrink: 0; }
+    .demo-footer { text-align: center; margin-top: 24px; font-size: 12px; color: var(--color-text-muted); }
+    .demo-footer a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
     .demo-footer a:hover { text-decoration: underline; }
-    @media (max-width: 640px) {
-      .role-grid {
-        grid-template-columns: 1fr;
-        max-width: 340px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-      h1 { font-size: 1.5rem; }
-    }
   </style>
 </head>
 <body>
-  <div class="demo-container">
-    <div class="demo-logo">&#x1F690;</div>
-    <h1>RideOps Demo</h1>
-    <p class="demo-subtitle">Experience the platform from every angle. Pick a role to explore.</p>
+  <div class="demo-wrap">
+    <div class="demo-header">
+      <div class="demo-brand">
+        <div class="ro-brand-icon">RO</div>
+        <span class="demo-brand-text">RideOps Demo</span>
+      </div>
+      <div class="demo-subtitle">Experience the platform from every angle. Pick a role to explore.</div>
+    </div>
 
-    <div class="role-grid">
-      <div class="role-card">
-        <div class="role-icon office">&#x1F3E2;</div>
-        <div class="role-title">Office Manager</div>
-        <div class="role-desc">Dispatch rides, manage drivers, approve requests, and monitor operations in real time.</div>
-        <button class="role-btn" onclick="loginAs('office', 'dart123', '/')">Enter</button>
+    <div class="strip-list">
+      <div class="demo-row" onclick="loginAs('office', 'dart123', '/')">
+        <div class="demo-row-icon demo-row-icon--office"><i class="ti ti-building"></i></div>
+        <div class="demo-row-text">
+          <div class="demo-row-title">Office Manager</div>
+          <div class="demo-row-desc">Full admin access &mdash; dispatch, scheduling, analytics</div>
+        </div>
+        <i class="ti ti-chevron-right demo-row-chevron"></i>
       </div>
-      <div class="role-card">
-        <div class="role-icon driver">&#x1F697;</div>
-        <div class="role-title">Driver</div>
-        <div class="role-desc">Claim and complete rides on the go with the mobile driver console.</div>
-        <button class="role-btn" onclick="loginAs('mazen', 'dart123', '/driver')">Enter</button>
+      <div class="demo-row" onclick="loginAs('mazen', 'dart123', '/driver')">
+        <div class="demo-row-icon demo-row-icon--driver"><i class="ti ti-steering-wheel"></i></div>
+        <div class="demo-row-text">
+          <div class="demo-row-title">Driver</div>
+          <div class="demo-row-desc">Claim &amp; complete rides on the mobile console</div>
+        </div>
+        <i class="ti ti-chevron-right demo-row-chevron"></i>
       </div>
-      <div class="role-card">
-        <div class="role-icon rider">&#x1F9D1;</div>
-        <div class="role-title">Rider</div>
-        <div class="role-desc">Request one-time or recurring rides and track their status.</div>
-        <button class="role-btn" onclick="loginAs('sarah', 'dart123', '/rider')">Enter</button>
+      <div class="demo-row" onclick="loginAs('sarah', 'dart123', '/rider')">
+        <div class="demo-row-icon demo-row-icon--rider"><i class="ti ti-wheelchair"></i></div>
+        <div class="demo-row-text">
+          <div class="demo-row-title">Rider</div>
+          <div class="demo-row-desc">Request rides and track their status</div>
+        </div>
+        <i class="ti ti-chevron-right demo-row-chevron"></i>
       </div>
     </div>
 
@@ -159,10 +74,11 @@
     </div>
   </div>
 
+  <script src="/demo-config.js"></script>
   <script>
     async function loginAs(username, password, redirectTo) {
-      var btns = document.querySelectorAll('.role-btn');
-      btns.forEach(function(b) { b.disabled = true; });
+      var rows = document.querySelectorAll('.demo-row');
+      rows.forEach(function(r) { r.style.pointerEvents = 'none'; r.style.opacity = '0.6'; });
       try {
         var res = await fetch('/api/auth/login', {
           method: 'POST',
@@ -174,11 +90,11 @@
         } else {
           var data = await res.json().catch(function() { return {}; });
           alert(data.error || 'Login failed. Please try again.');
-          btns.forEach(function(b) { b.disabled = false; });
+          rows.forEach(function(r) { r.style.pointerEvents = ''; r.style.opacity = ''; });
         }
       } catch (e) {
         alert('Network error. Please try again.');
-        btns.forEach(function(b) { b.disabled = false; });
+        rows.forEach(function(r) { r.style.pointerEvents = ''; r.style.opacity = ''; });
       }
     }
   </script>
