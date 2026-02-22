@@ -41,7 +41,10 @@ Default login credentials (password: `dart123`):
 - `public/rider.html` — Rider request form and ride history (self-contained with inline JS/CSS, ~585 lines)
 - `public/index.html` — Office/admin console (staff, shifts, rides, dispatch, user management)
 - `public/login.html` / `signup.html` — Auth pages
-- `public/styles.css` — All CSS including USC brand colors (~687 lines)
+- `public/css/rideops-theme.css` — All CSS custom properties, component styles, layout classes (replaces styles.css)
+- `public/js/rideops-utils.js` — Shared UI utilities: `statusBadge()`, `showToastNew()`, `showModalNew()`, `initSidebar()`, `initBottomTabs()`, `formatTime()`, `formatDate()`
+- `public/styles.css` — **DEPRECATED** — no longer loaded by any page, kept for reference only
+- `demo-seed.js` — Seeds demo data for the demo mode flow
 - `public/favicon.svg` — USC-themed favicon (cardinal red circle with DT)
 - `db/schema.sql` — PostgreSQL schema reference
 
@@ -207,7 +210,7 @@ pending → approved → scheduled → driver_on_the_way → driver_arrived_grac
 
 - **Module system:** CommonJS (`require`), NOT ES modules (`import/export`)
 - **No build step** — edit files directly, refresh browser
-- **CSS:** Plain class names, USC brand colors hardcoded as hex
+- **CSS:** CSS custom properties from `rideops-theme.css`, Tabler Icons (`ti ti-*`)
 - **Error handling:** Return `{ error: 'message' }` JSON on errors
 - **Date/time:** Use ISO 8601 strings, PostgreSQL TIMESTAMPTZ columns
 - **Validation:** Server-side validation for all inputs (USC email, service hours, etc.)
@@ -226,11 +229,10 @@ pending → approved → scheduled → driver_on_the_way → driver_arrived_grac
 
 ## Current State
 
-- **Branch:** `claude/dart-operations-console-01CPHo5oRJBKQ5kJAsBTezm1`
+- **Branch:** `demo-mode`
 - **Main branch:** `main`
-- **Uncommitted changes:** Yes — large diff (~3756 insertions) across server.js, app.js, all HTML files, styles.css, plus new files (utils.js, usc_building_options.js, rider.html, signup.html, favicon.svg, CLAUDE.md, tests/)
-- **Codebase size:** ~5200 lines total (server.js: 1075, app.js: 1543, styles.css: 687, driver.html: 418, rider.html: 585, utils.js: 186, usc_building_options.js: 304)
-- **All features implemented (as of Feb 7, 2026):**
+- **UI redesign:** Complete — all pages use Tabler CSS/Icons + rideops-theme.css (no Material Symbols)
+- **All features implemented (as of Feb 21, 2026):**
   - Authentication system with login/signup (session-based, bcrypt)
   - Driver mobile view with clock in/out, ride claiming, grace timer
   - Visual schedule grid for shifts (weekly + daily views, drag-to-add)
@@ -294,13 +296,13 @@ Every ride endpoint returns this shape:
 
 `day_of_week`: 1=Monday through 5=Friday (SMALLINT).
 
-## UI Redesign Architecture (Active)
+## UI Redesign Architecture (Complete)
 
-The frontend is being migrated to a Tabler-based design system. Key rules:
+The frontend uses a Tabler-based design system. Key rules:
 
 ### CDN Dependencies (do NOT npm install these)
 - Tabler CSS: `https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css`
-- Tabler Icons: `https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css`
+- Tabler Icons: `https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css`
 - FullCalendar: `https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js` (office view only)
 
 ### New Files
