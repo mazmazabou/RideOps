@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="/js/rideops-utils.js"></script>
+  <script src="/demo-config.js"></script>
   <script src="/usc_building_options.js"></script>
   <style>
     body { padding-bottom: 56px; }
@@ -178,7 +179,11 @@
     // ── Init ──
     async function init() {
       var me = await fetchMe();
-      if (!me || me.role !== 'rider') { window.location.href = '/login.html'; return; }
+      if (!me) { window.location.href = '/login.html'; return; }
+      if (!me.demoMode && me.role !== 'rider') {
+        window.location.href = me.role === 'office' ? '/' : '/driver.html';
+        return;
+      }
       meUser = me;
       applyTenantTheme();
       initBottomTabs();

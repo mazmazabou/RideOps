@@ -421,7 +421,8 @@ app.get('/api/auth/me', (req, res) => {
     name: req.session.name,
     email: req.session.email,
     usc_id: req.session.uscId,
-    role: req.session.role
+    role: req.session.role,
+    demoMode: DEMO_MODE
   });
 });
 

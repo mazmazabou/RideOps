@@ -81,6 +81,10 @@ async function checkAuth() {
     const res = await fetch('/api/auth/me');
     if (!res.ok) { window.location.href = '/login'; return false; }
     currentUser = await res.json();
+    if (!currentUser.demoMode && currentUser.role !== 'office') {
+      window.location.href = currentUser.role === 'driver' ? '/driver.html' : '/rider.html';
+      return false;
+    }
     return true;
   } catch { window.location.href = '/login'; return false; }
 }
