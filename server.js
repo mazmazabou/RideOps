@@ -206,13 +206,13 @@ async function runMigrations() {
 
 async function seedDefaultUsers() {
   const defaults = [
-    { id: 'emp1', username: 'mazen', name: 'Mazen', email: 'hello+mazen@ride-ops.com', member_id: '1000000001', phone: '213-555-0101', role: 'driver', active: false },
-    { id: 'emp2', username: 'jason', name: 'Jason', email: 'hello+jason@ride-ops.com', member_id: '1000000002', phone: '213-555-0102', role: 'driver', active: false },
-    { id: 'emp3', username: 'jocelin', name: 'Jocelin', email: 'hello+jocelin@ride-ops.com', member_id: '1000000003', phone: '213-555-0103', role: 'driver', active: false },
-    { id: 'emp4', username: 'olivia', name: 'Olivia', email: 'hello+olivia@ride-ops.com', member_id: '1000000004', phone: '213-555-0104', role: 'driver', active: false },
+    { id: 'emp1', username: 'alex', name: 'Alex', email: 'hello+alex@ride-ops.com', member_id: '1000000001', phone: '213-555-0101', role: 'driver', active: false },
+    { id: 'emp2', username: 'jordan', name: 'Jordan', email: 'hello+jordan@ride-ops.com', member_id: '1000000002', phone: '213-555-0102', role: 'driver', active: false },
+    { id: 'emp3', username: 'taylor', name: 'Taylor', email: 'hello+taylor@ride-ops.com', member_id: '1000000003', phone: '213-555-0103', role: 'driver', active: false },
+    { id: 'emp4', username: 'morgan', name: 'Morgan', email: 'hello+morgan@ride-ops.com', member_id: '1000000004', phone: '213-555-0104', role: 'driver', active: false },
     { id: 'office', username: 'office', name: 'Office', email: 'hello+office@ride-ops.com', member_id: '1000009999', phone: '213-555-0199', role: 'office', active: true },
-    { id: 'rider1', username: 'sarah', name: 'Sarah Student', email: 'hello+sarah@ride-ops.com', member_id: '1000000011', phone: '213-555-0111', role: 'rider', active: false },
-    { id: 'rider2', username: 'tom', name: 'Tom Faculty', email: 'hello+tom@ride-ops.com', member_id: '1000000012', phone: '213-555-0112', role: 'rider', active: false }
+    { id: 'rider1', username: 'casey', name: 'Casey Rivera', email: 'hello+casey@ride-ops.com', member_id: '1000000011', phone: '213-555-0111', role: 'rider', active: false },
+    { id: 'rider2', username: 'riley', name: 'Riley Chen', email: 'hello+riley@ride-ops.com', member_id: '1000000012', phone: '213-555-0112', role: 'rider', active: false }
   ];
 
   for (const user of defaults) {
@@ -1758,7 +1758,7 @@ initDb()
       console.log('Server running from:', __dirname);
       console.log(`RideOps server running on port ${PORT}${DEMO_MODE ? ' (DEMO MODE)' : ''}`);
       if (process.env.NODE_ENV !== 'production') {
-        console.log('Login: mazen/jason/jocelin/olivia/office, riders: sarah/tom, password: demo123');
+        console.log('Login: alex/jordan/taylor/morgan/office, riders: casey/riley, password: demo123');
       }
     });
   })

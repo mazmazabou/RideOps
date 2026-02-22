@@ -17,8 +17,8 @@ Server runs on `http://localhost:3000` by default.
 
 **Default credentials** (password: `demo123`):
 - Office: `office`
-- Drivers: `mazen`, `jason`, `jocelin`, `olivia`
-- Riders: `sarah`, `tom`
+- Drivers: `alex`, `jordan`, `taylor`, `morgan`
+- Riders: `casey`, `riley`
 
 ## Tenant Configuration
 

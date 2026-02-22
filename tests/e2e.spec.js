@@ -7,10 +7,10 @@ const PASSWORD = process.env.TEST_PASSWORD || 'demo123';
 
 const USERS = {
   office:  { username: 'office',  id: 'office', role: 'office' },
-  driver1: { username: 'mazen',   id: 'emp1',   role: 'driver' },
-  driver2: { username: 'jason',   id: 'emp2',   role: 'driver' },
-  rider1:  { username: 'sarah',   id: 'rider1', role: 'rider', email: 'hello+sarah@ride-ops.com' },
-  rider2:  { username: 'tom',     id: 'rider2', role: 'rider', email: 'hello+tom@ride-ops.com' },
+  driver1: { username: 'alex',    id: 'emp1',   role: 'driver' },
+  driver2: { username: 'jordan',  id: 'emp2',   role: 'driver' },
+  rider1:  { username: 'casey',   id: 'rider1', role: 'rider', email: 'hello+casey@ride-ops.com' },
+  rider2:  { username: 'riley',   id: 'rider2', role: 'rider', email: 'hello+riley@ride-ops.com' },
 };
 
 const VEHICLE_ID = 'veh_cart1';
@@ -214,29 +214,29 @@ test.describe('API: Config', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 test.describe('API: Profile', () => {
   test('GET /api/me returns full profile', async ({ playwright }) => {
-    const ctx = await apiContext(playwright, 'sarah');
+    const ctx = await apiContext(playwright, 'casey');
     const res = await ctx.get('/api/me');
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body).toHaveProperty('id', 'rider1');
-    expect(body).toHaveProperty('username', 'sarah');
+    expect(body).toHaveProperty('username', 'casey');
     expect(body).toHaveProperty('role', 'rider');
     expect(body).toHaveProperty('email');
     await ctx.dispose();
   });
 
   test('PUT /api/me updates name/phone, then reverts', async ({ playwright }) => {
-    const ctx = await apiContext(playwright, 'sarah');
+    const ctx = await apiContext(playwright, 'casey');
     // Read original
     const original = await (await ctx.get('/api/me')).json();
 
     // Update
     const updateRes = await ctx.put('/api/me', {
-      data: { name: 'Sarah Updated', phone: '213-555-0000' },
+      data: { name: 'Casey Updated', phone: '213-555-0000' },
     });
     expect(updateRes.ok()).toBeTruthy();
     const updated = await updateRes.json();
-    expect(updated.name).toBe('Sarah Updated');
+    expect(updated.name).toBe('Casey Updated');
     expect(updated.phone).toBe('213-555-0000');
 
     // Revert
@@ -273,11 +273,11 @@ test.describe.serial('API: Admin User Management', () => {
     expect(users.length).toBeGreaterThanOrEqual(7);
   });
 
-  test('GET /api/admin/users/search finds mazen by member ID', async () => {
+  test('GET /api/admin/users/search finds alex by member ID', async () => {
     const res = await officeCtx.get('/api/admin/users/search?member_id=1000000001');
     expect(res.ok()).toBeTruthy();
     const user = await res.json();
-    expect(user.username).toBe('mazen');
+    expect(user.username).toBe('alex');
   });
 
   test('POST /api/admin/users creates test user', async () => {
@@ -371,7 +371,7 @@ test.describe.serial('API: Employees', () => {
     const employees = await res.json();
     expect(Array.isArray(employees)).toBeTruthy();
     expect(employees.length).toBeGreaterThanOrEqual(4);
-    expect(employees.some((e) => e.username === 'mazen')).toBeTruthy();
+    expect(employees.some((e) => e.username === 'alex')).toBeTruthy();
   });
 
   test('POST /api/employees/clock-in sets active=true', async () => {

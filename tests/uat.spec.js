@@ -6,8 +6,8 @@ const PASSWORD = process.env.TEST_PASSWORD || "demo123";
 // Seed users found in your server.js defaults (from your zip)
 const USERS = {
   office: "office",
-  driver: "mazen",
-  rider: "sarah",
+  driver: "alex",
+  rider: "casey",
 };
 
 /** Returns YYYY-MM-DDTHH:mm for a valid service-hours weekday (Mon-Fri 10:00 AM). */

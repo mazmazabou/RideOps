@@ -59,8 +59,8 @@ DISABLE_RIDER_SIGNUP=true      # Disable public rider signup (default: false)
 
 Default login credentials (password: `demo123`):
 - Office: `office`
-- Drivers: `mazen`, `jason`, `jocelin`, `olivia`
-- Riders: `sarah`, `tom`
+- Drivers: `alex`, `jordan`, `taylor`, `morgan`
+- Riders: `casey`, `riley`
 
 ## Key Files
 
