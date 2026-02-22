@@ -412,14 +412,157 @@ body {
 .ride-chip.status-no_show { background: rgba(239,68,68,0.1); color: var(--status-no-show); }
 .ride-chip .time { font-size: 9px; color: var(--color-text-muted); }
 
-/* ── Section 38: Shift editor grid ── */
-.shift-grid { display: grid; grid-template-columns: 60px repeat(5, 1fr); gap: 1px; background: var(--color-border-light); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
-.shift-grid .header-cell { background: var(--color-surface-hover); padding: 6px; text-align: center; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); }
-.shift-grid .time-cell { background: var(--color-surface); padding: 4px 6px; font-size: 10px; color: var(--color-text-muted); text-align: right; }
-.shift-grid .grid-cell { background: var(--color-surface); min-height: 20px; cursor: crosshair; transition: background 0.1s; }
-.shift-grid .grid-cell:hover { background: var(--color-primary-subtle); }
-.shift-grid .grid-cell.has-shift { background: var(--color-primary); opacity: 0.3; cursor: pointer; }
-.shift-grid .grid-cell.selected { background: var(--color-primary); opacity: 0.5; }
+/* ── Section 38: Shift popover + context menu ── */
+.shift-popover {
+  position: fixed;
+  width: 300px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 160;
+  animation: popover-in 0.15s ease;
+}
+@keyframes popover-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.shift-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.shift-popover__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+.shift-popover__close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  font-size: 16px;
+  line-height: 1;
+}
+.shift-popover__close:hover { color: var(--color-text); }
+.shift-popover__body {
+  padding: 10px 14px;
+}
+.shift-popover__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+}
+.shift-popover__row i {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+.shift-popover__notes-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 8px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.shift-popover__notes {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.shift-popover__notes:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.15);
+}
+.shift-popover__footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--color-border-light);
+}
+.shift-popover__btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.shift-popover__btn--danger {
+  background: none;
+  color: var(--status-no-show);
+}
+.shift-popover__btn--danger:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+.shift-popover__btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.shift-popover__btn--primary:hover {
+  background: var(--color-primary-dark);
+}
+
+/* Context menu */
+.shift-context-menu {
+  position: fixed;
+  min-width: 170px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 170;
+  padding: 4px 0;
+  animation: popover-in 0.1s ease;
+}
+.shift-context-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+.shift-context-menu__item:hover {
+  background: var(--color-surface-hover);
+}
+.shift-context-menu__item i {
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+.shift-context-menu__item--danger {
+  color: var(--status-no-show);
+}
+.shift-context-menu__item--danger i {
+  color: var(--status-no-show);
+}
+.shift-context-menu__item--danger:hover {
+  background: rgba(239, 68, 68, 0.06);
+}
 
 /* ── Section 39: Semester / Wrapped ── */
 .semester-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }

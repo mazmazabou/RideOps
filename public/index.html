@@ -167,33 +167,11 @@
 
         <!-- ═══ STAFF & SHIFTS PANEL ═══ -->
         <section class="tab-panel" id="staff-panel">
-          <div class="ro-tabs">
-            <button class="ro-tab active" data-subtarget="staff-schedule-view">Schedule</button>
-            <button class="ro-tab" data-subtarget="staff-shifts-view">Edit Shifts</button>
+          <div class="ro-section">
+            <div id="employee-bar" class="employee-bar"></div>
           </div>
-
-          <div class="sub-panel active" id="staff-schedule-view">
-            <div class="ro-section">
-              <div id="employee-bar" class="employee-bar"></div>
-            </div>
-            <div class="ro-section">
-              <div id="shift-calendar" style="padding:0;"></div>
-            </div>
-          </div>
-
-          <div class="sub-panel" id="staff-shifts-view">
-            <div class="ro-section">
-              <h3 class="ro-section__title mb-8">Add/Edit Shifts</h3>
-              <p class="text-sm text-muted mb-16">Click and drag on the grid to add shifts. Click existing shifts to remove.</p>
-              <div class="field-group mb-16">
-                <label class="ro-label">Employee</label>
-                <div class="flex gap-8 items-center">
-                  <select id="shift-employee" class="ro-select" style="max-width:300px;"></select>
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" id="shift-employee-profile" type="button">View Profile</button>
-                </div>
-              </div>
-              <div id="shift-grid" class="shift-grid"></div>
-            </div>
+          <div class="ro-section">
+            <div id="shift-calendar" style="padding:0;"></div>
           </div>
         </section>
 

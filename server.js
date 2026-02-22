@@ -155,7 +155,8 @@ async function runMigrations() {
       status TEXT NOT NULL DEFAULT 'active',
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    );`
+    );`,
+    `ALTER TABLE shifts ADD COLUMN IF NOT EXISTS notes TEXT;`
   ];
   for (const stmt of statements) {
     await query(stmt);
@@ -825,25 +826,26 @@ app.post('/api/employees/clock-out', requireStaff, async (req, res) => {
 // ----- Shift endpoints -----
 app.get('/api/shifts', requireStaff, async (req, res) => {
   const result = await query(
-    `SELECT id, employee_id AS "employeeId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime"
+    `SELECT id, employee_id AS "employeeId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime", notes
      FROM shifts ORDER BY day_of_week, start_time`
   );
   res.json(result.rows);
 });
 
 app.post('/api/shifts', requireOffice, async (req, res) => {
-  const { employeeId, dayOfWeek, startTime, endTime } = req.body;
+  const { employeeId, dayOfWeek, startTime, endTime, notes } = req.body;
   const shift = {
     id: generateId('shift'),
     employeeId,
     dayOfWeek,
     startTime,
-    endTime
+    endTime,
+    notes: notes || ''
   };
   await query(
-    `INSERT INTO shifts (id, employee_id, day_of_week, start_time, end_time)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [shift.id, employeeId, dayOfWeek, startTime, endTime]
+    `INSERT INTO shifts (id, employee_id, day_of_week, start_time, end_time, notes)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [shift.id, employeeId, dayOfWeek, startTime, endTime, notes || '']
   );
   res.json(shift);
 });
@@ -857,7 +859,7 @@ app.delete('/api/shifts/:id', requireOffice, async (req, res) => {
 
 app.put('/api/shifts/:id', requireOffice, async (req, res) => {
   const { id } = req.params;
-  const { employeeId, dayOfWeek, startTime, endTime } = req.body;
+  const { employeeId, dayOfWeek, startTime, endTime, notes } = req.body;
 
   // Validate dayOfWeek if provided
   if (dayOfWeek !== undefined) {
@@ -895,10 +897,12 @@ app.put('/api/shifts/:id', requireOffice, async (req, res) => {
      SET employee_id  = COALESCE($2, employee_id),
          day_of_week  = COALESCE($3, day_of_week),
          start_time   = COALESCE($4, start_time),
-         end_time     = COALESCE($5, end_time)
+         end_time     = COALESCE($5, end_time),
+         notes        = COALESCE($6, notes)
      WHERE id = $1
-     RETURNING id, employee_id, day_of_week, start_time, end_time, created_at`,
-    [id, employeeId !== undefined ? employeeId : null, dayOfWeek !== undefined ? dayOfWeek : null, startTime !== undefined ? startTime : null, endTime !== undefined ? endTime : null]
+     RETURNING id, employee_id AS "employeeId", day_of_week AS "dayOfWeek",
+               start_time AS "startTime", end_time AS "endTime", notes`,
+    [id, employeeId !== undefined ? employeeId : null, dayOfWeek !== undefined ? dayOfWeek : null, startTime !== undefined ? startTime : null, endTime !== undefined ? endTime : null, notes !== undefined ? notes : null]
   );
 
   res.json(result.rows[0]);
