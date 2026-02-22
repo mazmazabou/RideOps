@@ -173,7 +173,6 @@ async function initDb() {
 async function runMigrations() {
   const statements = [
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS member_id VARCHAR(50);`,
-    `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='member_id') THEN ALTER TABLE users RENAME COLUMN member_id TO member_id; EXCEPTION WHEN duplicate_column THEN NULL; END IF; END $$;`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`,
     `ALTER TABLE rides ADD COLUMN IF NOT EXISTS recurring_id TEXT;`,
