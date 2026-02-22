@@ -855,6 +855,55 @@ app.delete('/api/shifts/:id', requireOffice, async (req, res) => {
   res.json({ id });
 });
 
+app.put('/api/shifts/:id', requireOffice, async (req, res) => {
+  const { id } = req.params;
+  const { employeeId, dayOfWeek, startTime, endTime } = req.body;
+
+  // Validate dayOfWeek if provided
+  if (dayOfWeek !== undefined) {
+    const dow = Number(dayOfWeek);
+    if (!Number.isInteger(dow) || dow < 0 || dow > 4) {
+      return res.status(400).json({ error: 'dayOfWeek must be 0-4 (Mon-Fri)' });
+    }
+  }
+
+  // Validate time format if provided
+  const timeRe = /^\d{2}:\d{2}$/;
+  if (startTime !== undefined && !timeRe.test(startTime)) {
+    return res.status(400).json({ error: 'startTime must be HH:MM format' });
+  }
+  if (endTime !== undefined && !timeRe.test(endTime)) {
+    return res.status(400).json({ error: 'endTime must be HH:MM format' });
+  }
+
+  // Validate employeeId exists as a driver if provided
+  if (employeeId !== undefined) {
+    const emp = await query(`SELECT id FROM users WHERE id = $1 AND role = 'driver'`, [employeeId]);
+    if (!emp.rowCount) {
+      return res.status(400).json({ error: 'Employee not found or not a driver' });
+    }
+  }
+
+  // Check shift exists
+  const existing = await query(`SELECT id FROM shifts WHERE id = $1`, [id]);
+  if (!existing.rowCount) {
+    return res.status(404).json({ error: 'Shift not found' });
+  }
+
+  const result = await query(
+    `UPDATE shifts
+     SET employee_id  = COALESCE($2, employee_id),
+         day_of_week  = COALESCE($3, day_of_week),
+         start_time   = COALESCE($4, start_time),
+         end_time     = COALESCE($5, end_time)
+     WHERE id = $1
+     RETURNING id, employee_id, day_of_week, start_time, end_time, created_at`,
+    [id, employeeId !== undefined ? employeeId : null, dayOfWeek !== undefined ? dayOfWeek : null, startTime !== undefined ? startTime : null, endTime !== undefined ? endTime : null]
+  );
+
+  res.json(result.rows[0]);
+});
+
 // ----- Ride endpoints -----
 app.get('/api/rides', requireStaff, async (req, res) => {
   const { status } = req.query;
