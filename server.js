@@ -197,7 +197,8 @@ async function runMigrations() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );`,
-    `ALTER TABLE shifts ADD COLUMN IF NOT EXISTS notes TEXT;`
+    `ALTER TABLE shifts ADD COLUMN IF NOT EXISTS notes TEXT;`,
+    `ALTER TABLE shifts ADD COLUMN IF NOT EXISTS week_start DATE;`
   ];
   for (const stmt of statements) {
     await query(stmt);
@@ -310,6 +311,17 @@ async function setRiderMissCount(email, count) {
   );
 }
 
+async function incrementRiderMissCount(email) {
+  const res = await query(
+    `INSERT INTO rider_miss_counts (email, count)
+     VALUES ($1, 1)
+     ON CONFLICT (email) DO UPDATE SET count = rider_miss_counts.count + 1
+     RETURNING count`,
+    [email]
+  );
+  return res.rows[0].count;
+}
+
 async function addRideEvent(rideId, actorUserId, type, notes, initials) {
   await query(
     `INSERT INTO ride_events (id, ride_id, actor_user_id, type, notes, initials) VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -381,10 +393,19 @@ function generateRecurringDates(startDate, endDate, days) {
 }
 
 // ----- Auth middleware -----
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   if (!req.session.userId) {
     if (req.xhr || req.headers.accept?.includes('application/json')) {
       return res.status(401).json({ error: 'Not authenticated' });
+    }
+    return res.redirect('/login');
+  }
+  // Verify user still exists in DB (prevents ghost sessions after deletion)
+  const userCheck = await query('SELECT id FROM users WHERE id = $1', [req.session.userId]);
+  if (!userCheck.rowCount) {
+    req.session.destroy(() => {});
+    if (req.xhr || req.headers.accept?.includes('application/json')) {
+      return res.status(401).json({ error: 'User account no longer exists' });
     }
     return res.redirect('/login');
   }
@@ -885,27 +906,38 @@ app.post('/api/employees/clock-out', requireStaff, async (req, res) => {
 
 // ----- Shift endpoints -----
 app.get('/api/shifts', requireStaff, async (req, res) => {
-  const result = await query(
-    `SELECT id, employee_id AS "employeeId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime", notes
-     FROM shifts ORDER BY day_of_week, start_time`
-  );
+  const { weekStart } = req.query;
+  let result;
+  if (weekStart) {
+    result = await query(
+      `SELECT id, employee_id AS "employeeId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime", notes, week_start AS "weekStart"
+       FROM shifts WHERE week_start = $1 OR week_start IS NULL ORDER BY day_of_week, start_time`,
+      [weekStart]
+    );
+  } else {
+    result = await query(
+      `SELECT id, employee_id AS "employeeId", day_of_week AS "dayOfWeek", start_time AS "startTime", end_time AS "endTime", notes, week_start AS "weekStart"
+       FROM shifts ORDER BY day_of_week, start_time`
+    );
+  }
   res.json(result.rows);
 });
 
 app.post('/api/shifts', requireOffice, async (req, res) => {
-  const { employeeId, dayOfWeek, startTime, endTime, notes } = req.body;
+  const { employeeId, dayOfWeek, startTime, endTime, notes, weekStart } = req.body;
   const shift = {
     id: generateId('shift'),
     employeeId,
     dayOfWeek,
     startTime,
     endTime,
-    notes: notes || ''
+    notes: notes || '',
+    weekStart: weekStart || null
   };
   await query(
-    `INSERT INTO shifts (id, employee_id, day_of_week, start_time, end_time, notes)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [shift.id, employeeId, dayOfWeek, startTime, endTime, notes || '']
+    `INSERT INTO shifts (id, employee_id, day_of_week, start_time, end_time, notes, week_start)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [shift.id, employeeId, dayOfWeek, startTime, endTime, notes || '', weekStart || null]
   );
   res.json(shift);
 });
@@ -919,7 +951,7 @@ app.delete('/api/shifts/:id', requireOffice, async (req, res) => {
 
 app.put('/api/shifts/:id', requireOffice, async (req, res) => {
   const { id } = req.params;
-  const { employeeId, dayOfWeek, startTime, endTime, notes } = req.body;
+  const { employeeId, dayOfWeek, startTime, endTime, notes, weekStart } = req.body;
 
   // Validate dayOfWeek if provided
   if (dayOfWeek !== undefined) {
@@ -958,11 +990,12 @@ app.put('/api/shifts/:id', requireOffice, async (req, res) => {
          day_of_week  = COALESCE($3, day_of_week),
          start_time   = COALESCE($4, start_time),
          end_time     = COALESCE($5, end_time),
-         notes        = COALESCE($6, notes)
+         notes        = COALESCE($6, notes),
+         week_start   = COALESCE($7, week_start)
      WHERE id = $1
      RETURNING id, employee_id AS "employeeId", day_of_week AS "dayOfWeek",
-               start_time AS "startTime", end_time AS "endTime", notes`,
-    [id, employeeId !== undefined ? employeeId : null, dayOfWeek !== undefined ? dayOfWeek : null, startTime !== undefined ? startTime : null, endTime !== undefined ? endTime : null, notes !== undefined ? notes : null]
+               start_time AS "startTime", end_time AS "endTime", notes, week_start AS "weekStart"`,
+    [id, employeeId !== undefined ? employeeId : null, dayOfWeek !== undefined ? dayOfWeek : null, startTime !== undefined ? startTime : null, endTime !== undefined ? endTime : null, notes !== undefined ? notes : null, weekStart !== undefined ? weekStart : null]
   );
 
   res.json(result.rows[0]);
@@ -1025,6 +1058,7 @@ app.post('/api/rides/:id/approve', requireOffice, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  if (ride.status !== 'pending') return res.status(400).json({ error: 'Only pending rides can be approved' });
   const missCountRes = await query('SELECT count FROM rider_miss_counts WHERE email = $1', [ride.rider_email]);
   const missCount = missCountRes.rows[0] != null ? missCountRes.rows[0].count : (ride.consecutive_misses || 0);
   if (missCount >= 5) {
@@ -1047,6 +1081,7 @@ app.post('/api/rides/:id/deny', requireOffice, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  if (ride.status !== 'pending') return res.status(400).json({ error: 'Only pending rides can be denied' });
   const result = await query(
     `UPDATE rides SET status = 'denied', updated_at = NOW() WHERE id = $1
      RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
@@ -1086,9 +1121,9 @@ app.post('/api/rides/:id/cancel', requireAuth, async (req, res) => {
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
 
   if (isOffice) {
-    const terminalStatuses = ['completed', 'no_show', 'cancelled'];
+    const terminalStatuses = ['completed', 'no_show', 'cancelled', 'denied'];
     if (terminalStatuses.includes(ride.status)) {
-      return res.status(400).json({ error: 'Cannot cancel a ride that is already completed, no-show, or cancelled' });
+      return res.status(400).json({ error: 'Cannot cancel a ride that is already completed, no-show, cancelled, or denied' });
     }
   } else {
     const canCancelPending = ride.status === 'pending';
@@ -1171,6 +1206,13 @@ app.put('/api/rides/:id', requireOffice, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  const terminalStatuses = ['completed', 'no_show', 'cancelled', 'denied'];
+  if (terminalStatuses.includes(ride.status)) {
+    return res.status(400).json({ error: 'Cannot edit a ride that is completed, no-show, cancelled, or denied' });
+  }
+  if (requestedTime && !isWithinServiceHours(requestedTime)) {
+    return res.status(400).json({ error: 'Requested time outside service hours (8:00-19:00 Mon-Fri)' });
+  }
 
   const updates = [];
   const values = [];
@@ -1322,6 +1364,7 @@ app.post('/api/rides/:id/on-the-way', requireAuth, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  if (ride.status !== 'scheduled') return res.status(400).json({ error: 'Ride must be in scheduled status to start' });
   if (!(await allowDriverAction(req, res, ride))) return;
   const { vehicleId } = req.body || {};
   let finalVehicleId = ride.vehicle_id;
@@ -1348,6 +1391,7 @@ app.post('/api/rides/:id/here', requireAuth, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  if (ride.status !== 'driver_on_the_way') return res.status(400).json({ error: 'Ride must be in on-the-way status to mark arrived' });
   if (!(await allowDriverAction(req, res, ride))) return;
   const result = await query(
     `UPDATE rides SET status = 'driver_arrived_grace', grace_start_time = NOW(), updated_at = NOW()
@@ -1364,6 +1408,7 @@ app.post('/api/rides/:id/complete', requireAuth, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  if (ride.status !== 'driver_arrived_grace') return res.status(400).json({ error: 'Ride must be in grace period to complete' });
   if (!(await allowDriverAction(req, res, ride))) return;
   const { vehicleId } = req.body || {};
   if (vehicleId && !ride.vehicle_id) {
@@ -1389,8 +1434,17 @@ app.post('/api/rides/:id/no-show', requireAuth, async (req, res) => {
   const rideRes = await query(`SELECT * FROM rides WHERE id = $1`, [req.params.id]);
   const ride = rideRes.rows[0];
   if (!ride) return res.status(404).json({ error: 'Ride not found' });
+  if (ride.status !== 'driver_arrived_grace') return res.status(400).json({ error: 'Ride must be in grace period to mark no-show' });
   if (!(await allowDriverAction(req, res, ride))) return;
-  const newCount = (await getRiderMissCount(ride.rider_email)) + 1;
+  // Enforce 5-minute grace period server-side
+  if (ride.grace_start_time) {
+    const elapsed = Date.now() - new Date(ride.grace_start_time).getTime();
+    if (elapsed < 5 * 60 * 1000) {
+      const remaining = Math.ceil((5 * 60 * 1000 - elapsed) / 1000);
+      return res.status(400).json({ error: `Grace period not elapsed. ${remaining} seconds remaining.` });
+    }
+  }
+  const newCount = await incrementRiderMissCount(ride.rider_email);
   const result = await query(
     `UPDATE rides SET status = 'no_show', consecutive_misses = $2, updated_at = NOW()
      WHERE id = $1
@@ -1398,7 +1452,6 @@ app.post('/api/rides/:id/no-show', requireAuth, async (req, res) => {
                requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id`,
     [ride.id, newCount]
   );
-  await setRiderMissCount(ride.rider_email, newCount);
   await addRideEvent(ride.id, req.session.userId, 'no_show');
   res.json(mapRide(result.rows[0]));
 });

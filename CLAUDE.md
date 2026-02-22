@@ -118,7 +118,8 @@ Default login credentials (password: `demo123`):
   - `active`: TRUE when driver is clocked in (only for drivers)
   - Fields: id, username, password_hash, name, email, phone, member_id, role, active
 - **shifts** — Weekly schedule for drivers
-  - Fields: id, employee_id, day_of_week (0-4 for Mon-Fri), start_time, end_time
+  - Fields: id, employee_id, day_of_week (0-4 for Mon-Fri), start_time, end_time, week_start (DATE, nullable), notes
+  - When `week_start` is set, the shift only appears on that specific week. When NULL, it acts as a recurring template.
 - **rides** — All ride requests and their lifecycle
   - Fields: id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes, requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id
 - **ride_events** — Audit log of all ride status changes

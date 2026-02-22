@@ -820,8 +820,15 @@ function initShiftCalendar() {
     allDaySlot: false,
     weekends: false,
     height: 'auto',
-    events: function(fetchInfo, successCallback) {
-      successCallback(getShiftCalendarEvents(fetchInfo.start));
+    events: async function(fetchInfo, successCallback) {
+      try {
+        const weekStart = formatDateInputLocal(getMondayOfWeek(fetchInfo.start));
+        const res = await fetch(`/api/shifts?weekStart=${weekStart}`);
+        const weekShifts = res.ok ? await res.json() : [];
+        successCallback(mapShiftsToCalEvents(weekShifts, fetchInfo.start));
+      } catch {
+        successCallback(getShiftCalendarEvents(fetchInfo.start));
+      }
     },
     selectable: true,
     selectMirror: true,
@@ -848,21 +855,20 @@ const DRIVER_COLORS = [
   '#9932CC', // DarkOrchid
 ];
 
-function getShiftCalendarEvents(viewStart) {
-  const events = [];
-  let monday;
-  if (viewStart) {
-    monday = new Date(viewStart);
-  } else {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    monday = new Date(today);
-    monday.setDate(today.getDate() + mondayOffset);
-  }
-  monday.setHours(0, 0, 0, 0);
+function getMondayOfWeek(date) {
+  const d = new Date(date);
+  const dayOfWeek = d.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  d.setDate(d.getDate() + mondayOffset);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
 
-  shifts.forEach(s => {
+function mapShiftsToCalEvents(shiftList, viewStart) {
+  const events = [];
+  const monday = getMondayOfWeek(viewStart || new Date());
+
+  shiftList.forEach(s => {
     const emp = employees.find(e => e.id === s.employeeId);
     const name = emp?.name || 'Unknown';
     const employeeIndex = employees.findIndex(e => e.id === s.employeeId);
@@ -878,10 +884,14 @@ function getShiftCalendarEvents(viewStart) {
       end: `${dateStr}T${s.endTime}`,
       backgroundColor: color,
       borderColor: color,
-      extendedProps: { shiftId: s.id, employeeId: s.employeeId, notes: s.notes || '' }
+      extendedProps: { shiftId: s.id, employeeId: s.employeeId, notes: s.notes || '', weekStart: s.weekStart || null }
     });
   });
   return events;
+}
+
+function getShiftCalendarEvents(viewStart) {
+  return mapShiftsToCalEvents(shifts, viewStart);
 }
 
 async function onCalendarSelect(info) {
@@ -900,13 +910,15 @@ async function onCalendarSelect(info) {
     return;
   }
 
+  const weekStart = formatDateInputLocal(getMondayOfWeek(info.start));
   try {
     await fetch('/api/shifts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employeeId: empId, dayOfWeek, startTime, endTime })
+      body: JSON.stringify({ employeeId: empId, dayOfWeek, startTime, endTime, weekStart })
     });
     await loadShifts();
+    if (shiftCalendar) shiftCalendar.refetchEvents();
     showToast('Shift added', 'success');
   } catch {
     showToast('Failed to add shift', 'error');
@@ -936,11 +948,12 @@ async function onShiftEventDrop(info) {
   }
   const startTime = info.event.start.toTimeString().substring(0, 5);
   const endTime = info.event.end.toTimeString().substring(0, 5);
+  const weekStart = formatDateInputLocal(getMondayOfWeek(info.event.start));
   try {
     const res = await fetch(`/api/shifts/${shiftId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dayOfWeek, startTime, endTime })
+      body: JSON.stringify({ dayOfWeek, startTime, endTime, weekStart })
     });
     if (!res.ok) { info.revert(); showToast('Failed to move shift', 'error'); return; }
     await loadShifts();
@@ -1104,6 +1117,7 @@ function showShiftContextMenu(e, calEvent) {
   const startTime = calEvent.start.toTimeString().substring(0, 5);
   const endTime = calEvent.end.toTimeString().substring(0, 5);
   const notes = calEvent.extendedProps.notes || '';
+  const weekStart = formatDateInputLocal(getMondayOfWeek(calEvent.start));
 
   const menu = document.createElement('div');
   menu.className = 'shift-context-menu';
@@ -1139,10 +1153,11 @@ function showShiftContextMenu(e, calEvent) {
       const res = await fetch('/api/shifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId: empId, dayOfWeek, startTime, endTime, notes })
+        body: JSON.stringify({ employeeId: empId, dayOfWeek, startTime, endTime, notes, weekStart })
       });
       if (!res.ok) { showToast('Failed to duplicate shift', 'error'); return; }
       await loadShifts();
+      if (shiftCalendar) shiftCalendar.refetchEvents();
       showToast('Shift duplicated', 'success');
     } catch { showToast('Failed to duplicate shift', 'error'); }
   };
@@ -2229,9 +2244,10 @@ function buildDriverGridRow(driver, driverRides, cols, startHour, gridColStyle, 
   const selectedDate = dateInput?.value ? parseDateInputLocal(dateInput.value) : new Date();
   const dayOfWeek = selectedDate ? ((selectedDate.getDay() + 6) % 7) : ((new Date().getDay() + 6) % 7); // Mon=0
 
+  const currentWeekStart = formatDateInputLocal(getMondayOfWeek(selectedDate));
   for (let h = startHour; h < startHour + cols; h++) {
     const slot = `${String(h).padStart(2, '0')}:00`;
-    const hasShift = shifts.some(s => s.employeeId === driver.id && s.dayOfWeek === dayOfWeek && s.startTime <= slot && s.endTime > slot);
+    const hasShift = shifts.some(s => s.employeeId === driver.id && s.dayOfWeek === dayOfWeek && s.startTime <= slot && s.endTime > slot && (!s.weekStart || s.weekStart.slice(0, 10) === currentWeekStart));
     const bgStyle = hasShift ? 'background:var(--color-primary-subtle);' : '';
     html += `<div style="position:relative;${bgStyle}border-right:1px solid var(--color-border-light);">`;
 

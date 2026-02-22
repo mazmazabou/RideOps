@@ -34,22 +34,71 @@ async function seedDemoData(pool) {
   await q("UPDATE users SET active = FALSE WHERE role = 'driver'");
   await q("UPDATE users SET active = TRUE WHERE id IN ('emp1', 'emp2')");
 
-  // ── Shifts (weekly schedule) ──
-  const shifts = [
-    // Alex: Mon-Fri 8:00-12:00
-    ...([0,1,2,3,4].map(d => ({ id: generateId('shift'), employeeId: 'emp1', day: d, start: '08:00', end: '12:00' }))),
-    // Jordan: Mon-Fri 12:00-17:00
-    ...([0,1,2,3,4].map(d => ({ id: generateId('shift'), employeeId: 'emp2', day: d, start: '12:00', end: '17:00' }))),
-    // Taylor: Mon/Wed/Fri 9:00-14:00
-    ...([0,2,4].map(d => ({ id: generateId('shift'), employeeId: 'emp3', day: d, start: '09:00', end: '14:00' }))),
-    // Morgan: Tue/Thu 10:00-16:00
-    ...([1,3].map(d => ({ id: generateId('shift'), employeeId: 'emp4', day: d, start: '10:00', end: '16:00' })))
+  // ── Shifts (week-specific schedules spanning ±2 weeks) ──
+  // Compute Monday of current week
+  const _now = new Date();
+  const _today = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
+  const todayDay = _today.getDay(); // 0=Sun
+  const mondayOffset = todayDay === 0 ? -6 : 1 - todayDay;
+  const currentMonday = new Date(_today);
+  currentMonday.setDate(_today.getDate() + mondayOffset);
+  currentMonday.setHours(0, 0, 0, 0);
+
+  function getMondayForOffset(weekOffset) {
+    const d = new Date(currentMonday);
+    d.setDate(d.getDate() + weekOffset * 7);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  }
+
+  // Week schedules: [weekOffset, employeeId, days[], start, end]
+  const weekSchedules = [
+    // Week -2: Alex Mon-Thu 8-12, Jordan Mon-Fri 12-17, Taylor Mon/Wed 9-14, Morgan Thu 10-16
+    ...([0,1,2,3].map(d => [-2, 'emp1', d, '08:00', '12:00'])),
+    ...([0,1,2,3,4].map(d => [-2, 'emp2', d, '12:00', '17:00'])),
+    ...([0,2].map(d => [-2, 'emp3', d, '09:00', '14:00'])),
+    [-2, 'emp4', 3, '10:00', '16:00'],
+
+    // Week -1: Alex Mon-Fri 8-12, Jordan Mon-Thu 12-17, Taylor Mon/Wed/Fri 9-14, Morgan Tue/Thu 10-16
+    ...([0,1,2,3,4].map(d => [-1, 'emp1', d, '08:00', '12:00'])),
+    ...([0,1,2,3].map(d => [-1, 'emp2', d, '12:00', '17:00'])),
+    ...([0,2,4].map(d => [-1, 'emp3', d, '09:00', '14:00'])),
+    ...([1,3].map(d => [-1, 'emp4', d, '10:00', '16:00'])),
+
+    // Week 0 (current): Alex Mon-Fri 8-12, Jordan Mon-Fri 12-17, Taylor Mon/Wed/Fri 9-14, Morgan Tue/Thu 10-16
+    ...([0,1,2,3,4].map(d => [0, 'emp1', d, '08:00', '12:00'])),
+    ...([0,1,2,3,4].map(d => [0, 'emp2', d, '12:00', '17:00'])),
+    ...([0,2,4].map(d => [0, 'emp3', d, '09:00', '14:00'])),
+    ...([1,3].map(d => [0, 'emp4', d, '10:00', '16:00'])),
+
+    // Week +1: Alex Mon-Fri 9-13, Jordan Tue-Fri 12-17, Taylor Wed/Fri 9-14, Morgan Mon/Tue/Thu 10-16
+    ...([0,1,2,3,4].map(d => [1, 'emp1', d, '09:00', '13:00'])),
+    ...([1,2,3,4].map(d => [1, 'emp2', d, '12:00', '17:00'])),
+    ...([2,4].map(d => [1, 'emp3', d, '09:00', '14:00'])),
+    ...([0,1,3].map(d => [1, 'emp4', d, '10:00', '16:00'])),
+
+    // Week +2: Alex Mon-Wed 8-12, Jordan Mon-Fri 11-16, Taylor Mon/Wed/Fri 10-15, Morgan Tue/Thu 10-16
+    ...([0,1,2].map(d => [2, 'emp1', d, '08:00', '12:00'])),
+    ...([0,1,2,3,4].map(d => [2, 'emp2', d, '11:00', '16:00'])),
+    ...([0,2,4].map(d => [2, 'emp3', d, '10:00', '15:00'])),
+    ...([1,3].map(d => [2, 'emp4', d, '10:00', '16:00'])),
   ];
+
+  const shifts = weekSchedules.map(([weekOffset, employeeId, day, start, end]) => ({
+    id: generateId('shift'),
+    employeeId,
+    day,
+    start,
+    end,
+    weekStart: getMondayForOffset(weekOffset)
+  }));
 
   for (const s of shifts) {
     await q(
-      'INSERT INTO shifts (id, employee_id, day_of_week, start_time, end_time) VALUES ($1, $2, $3, $4, $5)',
-      [s.id, s.employeeId, s.day, s.start, s.end]
+      'INSERT INTO shifts (id, employee_id, day_of_week, start_time, end_time, week_start) VALUES ($1, $2, $3, $4, $5, $6)',
+      [s.id, s.employeeId, s.day, s.start, s.end, s.weekStart]
     );
   }
 
