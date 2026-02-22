@@ -784,15 +784,24 @@ app.get('/demo-config.js', (req, res) => {
   if (!DEMO_MODE) return res.send('');
   res.send(`
     (function() {
+      if (window.location.pathname.indexOf('demo') !== -1) return;
+
       var s = document.createElement('style');
-      s.textContent = 'body { padding-top: 40px !important; } .driver-header { top: 40px !important; }';
+      s.textContent = 'body { padding-top: 32px !important; } .driver-header { top: 32px !important; } .rider-header { top: 32px !important; } .ro-sidebar { top: 32px !important; } .ro-header { top: 32px !important; }';
       document.head.appendChild(s);
 
       window.addEventListener('DOMContentLoaded', function() {
+        var path = window.location.pathname;
+        var role = 'Office Manager';
+        if (path.indexOf('/driver') !== -1) role = 'Driver';
+        else if (path.indexOf('/rider') !== -1) role = 'Rider';
+
         var b = document.createElement('div');
         b.id = 'demo-banner';
-        b.innerHTML = '\\ud83e\\uddea This is a demo environment. Data resets every hour. <a href="https://ride-ops.com/contact" style="color:#6ee7b7;margin-left:12px;text-decoration:underline;">Request a real demo \\u2192</a>';
-        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#065f46;color:white;text-align:center;padding:8px 16px;font-size:14px;font-family:system-ui,sans-serif;';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;height:32px;z-index:99999;background:#1E2B3A;color:#94A3B8;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:12px;font-family:system-ui,sans-serif;';
+        b.innerHTML = '<span>\\u25C8 DEMO MODE \\u00B7 Viewing as: <span style="color:#E2E8F0;font-weight:600;">' + role + '</span></span>'
+          + '<span><a href="/demo.html" style="color:#94A3B8;text-decoration:none;margin-right:16px;">Switch Role \\u2197</a>'
+          + '<a href="https://ride-ops.com" style="color:#64748B;text-decoration:none;">ride-ops.com</a></span>';
         document.body.prepend(b);
 
         window.logout = function() {
