@@ -71,7 +71,7 @@ async function loadTenantConfig() {
   if (orgInitials) orgInitials.textContent = tenantConfig.orgInitials;
   const headerTitle = document.getElementById('header-title');
   if (headerTitle) headerTitle.textContent = tenantConfig.orgName + ' Operations Console';
-  const wrappedTitle = document.getElementById('dart-wrapped-title');
+  const wrappedTitle = document.getElementById('ro-wrapped-title');
   if (wrappedTitle) wrappedTitle.textContent = tenantConfig.orgShortName + ' Wrapped';
 }
 
@@ -163,7 +163,7 @@ function filterAdminUsers() {
   const countEl = document.getElementById('admin-user-filter-count');
   const q = (input?.value || '').trim().toLowerCase();
   filteredAdminUsers = q
-    ? adminUsers.filter(u => [u.name, u.username, u.email, u.phone, u.usc_id, u.role]
+    ? adminUsers.filter(u => [u.name, u.username, u.email, u.phone, u.member_id, u.role]
         .some(f => (f || '').toLowerCase().includes(q)))
     : adminUsers;
   renderAdminUsers(filteredAdminUsers);
@@ -183,7 +183,7 @@ function renderAdminUsers(users) {
       </td>
       <td>${u.username || ''}</td>
       <td><span class="role-badge role-${u.role}">${u.role}</span></td>
-      <td>${u.usc_id || ''}</td>
+      <td>${u.member_id || ''}</td>
       <td>${u.phone || ''}</td>
       <td></td>
       <td><i class="ti ti-chevron-right admin-chevron"></i></td>
@@ -298,7 +298,7 @@ async function openAdminDrawer(userId, scrollTo) {
     html += `<div class="drawer-section" id="drawer-details-view">
       <div class="drawer-section-title">Details</div>
       <div class="drawer-field"><div class="drawer-field-label">Email</div><div class="drawer-field-value">${user.email || '—'}</div></div>
-      <div class="drawer-field"><div class="drawer-field-label">USC ID</div><div class="drawer-field-value">${user.usc_id || '—'}</div></div>
+      <div class="drawer-field"><div class="drawer-field-label">${tenantConfig?.idFieldLabel || 'Member ID'}</div><div class="drawer-field-value">${user.member_id || '—'}</div></div>
       <div class="drawer-field"><div class="drawer-field-label">Phone</div><div class="drawer-field-value">${user.phone || '—'}</div></div>
       ${user.role === 'driver' ? `<div class="drawer-field"><div class="drawer-field-label">Status</div><div class="drawer-field-value">${user.active ? '<span style="color:#28a745; font-weight:700;">Clocked In</span>' : '<span style="color:#dc3545;">Clocked Out</span>'}</div></div>` : ''}
       <button class="btn secondary small" id="drawer-edit-toggle" style="margin-top:4px;">Edit</button>
@@ -310,7 +310,7 @@ async function openAdminDrawer(userId, scrollTo) {
       <label>Name<input type="text" id="drawer-edit-name" value="${user.name || ''}"></label>
       <label>Email<input type="email" id="drawer-edit-email" value="${user.email || ''}"></label>
       <label>Phone<input type="tel" id="drawer-edit-phone" value="${user.phone || ''}"></label>
-      <label>USC ID<input type="text" id="drawer-edit-uscid" value="${user.usc_id || ''}" maxlength="10"></label>
+      <label>${tenantConfig?.idFieldLabel || 'Member ID'}<input type="text" id="drawer-edit-memberid" value="${user.member_id || ''}"${tenantConfig?.idFieldMaxLength ? ` maxlength="${tenantConfig.idFieldMaxLength}"` : ''}></label>
       <label>Role
         <select id="drawer-edit-role">
           <option value="rider" ${user.role === 'rider' ? 'selected' : ''}>rider</option>
@@ -413,7 +413,7 @@ async function openAdminDrawer(userId, scrollTo) {
         name: body.querySelector('#drawer-edit-name').value.trim(),
         email: body.querySelector('#drawer-edit-email').value.trim(),
         phone: body.querySelector('#drawer-edit-phone').value.trim(),
-        uscId: body.querySelector('#drawer-edit-uscid').value.trim(),
+        uscId: body.querySelector('#drawer-edit-memberid').value.trim(),
         role: body.querySelector('#drawer-edit-role').value
       };
       try {
@@ -501,9 +501,9 @@ function showEditUserModal(user) {
     <div class="modal-box">
       <h3>Edit User: ${user.name || user.username}</h3>
       <label>Name<input type="text" id="edit-user-name" value="${user.name || ''}"></label>
-      <label>USC Email<input type="email" id="edit-user-email" value="${user.email || ''}"></label>
+      <label>Email<input type="email" id="edit-user-email" value="${user.email || ''}"></label>
       <label>Phone<input type="tel" id="edit-user-phone" value="${user.phone || ''}"></label>
-      <label>USC ID<input type="text" id="edit-user-uscid" value="${user.usc_id || ''}" maxlength="10"></label>
+      <label>${tenantConfig?.idFieldLabel || 'Member ID'}<input type="text" id="edit-user-memberid" value="${user.member_id || ''}"${tenantConfig?.idFieldMaxLength ? ` maxlength="${tenantConfig.idFieldMaxLength}"` : ''}></label>
       <label>Role
         <select id="edit-user-role">
           <option value="rider" ${user.role === 'rider' ? 'selected' : ''}>rider</option>
@@ -533,7 +533,7 @@ function showEditUserModal(user) {
       name: overlay.querySelector('#edit-user-name').value.trim(),
       email: overlay.querySelector('#edit-user-email').value.trim(),
       phone: overlay.querySelector('#edit-user-phone').value.trim(),
-      uscId: overlay.querySelector('#edit-user-uscid').value.trim(),
+      uscId: overlay.querySelector('#edit-user-memberid').value.trim(),
       role: overlay.querySelector('#edit-user-role').value
     };
     try {
@@ -661,7 +661,7 @@ async function createAdminUser() {
   const username = document.getElementById('admin-new-username')?.value.trim();
   const email = document.getElementById('admin-new-email')?.value.trim();
   const phone = document.getElementById('admin-new-phone')?.value.trim();
-  const uscId = document.getElementById('admin-new-uscid')?.value.trim();
+  const uscId = document.getElementById('admin-new-memberid')?.value.trim();
   const role = document.getElementById('admin-new-role')?.value;
   const password = document.getElementById('admin-new-password')?.value;
   const msg = document.getElementById('admin-create-message');
@@ -674,8 +674,8 @@ async function createAdminUser() {
     if (msg) msg.textContent = 'Username may only contain letters, numbers, and underscores.';
     return;
   }
-  if (!/^[0-9]{10}$/.test(uscId)) {
-    if (msg) msg.textContent = 'USC ID must be 10 digits.';
+  if (!uscId) {
+    if (msg) msg.textContent = `${tenantConfig?.idFieldLabel || 'Member ID'} is required.`;
     return;
   }
   try {
@@ -689,7 +689,7 @@ async function createAdminUser() {
       if (msg) msg.textContent = data.error || 'Could not create user';
       return;
     }
-    ['admin-new-name','admin-new-username','admin-new-email','admin-new-phone','admin-new-uscid','admin-new-password'].forEach(id => {
+    ['admin-new-name','admin-new-username','admin-new-email','admin-new-phone','admin-new-memberid','admin-new-password'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -1392,8 +1392,8 @@ function renderProfilePanel(data) {
         <input type="email" class="ro-input" value="${user.email || ''}" readonly>
       </div>
       <div class="mb-16">
-        <label class="ro-label">USC ID</label>
-        <input type="text" class="ro-input" value="${user.usc_id || ''}" readonly>
+        <label class="ro-label">${tenantConfig?.idFieldLabel || 'Member ID'}</label>
+        <input type="text" class="ro-input" value="${user.member_id || ''}" readonly>
       </div>
       <div class="mb-16">
         <label class="ro-label">Phone</label>
@@ -1463,7 +1463,7 @@ function renderProfileEdit() {
         <label class="ro-label">Phone</label>
         <input type="tel" class="ro-input" id="admin-profile-phone" value="${selectedAdminUser.phone || ''}" placeholder="(213) 555-0000">
       </div>
-      <div class="text-sm text-muted" style="margin-bottom:16px;">USC Email: ${selectedAdminUser.email || ''} · Username: ${selectedAdminUser.username}</div>
+      <div class="text-sm text-muted" style="margin-bottom:16px;">Email: ${selectedAdminUser.email || ''} · Username: ${selectedAdminUser.username}</div>
       <div style="display:flex; gap:8px;">
         <button class="ro-btn ro-btn--primary" onclick="saveAdminProfile('${selectedAdminUser.id}')">Save Changes</button>
         <button class="ro-btn ro-btn--outline" onclick="loadUserProfile('${selectedAdminUser.id}')">Cancel</button>
@@ -2530,11 +2530,13 @@ function showRulesModal() {
     <div class="modal-box" style="max-width:600px;">
       <div class="modal-title">Program Rules &amp; Guidelines</div>
       <ul style="padding-left:20px; line-height:1.8; color:var(--muted); font-size:14px;">
-        <li>${tenantConfig?.orgShortName || 'DART'} is a free service provided by USC Transportation to assist USC students, faculty and staff with mobility issues in getting around campus. Service is available at UPC during the Fall and Spring semesters only, between 8:00am\u20137:00pm, Monday\u2013Friday.</li>
-        <li>${tenantConfig?.orgShortName || 'DART'} vehicles (golf carts) are not city-street legal and cannot leave campus. Service is NOT available to off-campus housing, off-campus parking structures, the USC Village, etc.</li>
-        <li>Riders must be able to independently get in and out of a standard golf cart. Drivers cannot assist with lifting/carrying medical equipment (crutches, wheelchairs, etc.). A wheelchair-accessible golf cart is available upon request.</li>
-        <li>Due to high demand, drivers cannot wait more than five (5) minutes past a scheduled pick-up time. After that grace period, they may leave to continue other assignments.</li>
-        <li>Service is automatically terminated after five (5) consecutive missed pick-ups.</li>
+        ${(tenantConfig?.rules || [
+          'This is a free accessible transportation service available during operating hours, Monday\u2013Friday.',
+          'Vehicles cannot leave campus grounds.',
+          'Riders must be present at the designated pickup location at the requested time.',
+          'Drivers will wait up to 5 minutes (grace period). After that, the ride may be marked as a no-show.',
+          'Service is automatically terminated after 5 consecutive missed pick-ups.'
+        ]).map(r => `<li>${r}</li>`).join('')}
       </ul>
       <div class="modal-actions">
         <button class="btn primary modal-close-btn">Close</button>
@@ -2766,7 +2768,7 @@ function renderMilestoneList(containerId, people, type) {
     container.innerHTML = `<div class="ro-empty"><i class="ti ti-trophy-off"></i><div class="ro-empty__title">No ${type} data</div><div class="ro-empty__message">No completed rides yet.</div></div>`;
     return;
   }
-  const badgeLabels = { 50: 'Rising Star', 100: 'Century Club', 250: 'Quarter Thousand', 500: (tenantConfig?.orgShortName || 'DART') + ' Legend', 1000: 'Diamond' };
+  const badgeLabels = { 50: 'Rising Star', 100: 'Century Club', 250: 'Quarter Thousand', 500: (tenantConfig?.orgShortName || 'RideOps') + ' Legend', 1000: 'Diamond' };
   const badgeIcons = { 50: '\u{1F31F}', 100: '\u2B50', 250: '\u{1F3C6}', 500: '\u{1F451}', 1000: '\u{1F48E}' };
   container.innerHTML = '<div class="milestone-list">' + people.map(p => {
     const badges = [50, 100, 250, 500, 1000].map(m => {
@@ -2825,20 +2827,20 @@ function renderSemesterReport(data) {
     ${leaderboard}
   `;
 
-  // DART Wrapped
-  const wrapped = document.getElementById('dart-wrapped-content');
+  // RideOps Wrapped
+  const wrapped = document.getElementById('ro-wrapped-content');
   if (wrapped) {
     const c = data.current;
     const mvp = data.driverLeaderboard?.[0];
     if (c.completedRides === 0) {
-      wrapped.innerHTML = `<div class="dart-wrapped">
+      wrapped.innerHTML = `<div class="ro-wrapped">
         <div class="wrapped-big">\u{1F680} 0 Rides</div>
-        <div class="wrapped-line">In <strong>${data.semesterLabel}</strong>, ${tenantConfig?.orgShortName || 'DART'} has not yet completed any rides this semester.</div>
+        <div class="wrapped-line">In <strong>${data.semesterLabel}</strong>, ${tenantConfig?.orgShortName || 'RideOps'} has not yet completed any rides this semester.</div>
       </div>`;
     } else {
-      wrapped.innerHTML = `<div class="dart-wrapped">
+      wrapped.innerHTML = `<div class="ro-wrapped">
         <div class="wrapped-big">\u{1F389} ${c.completedRides} Rides</div>
-        <div class="wrapped-line">In <strong>${data.semesterLabel}</strong>, ${tenantConfig?.orgShortName || 'DART'} completed <strong>${c.completedRides}</strong> rides and helped <strong>${c.peopleHelped ?? 0}</strong> people get around campus.</div>
+        <div class="wrapped-line">In <strong>${data.semesterLabel}</strong>, ${tenantConfig?.orgShortName || 'RideOps'} completed <strong>${c.completedRides}</strong> rides and helped <strong>${c.peopleHelped ?? 0}</strong> people get around campus.</div>
         ${mvp ? `<div class="wrapped-line">MVP Driver: <strong>${mvp.name}</strong> with <strong>${mvp.completed}</strong> completed rides</div>` : ''}
         <div class="wrapped-line">Completion Rate: <strong>${c.completionRate}%</strong></div>
       </div>`;
@@ -3170,7 +3172,7 @@ function exportSemesterCSV() {
   if (d.driverLeaderboard) {
     d.driverLeaderboard.forEach(dr => rows.push([dr.name, dr.completed, '']));
   }
-  downloadCSV(headers, rows, `dart-report-${d.semesterLabel.replace(/\s/g, '-').toLowerCase()}.csv`);
+  downloadCSV(headers, rows, `rideops-report-${d.semesterLabel.replace(/\s/g, '-').toLowerCase()}.csv`);
   showToast('CSV downloaded', 'success');
 }
 

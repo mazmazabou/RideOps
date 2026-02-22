@@ -119,12 +119,12 @@ function toggleSidebar() {
   var shell = document.querySelector('.ro-shell');
   if (shell) {
     shell.classList.toggle('collapsed');
-    try { localStorage.setItem('dart-sidebar-collapsed', shell.classList.contains('collapsed') ? '1' : ''); } catch(e) {}
+    try { localStorage.setItem('ro-sidebar-collapsed', shell.classList.contains('collapsed') ? '1' : ''); } catch(e) {}
   }
 }
 function restoreSidebarState() {
   try {
-    if (localStorage.getItem('dart-sidebar-collapsed') === '1') {
+    if (localStorage.getItem('ro-sidebar-collapsed') === '1') {
       var shell = document.querySelector('.ro-shell');
       if (shell) shell.classList.add('collapsed');
     }

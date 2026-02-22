@@ -52,8 +52,8 @@
         <button class="ro-btn ro-btn--primary ro-btn--full" onclick="saveProfile()" style="margin-bottom:16px;">Save Changes</button>
         <div id="profile-message" style="font-size:13px; margin-bottom:16px;"></div>
         <div style="margin-bottom:12px;">
-          <label class="ro-label" for="profile-uscid">USC ID</label>
-          <input type="text" id="profile-uscid" class="ro-input" readonly style="background:var(--color-surface-hover); color:var(--color-text-muted);">
+          <label class="ro-label" for="profile-memberid" id="profile-memberid-label">Member ID</label>
+          <input type="text" id="profile-memberid" class="ro-input" readonly style="background:var(--color-surface-hover); color:var(--color-text-muted);">
         </div>
         <div style="margin-bottom:12px;">
           <label class="ro-label" for="profile-email">Email</label>
@@ -410,7 +410,7 @@
       try {
         const res = await fetch('/api/me');
         const me = await res.json();
-        document.getElementById('profile-uscid').value = me.usc_id || '';
+        document.getElementById('profile-memberid').value = me.member_id || '';
         document.getElementById('profile-email').value = me.email || '';
         document.getElementById('profile-username').value = me.username || '';
         document.getElementById('profile-name').value = me.name || '';

@@ -8,8 +8,8 @@
   async function resolveDevMode() {
     if (typeof cachedDevMode === 'boolean') return cachedDevMode;
 
-    if (typeof window.__DART_IS_DEV__ === 'boolean') {
-      cachedDevMode = window.__DART_IS_DEV__;
+    if (typeof window.__RIDEOPS_IS_DEV__ === 'boolean') {
+      cachedDevMode = window.__RIDEOPS_IS_DEV__;
       return cachedDevMode;
     }
 

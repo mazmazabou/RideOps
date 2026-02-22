@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="/js/rideops-utils.js"></script>
   <script src="/demo-config.js"></script>
-  <script src="/usc_building_options.js"></script>
+  <!-- Locations loaded dynamically from /api/locations -->
   <style>
     body { padding-bottom: 56px; }
     .rider-header { position: sticky; top: 0; z-index: 20; height: 48px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
@@ -88,7 +88,7 @@
       <!-- Step 1: Where -->
       <div class="step active" id="step-1">
         <h3 style="font-size:16px; font-weight:700; margin:0 0 4px;">Where are you going?</h3>
-        <p class="text-muted text-sm mb-16">USC campus locations only.</p>
+        <p class="text-muted text-sm mb-16" id="service-scope-text">Campus locations only.</p>
         <div style="margin-bottom:12px;">
           <label class="ro-label">From</label>
           <select id="pickup-location" class="ro-select"><option value="">Select pickup</option></select>
@@ -725,7 +725,7 @@
       // Profile fields
       html += '<div class="drawer-section">';
       html += '<div class="drawer-section-title">Profile</div>';
-      html += '<div style="margin-bottom:8px;"><label class="ro-label">USC ID</label><input type="text" class="ro-input" id="drawer-uscid" readonly></div>';
+      html += '<div style="margin-bottom:8px;"><label class="ro-label" id="drawer-memberid-label">Member ID</label><input type="text" class="ro-input" id="drawer-memberid" readonly></div>';
       html += '<div style="margin-bottom:8px;"><label class="ro-label">Email</label><input type="text" class="ro-input" id="drawer-email" readonly></div>';
       html += '<div style="margin-bottom:8px;"><label class="ro-label">Full Name</label><input type="text" class="ro-input" id="drawer-name"></div>';
       html += '<div style="margin-bottom:8px;"><label class="ro-label">Phone</label><input type="tel" class="ro-input" id="drawer-phone"></div>';
@@ -751,7 +751,7 @@
       setTimeout(function() {
         fetch('/api/me').then(function(r) { return r.json(); }).then(function(p) {
           var el;
-          el = document.getElementById('drawer-uscid'); if (el) el.value = p.usc_id || '';
+          el = document.getElementById('drawer-memberid'); if (el) el.value = p.member_id || '';
           el = document.getElementById('drawer-email'); if (el) el.value = p.email || '';
           el = document.getElementById('drawer-name'); if (el) el.value = p.name || '';
           el = document.getElementById('drawer-phone'); if (el) el.value = p.phone || '';
