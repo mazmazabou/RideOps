@@ -252,6 +252,90 @@ pending → approved → scheduled → driver_on_the_way → driver_arrived_grac
   - Admin user management (create, edit, delete, search by USC ID)
   - Login page: signup link (conditional), gold accent border
 
+## Ride Object Shape (from mapRide in server.js)
+
+Every ride endpoint returns this shape:
+
+```json
+{
+  "id": "ride_abc123",
+  "riderId": "rider1",
+  "riderName": "Sarah Student",
+  "riderEmail": "hello+sarah@ride-ops.com",
+  "riderPhone": "213-555-0111",
+  "pickupLocation": "Ethel Percy Andrus Gerontology Center (GER)",
+  "dropoffLocation": "Tommy Trojan (TT)",
+  "requestedTime": "2026-02-21T14:30:00.000Z",
+  "status": "pending",
+  "assignedDriverId": null,
+  "graceStartTime": null,
+  "consecutiveMisses": 0,
+  "notes": "",
+  "recurringId": null,
+  "cancelledBy": null,
+  "vehicleId": null
+}
+```
+
+**IMPORTANT:** There is NO `scheduledTime` field. Rides only have `requestedTime`. The dispatch time-grid positions rides using `requestedTime`.
+
+## Shift Object Shape (from GET /api/shifts)
+
+```json
+{
+  "id": "shift_abc123",
+  "employee_id": "emp1",
+  "day_of_week": 1,
+  "start_time": "09:00:00",
+  "end_time": "17:00:00",
+  "created_at": "2026-02-21T00:00:00.000Z"
+}
+```
+
+`day_of_week`: 1=Monday through 5=Friday (SMALLINT).
+
+## UI Redesign Architecture (Active)
+
+The frontend is being migrated to a Tabler-based design system. Key rules:
+
+### CDN Dependencies (do NOT npm install these)
+- Tabler CSS: `https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css`
+- Tabler Icons: `https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css`
+- FullCalendar: `https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js` (office view only)
+
+### New Files
+- `public/css/rideops-theme.css` — All CSS custom properties, component styles, layout classes. Every color must be a CSS variable from this file — never hardcode hex values in HTML or JS.
+- `public/js/rideops-utils.js` — Shared utilities: `applyTenantTheme()`, `statusBadge()`, `showToastNew()`, `showModalNew()`, `openDrawer()`, `closeDrawer()`, `initSidebar()`, `toggleSidebar()`, `initSubTabs()`, `initBottomTabs()`, `formatTime()`, `formatDate()`, `formatDateTime()`, `timeAgo()`, `showTab()`
+
+### CRITICAL: Panel Visibility
+rideops-theme.css contains these rules that make navigation work:
+```css
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.sub-panel { display: none; }
+.sub-panel.active { display: block; }
+```
+If you restructure HTML, you MUST keep `.tab-panel` and `.sub-panel` classes on panel elements. The previous UI rewrite (commit f5fa87d) broke entirely because these rules were missing.
+
+### Icon System
+Use Tabler Icons (`ti ti-{name}`), NOT Material Symbols. Example: `<i class="ti ti-broadcast"></i>`
+
+### Color System (Two-Layer Theming)
+- **Layer 1 — Platform defaults** (in rideops-theme.css :root): SteelBlue #4682B4 primary, Tan #D2B48C accent
+- **Layer 2 — Tenant override** (injected by JS from /api/tenant-config): primaryColor, secondaryColor
+- **Status colors are semantic and universal** — never overridden per tenant:
+  - pending=#94A3B8, approved=#3B82F6, scheduled=#6366F1, on_the_way=#F59E0B
+  - grace=#06B6D4, completed=#10B981, no_show=#EF4444, denied=#EF4444, cancelled=#6B7280
+- **Sidebar background (#1E2B3A)** — never changes per tenant
+
+### Layout Patterns
+- **Office view (index.html):** `.ro-shell` grid with fixed sidebar (220px, collapsible to 56px) + scrollable main content
+- **Driver view (driver.html):** Mobile-first, no sidebar, `.ro-bottom-tabs` bottom tab bar
+- **Rider view (rider.html):** Mobile-first, no sidebar, `.ro-bottom-tabs` bottom tab bar
+
+### Status Names (immutable — referenced across entire codebase)
+pending, approved, scheduled, driver_on_the_way, driver_arrived_grace, completed, no_show, denied, cancelled
+
 ## What NOT to Do
 
 - Don't add React, Vue, or any frontend framework — keep it vanilla JS
@@ -261,3 +345,10 @@ pending → approved → scheduled → driver_on_the_way → driver_arrived_grac
 - Don't remove business rule validations (service hours, 5 no-shows, grace period, etc.)
 - Don't expose sensitive data (password hashes, tokens) in API responses
 - Don't skip server-side validation — never trust client input
+- Don't hardcode hex colors in HTML or JS — use CSS custom properties from rideops-theme.css
+- Don't use Material Symbols — use Tabler Icons (ti ti-*)
+- Don't npm install Tabler, FullCalendar, or any CDN dependency — load from CDN only
+- Don't modify server.js during frontend redesign phases (except PUT /api/shifts/:id already added)
+- Don't rewrite app.js from scratch — make targeted edits to update DOM selectors
+- Don't remove `.tab-panel` / `.sub-panel` CSS classes from panel elements
+- Don't create one giant commit — work incrementally, verify each step with Playwright

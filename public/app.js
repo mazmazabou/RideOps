@@ -83,14 +83,12 @@ async function loadTenantConfig() {
   } catch {}
   if (!tenantConfig) return;
   document.title = tenantConfig.orgName + ' Operations Console';
-  const brandTitle = document.querySelector('.brand-title');
-  if (brandTitle) brandTitle.textContent = tenantConfig.orgShortName + ' Ops';
-  const brandCollapsed = document.querySelector('.brand-collapsed');
-  if (brandCollapsed) brandCollapsed.textContent = tenantConfig.orgInitials;
+  const orgShort = document.getElementById('org-short-name');
+  if (orgShort) orgShort.textContent = tenantConfig.orgShortName;
+  const orgInitials = document.getElementById('org-initials');
+  if (orgInitials) orgInitials.textContent = tenantConfig.orgInitials;
   const headerTitle = document.getElementById('header-title');
   if (headerTitle) headerTitle.textContent = tenantConfig.orgName + ' Operations Console';
-  const headerSub = document.getElementById('header-subtitle');
-  if (headerSub) headerSub.textContent = 'Dispatch + Driver tools for ' + tenantConfig.orgTagline;
   const wrappedTitle = document.getElementById('dart-wrapped-title');
   if (wrappedTitle) wrappedTitle.textContent = tenantConfig.orgShortName + ' Wrapped';
 }
@@ -848,7 +846,7 @@ function renderRideScheduleGrid() {
       message: 'Approved and scheduled rides will appear here. Try switching to the Active Rides tab to approve pending requests.',
       actionLabel: 'Go to Active Rides',
       actionHandler: () => {
-        const activeTab = document.querySelector('#rides-panel .sub-tab[data-subtarget="rides-active-view"]');
+        const activeTab = document.querySelector('#rides-panel .ro-tab[data-subtarget="rides-active-view"]');
         if (activeTab) activeTab.click();
       }
     });
@@ -923,12 +921,22 @@ function renderSchedule() {
   }
 }
 
+async function loadUserProfileData(userId) {
+  const content = document.getElementById('admin-profile-content');
+  if (!content) return;
+  content.innerHTML = 'Loading...';
+  return _fetchAndRenderProfile(userId, content);
+}
+
 async function loadUserProfile(userId) {
   const content = document.getElementById('admin-profile-content');
   if (!content) return;
   content.innerHTML = 'Loading...';
-  const profileTab = document.querySelector('.nav-btn[data-target="profile-panel"]');
-  if (profileTab) profileTab.click();
+  showTab('profile-panel');
+  return _fetchAndRenderProfile(userId, content);
+}
+
+async function _fetchAndRenderProfile(userId, content) {
   try {
     let data;
     if (currentUser?.role === 'office') {
@@ -2314,8 +2322,8 @@ function toggleAllActiveRides(header) {
   if (!el) return;
   const isHidden = el.style.display === 'none';
   el.style.display = isHidden ? 'block' : 'none';
-  const btn = header.querySelector('.toggle-btn-slim');
-  if (btn) btn.textContent = isHidden ? '▾' : '▸';
+  const chevron = document.getElementById('active-rides-chevron');
+  if (chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : '';
 }
 
 function buildGraceInfo(ride) {
@@ -2543,55 +2551,13 @@ function showRulesModal() {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
 
-function initSubTabs() {
-  document.querySelectorAll('.sub-tabs').forEach((strip) => {
-    strip.querySelectorAll('.sub-tab').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        strip.querySelectorAll('.sub-tab').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        const panel = strip.closest('.tab-panel') || strip.parentElement;
-        panel.querySelectorAll(':scope > .sub-panel').forEach((p) => p.style.display = 'none');
-        const target = document.getElementById(btn.dataset.subtarget);
-        if (target) target.style.display = 'block';
-      });
-    });
-  });
-}
+// initSubTabs — delegated to rideops-utils.js initSubTabs()
 
-function toggleSidebar() {
-  const shell = document.querySelector('.shell');
-  const nav = document.querySelector('.side-nav');
-  const btn = document.querySelector('.sidebar-toggle');
-  const collapsed = nav.classList.toggle('collapsed');
-  shell.classList.toggle('sidebar-collapsed', collapsed);
-  btn.textContent = collapsed ? '\u00BB' : '\u00AB';
-  localStorage.setItem('dart-sidebar-collapsed', collapsed ? '1' : '');
-}
+// toggleSidebar — delegated to rideops-utils.js toggleSidebar()
 
-function initTabs() {
-  const buttons = document.querySelectorAll('.nav-btn[data-target]');
-  const panels = document.querySelectorAll('.tab-panel');
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      buttons.forEach((b) => b.classList.remove('active'));
-      panels.forEach((p) => p.classList.remove('active'));
-      btn.classList.add('active');
-      const panel = document.getElementById(btn.dataset.target);
-      if (panel) panel.classList.add('active');
-    });
-  });
-}
+// initTabs — delegated to rideops-utils.js initSidebar()
 
-function showTab(panelId) {
-  const buttons = document.querySelectorAll('.nav-btn[data-target]');
-  const panels = document.querySelectorAll('.tab-panel');
-  buttons.forEach((b) => b.classList.remove('active'));
-  panels.forEach((p) => p.classList.remove('active'));
-  const matchBtn = document.querySelector(`.nav-btn[data-target="${panelId}"]`);
-  if (matchBtn) matchBtn.classList.add('active');
-  const panel = document.getElementById(panelId);
-  if (panel) panel.classList.add('active');
-}
+// showTab — delegated to rideops-utils.js showTab()
 
 // ============================================================================
 // ANALYTICS MODULE
@@ -3098,15 +3064,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  initTabs();
-  initSubTabs();
-  // Restore sidebar collapsed state
-  if (localStorage.getItem('dart-sidebar-collapsed') === '1') {
-    document.querySelector('.side-nav')?.classList.add('collapsed');
-    document.querySelector('.shell')?.classList.add('sidebar-collapsed');
-    const sidebarBtn = document.querySelector('.sidebar-toggle');
-    if (sidebarBtn) sidebarBtn.textContent = '\u00BB';
-  }
+  // Navigation is initialized via rideops-utils.js initSidebar() + initSubTabs() in index.html
   await initForms();
 
   // Ride filter input
@@ -3150,9 +3108,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadVehicles();
   await loadAdminUsers();
   checkEmailStatus();
-  // Default to showing own profile in Profile tab
+  // Pre-load profile data without switching tab
   if (currentUser?.id) {
-    await loadUserProfile(currentUser.id);
+    await loadUserProfileData(currentUser.id);
   }
   initScheduleDate();
   updateScheduleToggleUI();
@@ -3183,7 +3141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const exportCsvBtn = document.getElementById('export-csv-btn');
   if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportSemesterCSV);
 
-  const analyticsNavBtn = document.querySelector('.nav-btn[data-target="analytics-panel"]');
+  const analyticsNavBtn = document.querySelector('.ro-nav-item[data-target="analytics-panel"]');
   if (analyticsNavBtn) {
     analyticsNavBtn.addEventListener('click', () => {
       if (!analyticsLoaded) {
@@ -3195,7 +3153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Fleet: lazy load vehicles on first tab click
   let fleetLoaded = false;
-  const fleetNavBtn = document.querySelector('.nav-btn[data-target="fleet-panel"]');
+  const fleetNavBtn = document.querySelector('.ro-nav-item[data-target="fleet-panel"]');
   if (fleetNavBtn) {
     fleetNavBtn.addEventListener('click', () => {
       if (!fleetLoaded) {

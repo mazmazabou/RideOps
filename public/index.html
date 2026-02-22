@@ -5,350 +5,414 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Operations Console</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css">
+  <link rel="stylesheet" href="/css/rideops-theme.css">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
   <script src="/demo-config.js"></script>
 </head>
 <body>
-  <div class="shell">
-    <aside class="side-nav">
-      <div class="brand">
-        <div class="brand-title">USC DART Ops</div>
-        <div class="brand-sub">Dispatch + Driver</div>
-        <div class="brand-collapsed">DT</div>
-        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">&laquo;</button>
-      </div>
-      <button class="nav-btn active" data-target="staff-panel" title="Staff &amp; Shifts">
-        <span class="nav-icon"><span class="material-symbols-outlined">groups</span></span><span class="nav-label">Staff &amp; Shifts</span>
-      </button>
-      <button class="nav-btn" data-target="rides-panel" title="Ride Requests">
-        <span class="nav-icon"><span class="material-symbols-outlined">taxi_alert</span></span><span class="nav-label">Ride Requests</span>
-      </button>
-      <button class="nav-btn" data-target="driver-panel" title="Dispatch &amp; Monitoring">
-        <span class="nav-icon"><span class="material-symbols-outlined">cell_tower</span></span><span class="nav-label">Dispatch &amp; Monitoring</span>
-      </button>
-      <button class="nav-btn" data-target="fleet-panel" title="Fleet">
-        <span class="nav-icon"><span class="material-symbols-outlined">traffic_jam</span></span><span class="nav-label">Fleet</span>
-      </button>
-      <button class="nav-btn" data-target="analytics-panel" title="Analytics">
-        <span class="nav-icon"><span class="material-symbols-outlined">bar_chart</span></span><span class="nav-label">Analytics</span>
-      </button>
-      <button class="nav-btn" data-target="admin-panel" title="Admin Settings">
-        <span class="nav-icon"><span class="material-symbols-outlined">settings</span></span><span class="nav-label">Admin Settings</span>
-      </button>
-      <div class="sidebar-footer">
-        <button class="sidebar-footer-user" onclick="showTab('profile-panel')" title="Profile">
-          <span class="footer-user-icon"><span class="material-symbols-outlined">person</span></span>
-          <span class="footer-user-name" id="sidebar-user-name">Office</span>
+  <div class="ro-shell" id="app-shell">
+    <!-- Sidebar -->
+    <aside class="ro-sidebar">
+      <div class="ro-sidebar-brand">
+        <div class="ro-brand-icon" id="org-initials">RO</div>
+        <div class="ro-brand-text">
+          <span class="fw-700" id="org-short-name" style="font-size:14px;">RideOps</span>
+          <span class="text-xs text-muted">Operations</span>
+        </div>
+        <button class="ro-sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+          <i class="ti ti-chevrons-left"></i>
         </button>
-        <button class="sidebar-footer-btn" onclick="showRulesModal()" title="Program Rules"><span class="material-symbols-outlined">description</span></button>
-        <button class="sidebar-footer-btn" onclick="logout()" title="Logout"><span class="material-symbols-outlined">logout</span></button>
+      </div>
+      <nav class="ro-nav">
+        <button class="ro-nav-item active" data-target="dispatch-panel" title="Dispatch">
+          <i class="ti ti-broadcast"></i><span class="ro-nav-label">Dispatch</span>
+        </button>
+        <button class="ro-nav-item" data-target="rides-panel" title="Rides">
+          <i class="ti ti-car"></i><span class="ro-nav-label">Rides</span>
+        </button>
+        <button class="ro-nav-item" data-target="staff-panel" title="Staff & Shifts">
+          <i class="ti ti-users"></i><span class="ro-nav-label">Staff &amp; Shifts</span>
+        </button>
+        <button class="ro-nav-item" data-target="fleet-panel" title="Fleet">
+          <i class="ti ti-bus"></i><span class="ro-nav-label">Fleet</span>
+        </button>
+        <button class="ro-nav-item" data-target="analytics-panel" title="Analytics">
+          <i class="ti ti-chart-bar"></i><span class="ro-nav-label">Analytics</span>
+        </button>
+        <button class="ro-nav-item" data-target="settings-panel" title="Settings">
+          <i class="ti ti-settings"></i><span class="ro-nav-label">Settings</span>
+        </button>
+      </nav>
+      <div class="ro-sidebar-footer">
+        <button class="ro-nav-item" data-target="profile-panel" title="Profile" style="margin:0 8px 4px;">
+          <i class="ti ti-user-circle"></i><span class="ro-nav-label" id="sidebar-user-name">Profile</span>
+        </button>
+        <div class="ro-sidebar-footer-actions">
+          <button onclick="showRulesModal()" title="Program Rules"><i class="ti ti-book"></i></button>
+          <button onclick="logout()" title="Logout"><i class="ti ti-logout"></i></button>
+        </div>
       </div>
     </aside>
 
-    <main class="content-area">
-      <header class="header">
-        <div>
-          <h1 id="header-title">USC DART Operations Console</h1>
-          <p id="header-subtitle">Dispatch + Driver tools for Disabled Access To Road Transportation</p>
-        </div>
+    <!-- Main content -->
+    <main class="ro-main">
+      <header class="ro-header">
+        <h1 class="ro-header-title" id="header-title">Dispatch</h1>
       </header>
 
-      <section class="panel tab-panel active" id="staff-panel">
-        <h2>Staff &amp; Shifts</h2>
-        <div class="sub-tabs">
-          <button class="sub-tab active" data-subtarget="staff-schedule-view">Schedule</button>
-          <button class="sub-tab" data-subtarget="staff-shifts-view">Edit Shifts</button>
-        </div>
-        <div class="sub-panel" id="staff-schedule-view">
-          <div class="card"><div id="employee-bar" class="employee-bar"></div></div>
-          <div class="card">
-            <div class="card-header-row">
-              <h3>Schedule View</h3>
-              <div class="schedule-toggle">
-                <button class="btn toggle-btn active" data-schedule-mode="weekly" onclick="setScheduleMode('weekly')">Weekly</button>
-                <button class="btn toggle-btn" data-schedule-mode="daily" onclick="setScheduleMode('daily')">Daily</button>
+      <div class="ro-content">
+
+        <!-- ═══ DISPATCH PANEL ═══ -->
+        <section class="tab-panel active" id="dispatch-panel">
+          <div class="kpi-bar" id="dispatch-kpis">
+            <div class="kpi-card kpi-card--primary">
+              <div class="kpi-card__value" id="dispatch-active-drivers">0</div>
+              <div class="kpi-card__label">Active Drivers</div>
+            </div>
+            <div class="kpi-card kpi-card--pending">
+              <div class="kpi-card__value" id="dispatch-pending-rides">0</div>
+              <div class="kpi-card__label">Pending</div>
+            </div>
+            <div class="kpi-card kpi-card--progress">
+              <div class="kpi-card__value" id="dispatch-active-rides">0</div>
+              <div class="kpi-card__label">In Progress</div>
+            </div>
+            <div class="kpi-card kpi-card--completed">
+              <div class="kpi-card__value" id="dispatch-completed-today">0</div>
+              <div class="kpi-card__label">Completed Today</div>
+            </div>
+          </div>
+
+          <!-- Pending queue -->
+          <div class="ro-section">
+            <div class="ro-section__header">
+              <div>
+                <h2 class="ro-section__title">Pending Queue</h2>
+                <div class="ro-section__subtitle">Rides awaiting approval</div>
               </div>
             </div>
-            <div class="schedule-nav">
-              <div class="nav-left">
-                <button class="btn" onclick="changeScheduleWeek(-1)">&laquo; Prev Week</button>
-                <button class="btn" onclick="changeScheduleDay(-1)">&lt; Prev Day</button>
+            <div id="pending-queue-list" class="strip-list"></div>
+          </div>
+
+          <!-- Active Drivers -->
+          <div class="ro-section">
+            <div class="ro-section__header">
+              <h2 class="ro-section__title">Active Drivers</h2>
+            </div>
+            <div id="driver-dashboard" class="strip-list"></div>
+          </div>
+
+          <!-- Driver detail (shown when driver selected) -->
+          <div class="ro-section" id="driver-detail" style="display:none;">
+            <div class="ro-section__header">
+              <h2 class="ro-section__title" id="driver-detail-title">Driver: &mdash;</h2>
+              <button class="ro-btn ro-btn--outline" id="admin-clock-toggle">Clock In</button>
+            </div>
+            <div id="driver-ride-list"></div>
+          </div>
+
+          <!-- All Active Rides (collapsible) -->
+          <div class="ro-section">
+            <div class="ro-section__header" style="cursor:pointer;" onclick="toggleAllActiveRides(this)">
+              <h2 class="ro-section__title">All Active Rides <span id="active-rides-count" class="text-muted text-sm"></span></h2>
+              <i class="ti ti-chevron-right" id="active-rides-chevron" style="transition:transform 0.2s;"></i>
+            </div>
+            <div id="all-active-rides" style="display:none;">
+              <div id="all-active-rides-list"></div>
+            </div>
+          </div>
+
+          <!-- Campus Map -->
+          <div class="ro-section">
+            <div class="ro-section__header">
+              <h2 class="ro-section__title">USC Campus Map</h2>
+              <a class="ro-btn ro-btn--outline ro-btn--sm" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i> Full Map</a>
+            </div>
+            <div style="border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden;">
+              <iframe src="https://maps.usc.edu/" title="USC Campus Map" style="width:100%; height:350px; border:none;"></iframe>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ RIDES PANEL ═══ -->
+        <section class="tab-panel" id="rides-panel">
+          <div class="ro-tabs">
+            <button class="ro-tab active" data-subtarget="rides-active-view">Active Rides</button>
+            <button class="ro-tab" data-subtarget="rides-calendar-view">Calendar</button>
+            <button class="ro-tab" data-subtarget="rides-history-view">History</button>
+          </div>
+
+          <div class="sub-panel active" id="rides-active-view">
+            <div class="filter-bar">
+              <input type="text" id="ride-filter-input" class="ro-input" placeholder="Search rides by name, location, or status..." style="max-width:400px;">
+              <span class="text-sm text-muted" id="ride-filter-count"></span>
+            </div>
+            <div class="ro-section" id="sample-rides-card" data-dev-only hidden aria-hidden="true">
+              <button id="load-sample-rides" class="ro-btn ro-btn--outline">Load Sample Rides (Dev)</button>
+            </div>
+            <div class="ro-section" id="unassigned-list">
+              <div class="ro-section__header"><h3 class="ro-section__title">Unassigned Rides (Today)</h3></div>
+              <div id="unassigned-items"></div>
+            </div>
+            <div class="ro-section" id="pending-list">
+              <div class="ro-section__header"><h3 class="ro-section__title">Pending Requests</h3></div>
+              <div id="pending-items"></div>
+            </div>
+            <div class="ro-section" id="approved-list">
+              <div class="ro-section__header"><h3 class="ro-section__title">Approved / Scheduled</h3></div>
+              <div id="approved-items"></div>
+            </div>
+          </div>
+
+          <div class="sub-panel" id="rides-calendar-view">
+            <div class="ro-section">
+              <div class="flex items-center justify-between mb-16">
+                <button class="ro-btn ro-btn--outline ro-btn--sm" id="ride-week-prev"><i class="ti ti-chevron-left"></i> Prev Week</button>
+                <span class="text-sm fw-600" id="ride-week-label"></span>
+                <button class="ro-btn ro-btn--outline ro-btn--sm" id="ride-week-next">Next Week <i class="ti ti-chevron-right"></i></button>
               </div>
-              <input type="date" id="schedule-date" onchange="onScheduleDateChange()">
-              <div class="nav-right">
-                <button class="btn" onclick="changeScheduleDay(1)">Next Day &gt;</button>
-                <button class="btn" onclick="changeScheduleWeek(1)">Next Week &raquo;</button>
+              <div id="ride-schedule-grid"></div>
+            </div>
+          </div>
+
+          <div class="sub-panel" id="rides-history-view">
+            <div class="filter-bar">
+              <input type="text" id="history-filter-input" class="ro-input" placeholder="Filter history by name, location, or status..." style="max-width:400px;">
+            </div>
+            <div class="ro-section" id="history-list">
+              <div class="ro-section__header"><h3 class="ro-section__title">Completed &amp; No-Show History</h3></div>
+              <div id="history-items"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ STAFF & SHIFTS PANEL ═══ -->
+        <section class="tab-panel" id="staff-panel">
+          <div class="ro-tabs">
+            <button class="ro-tab active" data-subtarget="staff-schedule-view">Schedule</button>
+            <button class="ro-tab" data-subtarget="staff-shifts-view">Edit Shifts</button>
+          </div>
+
+          <div class="sub-panel active" id="staff-schedule-view">
+            <div class="ro-section">
+              <div id="employee-bar" class="employee-bar"></div>
+            </div>
+            <div class="ro-section">
+              <div class="flex items-center justify-between mb-16">
+                <h3 class="ro-section__title">Schedule View</h3>
+                <div class="flex gap-8">
+                  <button class="ro-btn ro-btn--outline ro-btn--sm active" data-schedule-mode="weekly" onclick="setScheduleMode('weekly')">Weekly</button>
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" data-schedule-mode="daily" onclick="setScheduleMode('daily')">Daily</button>
+                </div>
               </div>
-            </div>
-            <div id="day-schedule" class="day-schedule"></div>
-            <div class="schedule-legend">
-              <span class="legend-item"><span class="legend-color shift"></span> Driver on shift</span>
-              <span class="legend-item"><span class="legend-color ride"></span> Scheduled ride</span>
-            </div>
-          </div>
-        </div>
-        <div class="sub-panel" id="staff-shifts-view" style="display:none;">
-          <div class="card">
-            <h3>Add/Edit Shifts</h3>
-            <p class="small-text">Click and drag on the grid to add shifts. Click existing shifts to remove.</p>
-            <label>Employee
-              <div class="flex-row">
-                <select id="shift-employee"></select>
-                <button class="btn secondary" id="shift-employee-profile" type="button">View Profile</button>
+              <div class="flex items-center justify-between mb-16">
+                <div class="flex gap-8">
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleWeek(-1)"><i class="ti ti-chevrons-left"></i> Prev Week</button>
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleDay(-1)"><i class="ti ti-chevron-left"></i> Prev Day</button>
+                </div>
+                <input type="date" id="schedule-date" class="ro-input" style="width:auto;" onchange="onScheduleDateChange()">
+                <div class="flex gap-8">
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleDay(1)">Next Day <i class="ti ti-chevron-right"></i></button>
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleWeek(1)">Next Week <i class="ti ti-chevrons-right"></i></button>
+                </div>
               </div>
-            </label>
-            <div id="shift-grid" class="shift-grid"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel tab-panel" id="rides-panel">
-      <h2>Ride Requests</h2>
-      <div class="sub-tabs">
-        <button class="sub-tab active" data-subtarget="rides-active-view">Active Rides</button>
-        <button class="sub-tab" data-subtarget="rides-calendar-view">Calendar</button>
-        <button class="sub-tab" data-subtarget="rides-history-view">History</button>
-      </div>
-      <div class="sub-panel" id="rides-active-view">
-        <div class="rides-filter-bar">
-          <input type="text" id="ride-filter-input" placeholder="Search rides by name, location, or status...">
-          <span class="ride-filter-count" id="ride-filter-count"></span>
-        </div>
-        <div class="card" id="sample-rides-card" data-dev-only hidden aria-hidden="true">
-          <button id="load-sample-rides" class="btn secondary">Load Sample Rides (Dev)</button>
-        </div>
-        <div class="card" id="unassigned-list">
-          <h3>Unassigned Rides (Today)</h3>
-          <div class="list" id="unassigned-items"></div>
-        </div>
-        <div class="card" id="pending-list">
-          <h3>Pending Requests</h3>
-          <div class="list" id="pending-items"></div>
-        </div>
-        <div class="card" id="approved-list">
-          <h3>Approved / Scheduled</h3>
-          <div class="list" id="approved-items"></div>
-        </div>
-      </div>
-      <div class="sub-panel" id="rides-calendar-view" style="display:none;">
-        <div class="card">
-          <h3>Weekly Ride Schedule</h3>
-          <p class="small-text">Color-coded ride grid (08:00–19:00, Mon–Fri).</p>
-          <div class="schedule-nav">
-            <div class="nav-left">
-              <button class="btn" id="ride-week-prev" type="button">&laquo; Prev Week</button>
-            </div>
-            <div class="small-text" id="ride-week-label"></div>
-            <div class="nav-right">
-              <button class="btn" id="ride-week-next" type="button">Next Week &raquo;</button>
-            </div>
-          </div>
-          <div id="ride-schedule-grid"></div>
-        </div>
-      </div>
-      <div class="sub-panel" id="rides-history-view" style="display:none;">
-        <div style="margin-bottom:12px;">
-          <input type="text" id="history-filter-input" placeholder="Filter history by name, location, or status..." style="width:100%;">
-        </div>
-        <div class="card" id="history-list">
-          <h3>Completed &amp; No-Show History</h3>
-          <div class="list" id="history-items"></div>
-        </div>
-      </div>
-      </section>
-
-      <section class="panel tab-panel" id="driver-panel">
-        <h2>Dispatch &amp; Monitoring</h2>
-        <div class="dispatch-summary-card">
-          <div class="summary-stat">
-            <span class="stat-number" id="dispatch-active-drivers">0</span>
-            <span class="stat-label">Drivers Active</span>
-          </div>
-          <div class="summary-stat">
-            <span class="stat-number" id="dispatch-active-rides">0</span>
-            <span class="stat-label">Active Rides</span>
-          </div>
-          <div class="summary-stat">
-            <span class="stat-number" id="dispatch-pending-rides">0</span>
-            <span class="stat-label">Awaiting Assignment</span>
-          </div>
-          <div class="summary-stat">
-            <span class="stat-number" id="dispatch-completed-today">0</span>
-            <span class="stat-label">Completed Today</span>
-          </div>
-        </div>
-        <div class="card">
-          <h3>Active Drivers</h3>
-          <div id="driver-dashboard" class="driver-dashboard"></div>
-        </div>
-        <div class="card" id="driver-detail" style="display:none;">
-          <div class="card-header-row">
-            <h3 id="driver-detail-title">Driver: —</h3>
-            <div>
-              <button class="btn secondary" id="admin-clock-toggle">Clock In</button>
-            </div>
-          </div>
-          <div class="list" id="driver-ride-list"></div>
-        </div>
-        <div class="card">
-          <div class="toggle-header" onclick="toggleAllActiveRides(this)">
-            <h3>All Active Rides <span id="active-rides-count"></span></h3>
-            <button class="toggle-btn-slim" type="button">▸</button>
-          </div>
-          <div id="all-active-rides" style="display:none;">
-            <div class="list" id="all-active-rides-list"></div>
-          </div>
-        </div>
-        <div class="card">
-        <h3>USC Campus Map</h3>
-        <div class="map-wrapper office-map">
-          <iframe src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
-        </div>
-        <div class="map-actions">
-          <a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a>
-        </div>
-      </div>
-    </section>
-
-      <section class="panel tab-panel" id="admin-panel">
-        <h2>Admin Settings</h2>
-        <div class="sub-tabs">
-          <button class="sub-tab active" data-subtarget="admin-users-view">Users</button>
-          <button class="sub-tab" data-subtarget="admin-create-view">Create User</button>
-        </div>
-        <div class="sub-panel" id="admin-users-view">
-          <div class="rides-filter-bar">
-            <input type="text" id="admin-user-filter" placeholder="Search by name, email, phone, USC ID, or role...">
-            <span class="ride-filter-count" id="admin-user-filter-count"></span>
-          </div>
-          <div class="card">
-            <h3>Users</h3>
-            <div class="small-text">Manage riders, drivers, and office accounts. You cannot delete your own office account.</div>
-            <div class="table-responsive">
-              <table class="admin-table" id="admin-users-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>USC ID</th>
-                    <th>Phone</th>
-                    <th></th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div class="sub-panel" id="admin-create-view" style="display:none;">
-          <div class="card">
-            <h3>Create User</h3>
-            <div id="admin-email-status" class="small-text" style="margin-bottom:8px;"></div>
-            <div class="form-grid">
-              <label>Name<input type="text" id="admin-new-name" required></label>
-              <label>USC Email<input type="email" id="admin-new-email" required></label>
-              <label>Phone<input type="tel" id="admin-new-phone"></label>
-              <label>USC ID (10 digits)<input type="text" id="admin-new-uscid" maxlength="10" required></label>
-              <label>Role
-                <select id="admin-new-role">
-                  <option value="rider">rider</option>
-                  <option value="driver">driver</option>
-                  <option value="office">office</option>
-                </select>
-              </label>
-              <label>Temp Password<input type="password" id="admin-new-password" required></label>
-            </div>
-            <button class="btn primary" id="admin-create-btn" type="button">Create User</button>
-            <div id="admin-create-message" class="small-text"></div>
-          </div>
-        </div>
-      </section>
-
-      <div id="admin-drawer-backdrop" class="admin-drawer-backdrop"></div>
-      <aside id="admin-drawer" class="admin-drawer">
-        <div class="admin-drawer-header">
-          <h3 id="admin-drawer-title">User Details</h3>
-          <button class="admin-drawer-close" id="admin-drawer-close">
-            <span class="material-symbols-outlined">cancel</span>
-          </button>
-        </div>
-        <div class="admin-drawer-body" id="admin-drawer-body"></div>
-      </aside>
-
-      <section class="panel tab-panel" id="profile-panel">
-        <h2>User Profile</h2>
-        <div id="admin-profile-content" class="card"></div>
-      </section>
-
-      <section class="panel tab-panel" id="fleet-panel">
-        <h2>Fleet Management</h2>
-        <div class="card">
-          <div class="card-header-row">
-            <h3>Vehicles</h3>
-            <button class="btn primary small" id="add-vehicle-btn" type="button">Add Vehicle</button>
-          </div>
-        </div>
-        <div id="vehicles-grid" class="vehicles-grid"></div>
-      </section>
-
-      <section class="panel tab-panel" id="analytics-panel">
-        <h2>Analytics &amp; Reports</h2>
-        <div class="sub-tabs">
-          <button class="sub-tab active" data-subtarget="analytics-dashboard-view">Dashboard</button>
-          <button class="sub-tab" data-subtarget="analytics-hotspots-view">Hotspots</button>
-          <button class="sub-tab" data-subtarget="analytics-milestones-view">Milestones</button>
-          <button class="sub-tab" data-subtarget="analytics-reports-view">Reports</button>
-        </div>
-
-        <div class="sub-panel" id="analytics-dashboard-view">
-          <div class="card">
-            <div class="card-header-row">
-              <h3>Overview</h3>
-              <div class="analytics-date-range">
-                <label class="inline-label">From <input type="date" id="analytics-from"></label>
-                <label class="inline-label">To <input type="date" id="analytics-to"></label>
-                <button class="btn secondary small" id="analytics-refresh-btn" type="button">Refresh</button>
+              <div id="day-schedule" class="day-schedule"></div>
+              <div class="schedule-legend" style="margin-top:12px;">
+                <span class="legend-item"><span class="legend-color shift"></span> Driver on shift</span>
+                <span class="legend-item"><span class="legend-color ride"></span> Scheduled ride</span>
               </div>
             </div>
           </div>
-          <div class="kpi-grid" id="analytics-kpi-grid"></div>
-          <div class="card"><h3>Rides by Day of Week</h3><div id="chart-dow"></div></div>
-          <div class="card"><h3>Rides by Hour</h3><div id="chart-hour"></div></div>
-          <div class="card"><h3>Daily Volume (Recent)</h3><div id="chart-daily"></div></div>
-          <div class="card"><h3>Status Breakdown</h3><div id="chart-status"></div></div>
-        </div>
 
-        <div class="sub-panel" id="analytics-hotspots-view" style="display:none;">
-          <div class="card"><h3>Top Pickup Locations</h3><div id="hotspot-pickups"></div></div>
-          <div class="card"><h3>Top Dropoff Locations</h3><div id="hotspot-dropoffs"></div></div>
-          <div class="card"><h3>Most Popular Routes</h3><div id="hotspot-routes"></div></div>
-        </div>
-
-        <div class="sub-panel" id="analytics-milestones-view" style="display:none;">
-          <div class="card"><h3>Driver Milestones</h3><div id="driver-milestones"></div></div>
-          <div class="card"><h3>Rider Milestones</h3><div id="rider-milestones"></div></div>
-        </div>
-
-        <div class="sub-panel" id="analytics-reports-view" style="display:none;">
-          <div class="card">
-            <div class="card-header-row">
-              <h3>Semester Report</h3>
-              <button class="btn secondary small" id="export-csv-btn" type="button">Export CSV</button>
+          <div class="sub-panel" id="staff-shifts-view">
+            <div class="ro-section">
+              <h3 class="ro-section__title mb-8">Add/Edit Shifts</h3>
+              <p class="text-sm text-muted mb-16">Click and drag on the grid to add shifts. Click existing shifts to remove.</p>
+              <div class="field-group mb-16">
+                <label class="ro-label">Employee</label>
+                <div class="flex gap-8 items-center">
+                  <select id="shift-employee" class="ro-select" style="max-width:300px;"></select>
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" id="shift-employee-profile" type="button">View Profile</button>
+                </div>
+              </div>
+              <div id="shift-grid" class="shift-grid"></div>
             </div>
-            <div id="semester-report-content"></div>
           </div>
-          <div class="card">
-            <h3 id="dart-wrapped-title">DART Wrapped</h3>
-            <div id="dart-wrapped-content"></div>
-          </div>
-        </div>
-      </section>
+        </section>
 
+        <!-- ═══ FLEET PANEL ═══ -->
+        <section class="tab-panel" id="fleet-panel">
+          <div class="ro-section">
+            <div class="ro-section__header">
+              <h2 class="ro-section__title">Vehicles</h2>
+              <button class="ro-btn ro-btn--primary ro-btn--sm" id="add-vehicle-btn" type="button"><i class="ti ti-plus"></i> Add Vehicle</button>
+            </div>
+            <div id="vehicles-grid" class="vehicles-grid"></div>
+          </div>
+        </section>
+
+        <!-- ═══ ANALYTICS PANEL ═══ -->
+        <section class="tab-panel" id="analytics-panel">
+          <div class="ro-tabs">
+            <button class="ro-tab active" data-subtarget="analytics-dashboard-view">Dashboard</button>
+            <button class="ro-tab" data-subtarget="analytics-hotspots-view">Hotspots</button>
+            <button class="ro-tab" data-subtarget="analytics-milestones-view">Milestones</button>
+            <button class="ro-tab" data-subtarget="analytics-reports-view">Reports</button>
+          </div>
+
+          <div class="sub-panel active" id="analytics-dashboard-view">
+            <div class="ro-section">
+              <div class="flex items-center justify-between mb-16">
+                <h3 class="ro-section__title">Overview</h3>
+                <div class="flex gap-8 items-center">
+                  <label class="ro-label" style="margin:0;">From</label>
+                  <input type="date" id="analytics-from" class="ro-input" style="width:auto;">
+                  <label class="ro-label" style="margin:0;">To</label>
+                  <input type="date" id="analytics-to" class="ro-input" style="width:auto;">
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" id="analytics-refresh-btn" type="button">Refresh</button>
+                </div>
+              </div>
+            </div>
+            <div class="kpi-bar" id="analytics-kpi-grid"></div>
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Rides by Day of Week</h3><div id="chart-dow"></div></div>
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Rides by Hour</h3><div id="chart-hour"></div></div>
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Daily Volume (Recent)</h3><div id="chart-daily"></div></div>
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Status Breakdown</h3><div id="chart-status"></div></div>
+          </div>
+
+          <div class="sub-panel" id="analytics-hotspots-view">
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Top Pickup Locations</h3><div id="hotspot-pickups"></div></div>
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Top Dropoff Locations</h3><div id="hotspot-dropoffs"></div></div>
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Most Popular Routes</h3><div id="hotspot-routes"></div></div>
+          </div>
+
+          <div class="sub-panel" id="analytics-milestones-view">
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Driver Milestones</h3><div id="driver-milestones"></div></div>
+            <div class="ro-section"><h3 class="ro-section__title mb-8">Rider Milestones</h3><div id="rider-milestones"></div></div>
+          </div>
+
+          <div class="sub-panel" id="analytics-reports-view">
+            <div class="ro-section">
+              <div class="flex items-center justify-between mb-16">
+                <h3 class="ro-section__title">Semester Report</h3>
+                <button class="ro-btn ro-btn--outline ro-btn--sm" id="export-csv-btn" type="button"><i class="ti ti-download"></i> Export CSV</button>
+              </div>
+              <div id="semester-report-content"></div>
+            </div>
+            <div class="ro-section">
+              <h3 class="ro-section__title mb-8" id="dart-wrapped-title">DART Wrapped</h3>
+              <div id="dart-wrapped-content"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ SETTINGS PANEL ═══ -->
+        <section class="tab-panel" id="settings-panel">
+          <div class="ro-tabs">
+            <button class="ro-tab active" data-subtarget="admin-users-view">Users</button>
+            <button class="ro-tab" data-subtarget="admin-create-view">Create User</button>
+          </div>
+
+          <div class="sub-panel active" id="admin-users-view">
+            <div class="filter-bar">
+              <input type="text" id="admin-user-filter" class="ro-input" placeholder="Search by name, email, phone, USC ID, or role..." style="max-width:400px;">
+              <span class="text-sm text-muted" id="admin-user-filter-count"></span>
+            </div>
+            <div class="ro-section">
+              <div class="text-sm text-muted mb-16">Manage riders, drivers, and office accounts. You cannot delete your own office account.</div>
+              <div class="ro-table-wrap">
+                <table class="ro-table" id="admin-users-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Username</th>
+                      <th>Role</th>
+                      <th>USC ID</th>
+                      <th>Phone</th>
+                      <th></th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="sub-panel" id="admin-create-view">
+            <div class="ro-section">
+              <h3 class="ro-section__title mb-8">Create User</h3>
+              <div id="admin-email-status" class="text-sm mb-8"></div>
+              <div class="form-grid">
+                <div class="field-group">
+                  <label class="ro-label">Name</label>
+                  <input type="text" id="admin-new-name" class="ro-input" required>
+                </div>
+                <div class="field-group">
+                  <label class="ro-label">USC Email</label>
+                  <input type="email" id="admin-new-email" class="ro-input" required>
+                </div>
+                <div class="field-group">
+                  <label class="ro-label">Phone</label>
+                  <input type="tel" id="admin-new-phone" class="ro-input">
+                </div>
+                <div class="field-group">
+                  <label class="ro-label">USC ID (10 digits)</label>
+                  <input type="text" id="admin-new-uscid" class="ro-input" maxlength="10" required>
+                </div>
+                <div class="field-group">
+                  <label class="ro-label">Role</label>
+                  <select id="admin-new-role" class="ro-select">
+                    <option value="rider">rider</option>
+                    <option value="driver">driver</option>
+                    <option value="office">office</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label class="ro-label">Temp Password</label>
+                  <input type="password" id="admin-new-password" class="ro-input" required>
+                </div>
+              </div>
+              <button class="ro-btn ro-btn--primary" id="admin-create-btn" type="button" style="margin-top:12px;"><i class="ti ti-user-plus"></i> Create User</button>
+              <div id="admin-create-message" class="text-sm" style="margin-top:8px;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ PROFILE PANEL ═══ -->
+        <section class="tab-panel" id="profile-panel">
+          <div class="ro-section">
+            <div id="admin-profile-content"></div>
+          </div>
+        </section>
+
+      </div><!-- /ro-content -->
     </main>
   </div>
+
+  <!-- Admin Drawer (used by Settings panel) -->
+  <div id="admin-drawer-backdrop" class="ro-drawer-overlay"></div>
+  <aside id="admin-drawer" class="ro-drawer">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 id="admin-drawer-title" style="font-size:16px; font-weight:700; margin:0;">User Details</h3>
+      <button class="ro-btn ro-btn--outline ro-btn--sm" id="admin-drawer-close"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="admin-drawer-body"></div>
+  </aside>
+
   <script src="/utils.js"></script>
+  <script src="/js/rideops-utils.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Initialize new navigation system after app.js loads
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof initSidebar === 'function') initSidebar();
+      if (typeof initSubTabs === 'function') initSubTabs();
+      if (typeof restoreSidebarState === 'function') restoreSidebarState();
+    });
+  </script>
 </body>
 </html>

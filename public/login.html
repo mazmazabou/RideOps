@@ -5,42 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css">
+  <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="/demo-config.js"></script>
   <style>
-    body { display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
-    .login-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
-    .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 100%; max-width: 360px; border-bottom: 3px solid #FFCC00; }
-    .login-card h2 { margin-top: 0; color: #990000; text-align: center; }
-    .login-card input { width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; margin-top: 0.25rem; box-sizing: border-box; }
-    .login-card button { width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 1rem; }
-    .login-error { color: #990000; background: #ffe6e6; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; display: none; }
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--color-page-bg); }
+    .login-wrap { width: 100%; max-width: 400px; padding: 24px; }
+    .login-card { background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 32px 28px; }
+    .login-brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 24px; }
+    .login-brand .ro-brand-icon { width: 36px; height: 36px; font-size: 13px; }
+    .login-brand-text { font-size: 18px; font-weight: 800; color: var(--color-text); }
+    .login-error { color: var(--status-no-show); background: rgba(239,68,68,0.08); padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px; font-weight: 600; display: none; }
     .login-error.show { display: block; }
-    .login-hint { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; font-size: 0.85rem; color: #666; }
+    .field-group { margin-bottom: 16px; }
+    .field-group .ro-label { margin-bottom: 4px; }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--color-text-muted); font-size: 16px; }
+    .input-icon-wrap .ro-input { padding-left: 34px; }
+    .login-hint { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-text-muted); line-height: 1.6; }
+    .login-hint strong { color: var(--color-text-secondary); }
+    #signup-link { display: none; text-align: center; margin-top: 16px; }
+    #signup-link a { color: var(--color-primary); font-weight: 700; text-decoration: none; font-size: 13px; }
+    #signup-link a:hover { text-decoration: underline; }
+    #change-password-form .field-group { margin-bottom: 12px; }
+    .cp-warning { color: var(--status-no-show); font-weight: 700; font-size: 13px; margin-bottom: 16px; }
+    #cp-message { margin-top: 8px; font-size: 13px; }
   </style>
 </head>
 <body>
-  <header class="header"><div><h1 id="login-brand">USC DART</h1><p id="login-tagline">Disabled Access To Road Transportation</p></div></header>
-  <div class="login-container">
+  <div class="login-wrap">
     <div class="login-card">
-      <h2>Sign In</h2>
-      <div id="login-error" class="login-error"></div>
-      <form id="login-form">
-        <label>Username<input type="text" id="username" required autocomplete="username"></label>
-        <label>Password<input type="password" id="password" required autocomplete="current-password"></label>
-        <button type="submit" class="btn primary">Sign In</button>
-      </form>
-      <div id="change-password-form" style="display:none;">
-        <p class="small-text" style="color:#990000; font-weight:700;">You must change your password before continuing.</p>
-        <label>Current Password<input type="password" id="cp-current" required autocomplete="current-password"></label>
-        <label>New Password (min 8 chars)<input type="password" id="cp-new" required autocomplete="new-password"></label>
-        <label>Confirm New Password<input type="password" id="cp-confirm" required autocomplete="new-password"></label>
-        <button type="button" id="cp-submit" class="btn primary">Change Password</button>
-        <div id="cp-message" class="small-text" style="margin-top:8px;"></div>
+      <div class="login-brand">
+        <div class="ro-brand-icon" id="login-brand-icon">RO</div>
+        <span class="login-brand-text" id="login-brand">RideOps</span>
       </div>
+      <div id="login-tagline" style="text-align:center; font-size:13px; color:var(--color-text-secondary); margin-bottom:24px;">Dispatch + Driver Operations</div>
+
+      <div id="login-error" class="login-error"></div>
+
+      <form id="login-form">
+        <div class="field-group">
+          <label class="ro-label" for="username">Username</label>
+          <div class="input-icon-wrap">
+            <i class="ti ti-user"></i>
+            <input type="text" id="username" class="ro-input" required autocomplete="username" placeholder="Enter username">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="ro-label" for="password">Password</label>
+          <div class="input-icon-wrap">
+            <i class="ti ti-lock"></i>
+            <input type="password" id="password" class="ro-input" required autocomplete="current-password" placeholder="Enter password">
+          </div>
+        </div>
+        <button type="submit" class="ro-btn ro-btn--primary ro-btn--action ro-btn--full">Sign In</button>
+      </form>
+
+      <div id="change-password-form" style="display:none;">
+        <p class="cp-warning">You must change your password before continuing.</p>
+        <div class="field-group">
+          <label class="ro-label" for="cp-current">Current Password</label>
+          <input type="password" id="cp-current" class="ro-input" required autocomplete="current-password">
+        </div>
+        <div class="field-group">
+          <label class="ro-label" for="cp-new">New Password (min 8 chars)</label>
+          <input type="password" id="cp-new" class="ro-input" required autocomplete="new-password">
+        </div>
+        <div class="field-group">
+          <label class="ro-label" for="cp-confirm">Confirm New Password</label>
+          <input type="password" id="cp-confirm" class="ro-input" required autocomplete="new-password">
+        </div>
+        <button type="button" id="cp-submit" class="ro-btn ro-btn--primary ro-btn--action ro-btn--full">Change Password</button>
+        <div id="cp-message"></div>
+      </div>
+
       <div class="login-hint" data-dev-only hidden aria-hidden="true"><strong>Test accounts:</strong><br>Drivers: mazen, jason, jocelin, olivia<br>Office: office<br>Riders: sarah, tom<br>Password: dart123</div>
-      <div id="signup-link" style="display:none; text-align:center; margin-top:1rem; font-size:0.9rem;">
-        <a href="/signup" style="color:#990000; font-weight:700; text-decoration:none;">New rider? Create an account</a>
+      <div id="signup-link">
+        <a href="/signup">New rider? Create an account</a>
       </div>
     </div>
   </div>
@@ -71,6 +113,7 @@
         document.title=c.orgName;
         const b=document.getElementById('login-brand');if(b)b.textContent=c.orgName;
         const t=document.getElementById('login-tagline');if(t)t.textContent=c.orgTagline;
+        const icon=document.getElementById('login-brand-icon');if(icon&&c.orgInitials)icon.textContent=c.orgInitials;
       }).catch(()=>{});
     })();
 
@@ -114,17 +157,17 @@
       const confirm = document.getElementById('cp-confirm').value;
       if (!currentPassword || !newPassword || !confirm) {
         msg.textContent = 'All fields are required.';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       if (newPassword.length < 8) {
         msg.textContent = 'New password must be at least 8 characters.';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       if (newPassword !== confirm) {
         msg.textContent = 'Passwords do not match.';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       try {
@@ -136,15 +179,15 @@
         const data = await res.json();
         if (!res.ok) {
           msg.textContent = data.error || 'Failed to change password';
-          msg.style.color = '#c62828';
+          msg.style.color = 'var(--status-no-show)';
           return;
         }
         msg.textContent = 'Password changed! Redirecting...';
-        msg.style.color = '#228b22';
+        msg.style.color = 'var(--status-completed)';
         setTimeout(() => redirectByRole(loginUserData?.role), 1000);
       } catch {
         msg.textContent = 'Connection error';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
       }
     });
   </script>
