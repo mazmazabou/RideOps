@@ -3030,6 +3030,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Fix FullCalendar day header overlap when Staff panel first becomes visible
+  document.querySelector('.ro-nav-item[data-target="staff-panel"]')?.addEventListener('click', () => {
+    if (shiftCalendar) requestAnimationFrame(() => shiftCalendar.updateSize());
+  });
+
   setInterval(loadRides, 5000);
   setInterval(loadVehicles, 15000);
   setInterval(renderDriverConsole, 1000);
