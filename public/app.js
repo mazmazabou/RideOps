@@ -90,6 +90,10 @@ async function checkAuth() {
 }
 
 async function logout() {
+  if (window._pollIntervals) {
+    window._pollIntervals.forEach(id => clearInterval(id));
+    window._pollIntervals = [];
+  }
   await fetch('/api/auth/logout', { method: 'POST' });
   window.location.href = '/login';
 }
@@ -740,11 +744,21 @@ function renderEmployees() {
 }
 
 async function clockEmployee(id, isIn) {
-  await fetch(`/api/employees/${isIn ? 'clock-in' : 'clock-out'}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ employeeId: id })
-  });
+  try {
+    const res = await fetch(`/api/employees/${isIn ? 'clock-in' : 'clock-out'}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId: id })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.error || `Failed to clock ${isIn ? 'in' : 'out'}`, 'error');
+      return;
+    }
+  } catch {
+    showToast('Network error — could not update clock status', 'error');
+    return;
+  }
   await loadEmployees();
   await loadRides();
 }
@@ -1825,7 +1839,7 @@ function buildWarningBanner(driverName) {
 function showVehiclePromptModal() {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
+    overlay.className = 'modal-overlay show';
     const box = document.createElement('div');
     box.className = 'modal-box';
     const availableVehicles = vehicles.filter(v => v.status === 'available');
@@ -2316,11 +2330,28 @@ function openRideDrawer(ride) {
   }
 
   if (['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
-    actionsEl.appendChild(makeBtn('On My Way', 'ro-btn ro-btn--primary ro-btn--full', () => updateRide(`/api/rides/${ride.id}/on-the-way`).then(reload)));
+    actionsEl.appendChild(makeBtn('On My Way', 'ro-btn ro-btn--primary ro-btn--full', async () => {
+      if (!ride.vehicleId) {
+        const vehicleId = await showVehiclePromptModal();
+        if (!vehicleId) return;
+        await updateRide(`/api/rides/${ride.id}/on-the-way`, { vehicleId });
+      } else {
+        await updateRide(`/api/rides/${ride.id}/on-the-way`);
+      }
+      reload();
+    }));
     actionsEl.appendChild(makeBtn("I'm Here", 'ro-btn ro-btn--outline ro-btn--full', () => updateRide(`/api/rides/${ride.id}/here`).then(reload)));
     actionsEl.appendChild(makeBtn('Complete', 'ro-btn ro-btn--success ro-btn--full', async () => {
       const confirmed = await showConfirmModal({ title: 'Complete Ride', message: 'Mark this ride as completed?', confirmLabel: 'Complete', type: 'warning' });
-      if (confirmed) { await updateRide(`/api/rides/${ride.id}/complete`); reload(); }
+      if (!confirmed) return;
+      if (!ride.vehicleId) {
+        const vehicleId = await showVehiclePromptModal();
+        if (!vehicleId) return;
+        await updateRide(`/api/rides/${ride.id}/complete`, { vehicleId });
+      } else {
+        await updateRide(`/api/rides/${ride.id}/complete`);
+      }
+      reload();
     }));
     actionsEl.appendChild(makeBtn('No-Show', 'ro-btn ro-btn--danger ro-btn--full', async () => {
       const confirmed = await showConfirmModal({ title: 'Confirm No-Show', message: 'Mark this rider as a no-show?', confirmLabel: 'Mark No-Show', type: 'danger' });
@@ -2334,7 +2365,14 @@ function openRideDrawer(ride) {
     actionsEl.appendChild(hr);
     actionsEl.appendChild(makeBtn('Unassign Driver', 'ro-btn ro-btn--outline ro-btn--full', async () => {
       const confirmed = await showConfirmModal({ title: 'Unassign Driver', message: `Unassign ${driverName}?`, confirmLabel: 'Unassign', type: 'warning' });
-      if (confirmed) { await fetch(`/api/rides/${ride.id}/unassign`, { method: 'POST' }); reload(); }
+      if (confirmed) {
+        try {
+          const res = await fetch(`/api/rides/${ride.id}/unassign`, { method: 'POST' });
+          if (!res.ok) { const err = await res.json().catch(() => ({})); showToast(err.error || 'Failed to unassign', 'error'); }
+          else { showToast('Driver unassigned', 'success'); }
+        } catch { showToast('Network error', 'error'); }
+        reload();
+      }
     }));
     const reassignSelect = buildReassignDropdown(ride, ride.assignedDriverId, reload);
     reassignSelect.style.width = '100%';
@@ -2344,7 +2382,14 @@ function openRideDrawer(ride) {
   if (!isTerminal) {
     actionsEl.appendChild(makeBtn('Cancel Ride', 'ro-btn ro-btn--danger ro-btn--full', async () => {
       const confirmed = await showConfirmModal({ title: 'Cancel Ride', message: 'Cancel this ride?', confirmLabel: 'Cancel Ride', type: 'danger' });
-      if (confirmed) { await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' }); reload(); }
+      if (confirmed) {
+        try {
+          const res = await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' });
+          if (!res.ok) { const err = await res.json().catch(() => ({})); showToast(err.error || 'Failed to cancel', 'error'); }
+          else { showToast('Ride cancelled', 'success'); }
+        } catch { showToast('Network error', 'error'); }
+        reload();
+      }
     }));
   }
 
@@ -3312,8 +3357,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (shiftCalendar) requestAnimationFrame(() => shiftCalendar.updateSize());
   });
 
-  setInterval(loadRides, 5000);
-  setInterval(loadVehicles, 15000);
-  setInterval(renderDriverConsole, 1000);
-  setInterval(renderSchedule, 5000);
+  window._pollIntervals = [
+    setInterval(loadRides, 5000),
+    setInterval(loadVehicles, 15000),
+    setInterval(renderDriverConsole, 1000),
+    setInterval(renderSchedule, 5000)
+  ];
 });
