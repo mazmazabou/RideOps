@@ -658,6 +658,7 @@ async function deleteUser(id) {
 
 async function createAdminUser() {
   const name = document.getElementById('admin-new-name')?.value.trim();
+  const username = document.getElementById('admin-new-username')?.value.trim();
   const email = document.getElementById('admin-new-email')?.value.trim();
   const phone = document.getElementById('admin-new-phone')?.value.trim();
   const uscId = document.getElementById('admin-new-uscid')?.value.trim();
@@ -665,8 +666,12 @@ async function createAdminUser() {
   const password = document.getElementById('admin-new-password')?.value;
   const msg = document.getElementById('admin-create-message');
   if (msg) msg.textContent = '';
-  if (!name || !email || !uscId || !role || !password) {
+  if (!name || !username || !email || !uscId || !role || !password) {
     if (msg) msg.textContent = 'All required fields must be filled.';
+    return;
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    if (msg) msg.textContent = 'Username may only contain letters, numbers, and underscores.';
     return;
   }
   if (!/^[0-9]{10}$/.test(uscId)) {
@@ -677,14 +682,14 @@ async function createAdminUser() {
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, phone, uscId, role, password })
+      body: JSON.stringify({ name, username, email, phone, uscId, role, password })
     });
     const data = await res.json();
     if (!res.ok) {
       if (msg) msg.textContent = data.error || 'Could not create user';
       return;
     }
-    ['admin-new-name','admin-new-email','admin-new-phone','admin-new-uscid','admin-new-password'].forEach(id => {
+    ['admin-new-name','admin-new-username','admin-new-email','admin-new-phone','admin-new-uscid','admin-new-password'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });

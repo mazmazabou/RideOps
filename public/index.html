@@ -281,6 +281,13 @@
                   <input type="text" id="admin-new-name" class="ro-input" required>
                 </div>
                 <div class="field-group">
+                  <label class="ro-label">Username <span style="color:var(--status-no-show)">*</span></label>
+                  <input type="text" class="ro-input" id="admin-new-username"
+                         placeholder="e.g. jsmith" autocomplete="off"
+                         pattern="[a-zA-Z0-9_]+" title="Letters, numbers, and underscores only" required>
+                  <div class="text-xs text-muted" style="margin-top:4px;">Used to log in. Letters, numbers, and underscores only.</div>
+                </div>
+                <div class="field-group">
                   <label class="ro-label">USC Email</label>
                   <input type="email" id="admin-new-email" class="ro-input" required>
                 </div>

@@ -570,7 +570,7 @@ app.delete('/api/admin/users/:id', requireOffice, async (req, res) => {
 });
 
 app.post('/api/admin/users', requireOffice, async (req, res) => {
-  const { name, email, phone, uscId, role, password } = req.body;
+  const { name, email, phone, uscId, role, password, username: reqUsername } = req.body;
   if (!name || !email || !uscId || !role || !password) {
     return res.status(400).json({ error: 'Name, email, USC ID, role, and password are required' });
   }
@@ -579,7 +579,10 @@ app.post('/api/admin/users', requireOffice, async (req, res) => {
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'Invalid phone format' });
   if (!['rider', 'driver', 'office'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
-  const username = email.toLowerCase().split('@')[0];
+  const username = reqUsername ? reqUsername.trim().toLowerCase() : email.toLowerCase().split('@')[0];
+  if (!/^[a-z0-9_]+$/.test(username)) {
+    return res.status(400).json({ error: 'Username may only contain letters, numbers, and underscores' });
+  }
   const existing = await query('SELECT 1 FROM users WHERE username = $1 OR email = $2 OR usc_id = $3 OR phone = $4', [username, email.toLowerCase(), uscId, phone || null]);
   if (existing.rowCount) {
     return res.status(400).json({ error: 'Username, email, phone, or USC ID already exists' });
