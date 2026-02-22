@@ -6,7 +6,7 @@
   <title>Driver Console</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="/js/rideops-utils.js"></script>
   <script src="/demo-config.js"></script>
@@ -417,23 +417,32 @@
     async function saveProfile() {
       const msg = document.getElementById('profile-message');
       msg.textContent = '';
-      const name = document.getElementById('profile-name').value.trim();
-      const phone = document.getElementById('profile-phone').value.trim();
-      const res = await fetch('/api/me', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        msg.textContent = data.error || 'Could not save profile';
-        msg.style.color = 'var(--status-no-show)';
-        return;
+      const btn = document.querySelector('#account-panel .ro-btn--primary');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        const name = document.getElementById('profile-name').value.trim();
+        const phone = document.getElementById('profile-phone').value.trim();
+        const res = await fetch('/api/me', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          msg.textContent = data.error || 'Could not save profile';
+          msg.style.color = 'var(--status-no-show)';
+          return;
+        }
+        msg.textContent = 'Saved!';
+        msg.style.color = 'var(--status-completed)';
+        document.getElementById('driver-name').textContent = data.name;
+        showToastNew('Profile updated', 'success');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
-      msg.textContent = 'Saved!';
-      msg.style.color = 'var(--status-completed)';
-      document.getElementById('driver-name').textContent = data.name;
-      showToastNew('Profile updated', 'success');
     }
 
     async function changePassword() {
@@ -458,6 +467,10 @@
         msg.style.color = 'var(--status-no-show)';
         return;
       }
+      const btn = document.querySelector('#account-panel .ro-btn--outline');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
       try {
         const res = await fetch('/api/auth/change-password', {
           method: 'POST',
@@ -479,6 +492,9 @@
       } catch {
         msg.textContent = 'Connection error';
         msg.style.color = 'var(--status-no-show)';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
     }
 

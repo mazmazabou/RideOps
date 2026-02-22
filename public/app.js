@@ -35,17 +35,6 @@ function statusLabel(status) {
   return labels[status] || status.replace(/_/g, ' ');
 }
 
-const STATUS_ICONS = {
-  pending: 'schedule', approved: 'check_circle', scheduled: 'calendar_today',
-  driver_on_the_way: 'directions_car', driver_arrived_grace: 'person_pin_circle',
-  completed: 'check_circle', no_show: 'warning', denied: 'block', cancelled: 'cancel'
-};
-
-function statusTag(status) {
-  const icon = STATUS_ICONS[status];
-  const iconHtml = icon ? `<span class="material-symbols-outlined">${icon}</span>` : '';
-  return `<span class="status-tag ${status}">${iconHtml}${statusLabel(status)}</span>`;
-}
 
 // Debounce helper for search inputs
 function debounce(func, wait) {
@@ -199,7 +188,7 @@ function renderAdminUsers(users) {
       <td>${u.usc_id || ''}</td>
       <td>${u.phone || ''}</td>
       <td></td>
-      <td><span class="material-symbols-outlined admin-chevron">chevron_right</span></td>
+      <td><i class="ti ti-chevron-right admin-chevron"></i></td>
     `;
     // Insert kebab menu into the 6th cell
     const kebabCell = tr.querySelectorAll('td')[5];
@@ -216,27 +205,27 @@ function buildAdminKebabMenu(user) {
 
   const btn = document.createElement('button');
   btn.className = 'kebab-btn';
-  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">more_vert</span>';
+  btn.innerHTML = '<i class="ti ti-dots-vertical" style="font-size:20px;"></i>';
 
   const dropdown = document.createElement('div');
   dropdown.className = 'kebab-dropdown';
 
   const editBtn = document.createElement('button');
   editBtn.className = 'edit-option';
-  editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">edit</span> Edit';
+  editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:16px;"></i> Edit';
   editBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); openAdminDrawer(user.id, 'edit'); };
   dropdown.appendChild(editBtn);
 
   const resetBtn = document.createElement('button');
   resetBtn.className = 'edit-option';
-  resetBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">lock_reset</span> Reset Password';
+  resetBtn.innerHTML = '<i class="ti ti-key" style="font-size:16px;"></i> Reset Password';
   resetBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); openAdminDrawer(user.id, 'password'); };
   dropdown.appendChild(resetBtn);
 
   if (user.id !== currentUser.id) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-option';
-    deleteBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete';
+    deleteBtn.innerHTML = '<i class="ti ti-trash" style="font-size:16px;"></i> Delete';
     deleteBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.remove('open'); deleteUser(user.id); };
     dropdown.appendChild(deleteBtn);
   }
@@ -974,16 +963,7 @@ function renderRideScheduleGrid() {
   updateRideWeekLabel();
 
   if (!Object.keys(slotMap).length) {
-    showEmptyState(grid, {
-      icon: 'calendar_today',
-      title: 'No rides on the calendar',
-      message: 'Approved and scheduled rides will appear here. Try switching to the Active Rides tab to approve pending requests.',
-      actionLabel: 'Go to Active Rides',
-      actionHandler: () => {
-        const activeTab = document.querySelector('#rides-panel .ro-tab[data-subtarget="rides-active-view"]');
-        if (activeTab) activeTab.click();
-      }
-    });
+    grid.innerHTML = '<div class="ro-empty"><i class="ti ti-calendar-off"></i><div class="ro-empty__title">No rides on the calendar</div><div class="ro-empty__message">Approved and scheduled rides will appear here.</div></div>';
     return;
   }
 
@@ -1155,7 +1135,7 @@ function renderProfilePanel(data) {
 
 function renderProfileRide(ride) {
   return `<div class="item">
-    <div>${statusTag(ride.status)} ${ride.pickupLocation} → ${ride.dropoffLocation}</div>
+    <div>${statusBadge(ride.status)} ${ride.pickupLocation} → ${ride.dropoffLocation}</div>
     <div class="small-text">${formatDate(ride.requestedTime)}</div>
   </div>`;
 }
@@ -1422,7 +1402,7 @@ function buildKebabMenu(ride, onDone) {
 
   const btn = document.createElement('button');
   btn.className = 'kebab-btn';
-  btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;">more_vert</span>';
+  btn.innerHTML = '<i class="ti ti-dots-vertical" style="font-size:20px;"></i>';
 
   const dropdown = document.createElement('div');
   dropdown.className = 'kebab-dropdown';
@@ -1430,7 +1410,7 @@ function buildKebabMenu(ride, onDone) {
   // Edit option — always visible
   const editBtn = document.createElement('button');
   editBtn.className = 'edit-option';
-  editBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">edit</span> Edit';
+  editBtn.innerHTML = '<i class="ti ti-pencil" style="font-size:16px;"></i> Edit';
   editBtn.onclick = (e) => {
     e.stopPropagation();
     dropdown.classList.remove('open');
@@ -1443,7 +1423,7 @@ function buildKebabMenu(ride, onDone) {
   if (!terminalStatuses.includes(ride.status)) {
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-option';
-    deleteBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">delete</span> Delete';
+    deleteBtn.innerHTML = '<i class="ti ti-trash" style="font-size:16px;"></i> Delete';
     deleteBtn.onclick = async (e) => {
       e.stopPropagation();
       dropdown.classList.remove('open');
@@ -1675,7 +1655,7 @@ function buildHistoryItem(ride) {
   item.className = 'item';
   const cancelledByOffice = ride.status === 'cancelled' && ride.cancelledBy === 'office';
   item.innerHTML = `
-    <div>${statusTag(ride.status)}${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
+    <div>${statusBadge(ride.status)}${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
     <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
     <div class="small-text">When: ${formatDate(ride.requestedTime)}</div>
     <div class="small-text">Misses: ${ride.consecutiveMisses || 0}</div>
@@ -1806,7 +1786,7 @@ function renderHistory(history) {
         const firstRide = ridesInDay[i];
         const summary = document.createElement('div');
         summary.className = 'history-group-summary';
-        summary.innerHTML = `${statusTag(firstRide.status)} <strong>${firstRide.riderName}</strong> <span class="small-text">${firstRide.pickupLocation} → ${firstRide.dropoffLocation}</span> <span class="history-group-count">${runLength}</span> <button class="history-group-toggle">${isExpanded ? 'Hide' : 'Show all'}</button>`;
+        summary.innerHTML = `${statusBadge(firstRide.status)} <strong>${firstRide.riderName}</strong> <span class="small-text">${firstRide.pickupLocation} → ${firstRide.dropoffLocation}</span> <span class="history-group-count">${runLength}</span> <button class="history-group-toggle">${isExpanded ? 'Hide' : 'Show all'}</button>`;
         const container = document.createElement('div');
         container.className = 'history-group-rides' + (isExpanded ? ' expanded' : '');
         for (let j = i; j < runEnd; j++) container.appendChild(buildHistoryItem(ridesInDay[j]));
@@ -1824,7 +1804,7 @@ function renderHistory(history) {
   });
 
   if (!history.length && !historyFilterText) {
-    showEmptyState(historyEl, { icon: 'inbox', title: 'No completed history yet', message: 'Completed and no-show rides will appear here.' });
+    historyEl.innerHTML = '<div class="ro-empty"><i class="ti ti-history"></i><div class="ro-empty__title">No completed history yet</div><div class="ro-empty__message">Completed and no-show rides will appear here.</div></div>';
   }
 }
 
@@ -2415,7 +2395,7 @@ function renderBarChart(containerId, data, options = {}) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (!data || !data.length) {
-    showEmptyState(container, { icon: 'inbox', title: 'No data', message: 'No ride data for this period.' });
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-bar-off"></i><div class="ro-empty__title">No data</div><div class="ro-empty__message">No ride data for this period.</div></div>';
     return;
   }
   const max = Math.max(...data.map(d => parseInt(d.count) || 0));
@@ -2440,7 +2420,7 @@ function renderHotspotList(containerId, items, colorClass) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (!items || !items.length) {
-    showEmptyState(container, { icon: 'inbox', title: 'No data', message: 'No location data available.' });
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-map-pin-off"></i><div class="ro-empty__title">No data</div><div class="ro-empty__message">No location data available.</div></div>';
     return;
   }
   const cls = colorClass || '';
@@ -2498,7 +2478,7 @@ function renderVehicleCards(vehicles) {
   const grid = document.getElementById('vehicles-grid');
   if (!grid) return;
   if (!vehicles || !vehicles.length) {
-    showEmptyState(grid, { icon: 'inbox', title: 'No vehicles', message: 'Add vehicles to track fleet usage.' });
+    grid.innerHTML = '<div class="ro-empty"><i class="ti ti-bus-off"></i><div class="ro-empty__title">No vehicles</div><div class="ro-empty__message">Add vehicles to track fleet usage.</div></div>';
     return;
   }
   grid.innerHTML = vehicles.map(v => {
@@ -2538,7 +2518,7 @@ function renderMilestoneList(containerId, people, type) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (!people || !people.length) {
-    showEmptyState(container, { icon: 'inbox', title: `No ${type} data`, message: `No completed rides yet.` });
+    container.innerHTML = `<div class="ro-empty"><i class="ti ti-trophy-off"></i><div class="ro-empty__title">No ${type} data</div><div class="ro-empty__message">No completed rides yet.</div></div>`;
     return;
   }
   const badgeLabels = { 50: 'Rising Star', 100: 'Century Club', 250: 'Quarter Thousand', 500: (tenantConfig?.orgShortName || 'DART') + ' Legend', 1000: 'Diamond' };
