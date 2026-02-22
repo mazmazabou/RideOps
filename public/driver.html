@@ -5,105 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Driver Console</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css">
+  <link rel="stylesheet" href="/css/rideops-theme.css">
+  <script src="/js/rideops-utils.js"></script>
   <script src="/demo-config.js"></script>
   <style>
-    body { margin: 0; padding: 0; background: #f5f5f5; }
-    .driver-header { background: #990000; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-    .driver-header h1 { margin: 0; font-size: 1.25rem; }
-    .driver-content { padding: 1rem; max-width: 600px; margin: 0 auto; }
-    .status-bar { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-    .status-bar .status.active { color: #228b22; font-weight: bold; }
-    .status-bar .status.inactive { color: #990000; font-weight: bold; }
-    .section { background: white; border-radius: 8px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
-    .section-header { background: #ffcc00; color: #333; padding: 0.75rem 1rem; font-weight: bold; }
-    .section-content { padding: 1rem; }
-    .ride-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #fafafa; }
-    .ride-card:last-child { margin-bottom: 0; }
-    .ride-card .rider-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 0.5rem; }
-    .ride-card .route { margin-bottom: 0.5rem; }
-    .ride-card .time { color: #666; font-size: 0.9rem; margin-bottom: 0.75rem; }
-    .vehicle-select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; margin-bottom: 0.5rem; }
-    .ride-card .status-badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.75rem; }
-    .ride-card .status-badge.scheduled { background: #d4edda; color: #155724; }
-    .ride-card .status-badge.driver_on_the_way { background: #fff3cd; color: #856404; }
-    .ride-card .status-badge.driver_arrived_grace { background: #cce5ff; color: #004085; }
-    .ride-card .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .ride-card .actions button { flex: 1; min-width: 100px; padding: 0.75rem; font-size: 0.9rem; }
-    .grace-timer { background: #fff3cd; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.75rem; font-size: 0.9rem; }
-    .no-vehicle-warning { background: #fff3cd; color: #856404; padding: 0.4rem 0.6rem; border-radius: 4px; font-size: 0.85rem; margin-bottom: 0.5rem; }
-    .empty-message { color: #666; text-align: center; padding: 2rem; }
-    .btn-logout { background: transparent; border: 1px solid white; color: white; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
-    .map-section iframe { width: 100%; height: 360px; border: none; border-radius: 4px; }
+    .driver-header { position: sticky; top: 0; z-index: 20; height: 48px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+    .driver-header__left { display: flex; align-items: center; gap: 8px; }
+    .driver-header__left span { font-weight: 700; font-size: 14px; }
+    .driver-header__right { display: flex; align-items: center; gap: 10px; }
+    .driver-header__right #driver-name { font-size: 13px; color: var(--color-text-secondary); }
+    .driver-main { max-width: 600px; margin: 0 auto; padding: 16px; }
   </style>
 </head>
-<body>
+<body style="padding-bottom:56px;">
   <header class="driver-header">
-    <div><h1 id="driver-brand">DART Driver</h1><div id="user-name"></div></div>
-    <button class="btn-logout" onclick="logout()">Logout</button>
+    <div class="driver-header__left">
+      <span id="org-short-name">RideOps</span>
+      <span style="color:var(--color-text-muted); font-weight:400;">Driver</span>
+    </div>
+    <div class="driver-header__right">
+      <span id="driver-name"></span>
+      <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="logout()"><i class="ti ti-logout"></i></button>
+    </div>
   </header>
-  <div class="driver-content">
-    <div class="status-bar">
-      <div>Status: <span id="clock-status" class="status inactive">Clocked Out</span></div>
-      <button id="clock-btn" class="btn primary" onclick="toggleClock()">Clock In</button>
+
+  <main class="driver-main">
+    <div class="tab-panel active" id="home-panel">
+      <div id="home-content"></div>
     </div>
-    <div class="section">
-      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>My Rides Today</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('my-rides', this)">▾</button>
-      </div>
-      <div class="section-content" id="my-rides"></div>
+    <div class="tab-panel" id="rides-panel">
+      <div id="rides-content"></div>
     </div>
-    <div class="section" id="available-section">
-      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Available to Claim</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('available-rides', this)">▾</button>
-      </div>
-      <div class="section-content" id="available-rides"></div>
-    </div>
-    <div class="section map-section">
-      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Campus Map</span><button class="toggle-btn-slim" type="button" onclick="toggleDriverSection('driver-map-box', this)">▾</button>
-      </div>
-      <div class="section-content" id="driver-map-box">
-        <iframe class="driver-map" src="https://maps.usc.edu/" title="USC Campus Map"></iframe>
-        <div class="map-actions">
-          <a class="map-full-link" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer">Open full map</a>
+    <div class="tab-panel" id="account-panel">
+      <div style="margin-bottom:24px;">
+        <h3 style="font-size:16px; font-weight:700; margin:0 0 16px;">Profile</h3>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="profile-name">Full Name</label>
+          <input type="text" id="profile-name" class="ro-input">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="profile-phone">Phone</label>
+          <input type="tel" id="profile-phone" class="ro-input">
+        </div>
+        <button class="ro-btn ro-btn--primary ro-btn--full" onclick="saveProfile()" style="margin-bottom:16px;">Save Changes</button>
+        <div id="profile-message" style="font-size:13px; margin-bottom:16px;"></div>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="profile-uscid">USC ID</label>
+          <input type="text" id="profile-uscid" class="ro-input" readonly style="background:var(--color-surface-hover); color:var(--color-text-muted);">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="profile-email">Email</label>
+          <input type="email" id="profile-email" class="ro-input" readonly style="background:var(--color-surface-hover); color:var(--color-text-muted);">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="profile-username">Username</label>
+          <input type="text" id="profile-username" class="ro-input" readonly style="background:var(--color-surface-hover); color:var(--color-text-muted);">
         </div>
       </div>
-    </div>
-    <div class="section">
-      <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>My Account <span id="account-summary" style="font-weight:400;font-size:0.85rem;color:#666;margin-left:8px;"></span></span>
-        <button class="toggle-btn-slim" id="profile-toggle" type="button" onclick="toggleProfileEdit()">▸</button>
-      </div>
-      <div class="section-content" id="profile-content" style="display:none;">
-        <label>USC ID (read-only)
-          <input type="text" id="profile-uscid" readonly>
-        </label>
-        <label>USC Email (read-only)
-          <input type="email" id="profile-email" readonly>
-        </label>
-        <label>Username (read-only)
-          <input type="text" id="profile-username" readonly>
-        </label>
-        <label>Full Name
-          <input type="text" id="profile-name">
-        </label>
-        <label>Phone
-          <input type="tel" id="profile-phone">
-        </label>
-        <button class="btn primary" onclick="saveProfile()">Save Changes</button>
-        <div id="profile-message" class="small-text"></div>
-        <hr style="margin:16px 0; border:none; border-top:1px solid #ddd;">
-        <h4 style="margin:0 0 8px;">Change Password</h4>
-        <label>Current Password<input type="password" id="pw-current"></label>
-        <label>New Password (min 8 chars)<input type="password" id="pw-new"></label>
-        <label>Confirm New Password<input type="password" id="pw-confirm"></label>
-        <button class="btn secondary" onclick="changePassword()">Update Password</button>
-        <div id="pw-message" class="small-text"></div>
+      <div style="border-top:1px solid var(--color-border); padding-top:20px;">
+        <h3 style="font-size:16px; font-weight:700; margin:0 0 16px;">Change Password</h3>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="pw-current">Current Password</label>
+          <input type="password" id="pw-current" class="ro-input">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="pw-new">New Password (min 8 chars)</label>
+          <input type="password" id="pw-new" class="ro-input">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="ro-label" for="pw-confirm">Confirm New Password</label>
+          <input type="password" id="pw-confirm" class="ro-input">
+        </div>
+        <button class="ro-btn ro-btn--outline ro-btn--full" onclick="changePassword()">Update Password</button>
+        <div id="pw-message" style="font-size:13px; margin-top:8px;"></div>
       </div>
     </div>
-  </div>
-  <script src="/utils.js"></script>
+  </main>
+
+  <nav class="ro-bottom-tabs">
+    <button class="ro-bottom-tab active" data-target="home-panel"><i class="ti ti-home"></i>Home</button>
+    <button class="ro-bottom-tab" data-target="rides-panel"><i class="ti ti-road"></i>My Rides</button>
+    <button class="ro-bottom-tab" data-target="account-panel"><i class="ti ti-user"></i>Account</button>
+  </nav>
+
   <script>
     let currentUser = null;
     let employees = [];
@@ -112,12 +98,6 @@
 
     const ACTIVE_STATUSES = ['driver_on_the_way', 'driver_arrived_grace'];
     const ASSIGNED_OPEN_STATUSES = ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'];
-
-    fetch('/api/tenant-config').then(r=>r.ok?r.json():null).then(c=>{
-      if(!c)return;
-      document.title=c.orgShortName+' Driver';
-      const b=document.getElementById('driver-brand');if(b)b.textContent=c.orgShortName+' Driver';
-    }).catch(()=>{});
 
     function todayLocal() {
       const now = new Date();
@@ -131,30 +111,272 @@
       return `${word}${count === 1 ? '' : 's'}`;
     }
 
-    function getContactIconSvg(type) {
-      if (type === 'phone') {
-        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.7 15.7 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2 11.2 11.2 0 0 0 3.5.6 1 1 0 0 1 1 1V21a1 1 0 0 1-1 1C10.9 22 2 13.1 2 2a1 1 0 0 1 1-1h3.4a1 1 0 0 1 1 1 11.2 11.2 0 0 0 .6 3.5 1 1 0 0 1-.2 1L6.6 8.7z"/></svg>';
+    function getUrgencyInfo(ride) {
+      if (!ride.requestedTime || ['completed', 'no_show'].includes(ride.status)) return '';
+      const diffMs = new Date(ride.requestedTime).getTime() - Date.now();
+      const diffMin = Math.round(diffMs / 60000);
+      if (diffMin >= 0 && diffMin <= 15) {
+        return `<span style="color:var(--status-no-show); font-weight:700; font-size:11px;"><i class="ti ti-clock" style="font-size:13px; vertical-align:middle;"></i> In ${diffMin} min</span>`;
+      } else if (diffMin > 15 && diffMin <= 30) {
+        return `<span style="color:var(--status-on-the-way); font-weight:700; font-size:11px;"><i class="ti ti-clock" style="font-size:13px; vertical-align:middle;"></i> In ${diffMin} min</span>`;
       }
-      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 7.2L20 6H4l8 5.2z"/></svg>';
+      return '';
     }
 
-    function buildContactPill(phone, protocol, label, iconType) {
-      const href = phone ? `${protocol}:${phone}` : '#';
-      const onMissingPhone = phone
-        ? ''
-        : 'onclick="event.preventDefault();showToast(\'No phone number available\',\'warning\')"';
-      return `<a class="contact-pill" href="${href}" ${onMissingPhone}><span class="icon">${getContactIconSvg(iconType)}</span><span>${label}</span></a>`;
+    function renderVehicleSelector() {
+      const opts = vehicles.filter(v => v.status === 'available').map(v =>
+        `<option value="${v.id}">${v.name}</option>`
+      ).join('');
+      return `<select id="active-vehicle" class="ro-select" style="margin-bottom:12px;"><option value="">Select cart...</option>${opts}</select>`;
+    }
+
+    function renderAvailableRide(ride) {
+      const time = formatTime(ride.requestedTime);
+      const urgency = getUrgencyInfo(ride);
+      return `<div class="strip-row" style="flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+          <span class="fw-700 text-sm">${time}</span>
+          ${urgency}
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div class="fw-600 text-sm" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${ride.pickupLocation} → ${ride.dropoffLocation}</div>
+          <div class="text-xs text-muted">${ride.riderName}</div>
+        </div>
+        <button class="ro-btn ro-btn--primary ro-btn--sm" onclick="claim('${ride.id}')">CLAIM</button>
+      </div>`;
+    }
+
+    function renderActiveRide(ride) {
+      const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || '') : '';
+      const phone = ride.riderPhone || '';
+      const phoneLine = phone
+        ? `<a href="tel:${phone}" style="color:var(--color-primary); font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="ti ti-phone" style="font-size:16px;"></i> ${phone}</a>`
+        : '';
+
+      let cta = '';
+      if (ride.status === 'scheduled') {
+        const vehOpts = vehicles.filter(v => v.status === 'available').map(v =>
+          `<option value="${v.id}" ${v.id === ride.vehicleId ? 'selected' : ''}>${v.name}</option>`
+        ).join('');
+        const hasVehicle = !!ride.vehicleId;
+        cta = `<select id="ride-vehicle-${ride.id}" class="ro-select" style="margin-bottom:12px;" onchange="setVehicle('${ride.id}', this.value)">
+          <option value="">${hasVehicle ? 'Change cart...' : 'Select cart...'}</option>${vehOpts}
+        </select>
+        <button class="ro-btn ro-btn--primary ro-btn--action ro-btn--full" onclick="startRide('${ride.id}')"><i class="ti ti-navigation"></i> ON MY WAY</button>`;
+      } else if (ride.status === 'driver_on_the_way') {
+        cta = `<button class="ro-btn ro-btn--primary ro-btn--action ro-btn--full" onclick="action('${ride.id}','here')"><i class="ti ti-map-pin"></i> I'M HERE</button>`;
+      } else if (ride.status === 'driver_arrived_grace') {
+        const graceData = ride.graceStartTime ? ` data-grace="${ride.graceStartTime}"` : '';
+        const elapsed = ride.graceStartTime ? (Date.now() - new Date(ride.graceStartTime).getTime()) / 1000 : 0;
+        const remaining = Math.max(0, 300 - elapsed);
+        const circumference = 452.4;
+        const offset = circumference * (1 - remaining / 300);
+        const mins = Math.floor(remaining / 60);
+        const secs = Math.floor(remaining % 60);
+        const timeStr = `${mins}:${String(secs).padStart(2, '0')}`;
+        const expired = remaining <= 0;
+        const canNoShow = expired;
+        cta = `<div class="grace-timer${expired ? ' expired' : ''}"${graceData}>
+          <div class="grace-timer__circle">
+            <svg viewBox="0 0 160 160"><circle class="bg" cx="80" cy="80" r="72"/><circle class="progress" cx="80" cy="80" r="72" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/></svg>
+            <div class="grace-timer__time">${timeStr}</div>
+          </div>
+          <div class="grace-timer__label">Waiting for rider</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="ro-btn ro-btn--success ro-btn--action" style="flex:1;" onclick="action('${ride.id}','complete')"><i class="ti ti-check"></i> RIDER BOARDED</button>
+          <button class="ro-btn ro-btn--danger ro-btn--action" style="flex:1;" onclick="action('${ride.id}','no-show')" ${canNoShow ? '' : 'disabled'}><i class="ti ti-user-off"></i> NO SHOW</button>
+        </div>`;
+      }
+
+      return `<div style="background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          ${ride.status === 'driver_arrived_grace' ? '<span class="status-badge status-badge--driver_arrived_grace">5-min grace period</span>' : statusBadge(ride.status)}
+          <span class="text-xs text-muted">${formatTime(ride.requestedTime)}</span>
+        </div>
+        <div class="fw-700" style="font-size:16px; margin-bottom:4px;">${ride.riderName}</div>
+        <div class="text-sm" style="margin-bottom:8px; color:var(--color-text-secondary);">
+          <i class="ti ti-map-pin" style="font-size:14px; vertical-align:middle;"></i>
+          ${ride.pickupLocation} → ${ride.dropoffLocation}
+        </div>
+        ${phoneLine ? `<div style="margin-bottom:8px;">${phoneLine}</div>` : ''}
+        ${vehicleName ? `<div class="text-sm text-muted" style="margin-bottom:8px;"><i class="ti ti-car" style="font-size:14px; vertical-align:middle;"></i> ${vehicleName}</div>` : ''}
+        ${ride.notes ? `<div class="text-xs text-muted" style="margin-bottom:12px;"><i class="ti ti-note" style="font-size:14px; vertical-align:middle;"></i> ${ride.notes}</div>` : ''}
+        <div style="margin-top:16px;">${cta}</div>
+      </div>`;
+    }
+
+    function renderFutureRide(ride) {
+      return `<div class="strip-row">
+        <span class="fw-700 text-sm">${formatTime(ride.requestedTime)}</span>
+        <span class="text-sm" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${ride.riderName} — ${ride.pickupLocation} → ${ride.dropoffLocation}</span>
+      </div>`;
+    }
+
+    function renderCompletedRide(ride) {
+      const isCompleted = ride.status === 'completed';
+      const icon = isCompleted ? 'ti-circle-check' : 'ti-alert-circle';
+      const color = isCompleted ? 'var(--status-completed)' : 'var(--status-no-show)';
+      const label = isCompleted ? 'Completed' : 'No-Show';
+      return `<div style="display:flex; align-items:center; gap:8px; padding:8px 0; font-size:13px;">
+        <i class="ti ${icon}" style="font-size:16px; color:${color};"></i>
+        <span class="fw-600">${formatTime(ride.requestedTime)}</span>
+        <span class="text-muted" style="flex:1;">${ride.riderName}</span>
+        <span class="text-xs" style="color:${color};">${label}</span>
+      </div>`;
+    }
+
+    function renderHomePanel(isActive, today) {
+      if (!isActive) {
+        return `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 24px; text-align:center;">
+          <i class="ti ti-plug-off" style="font-size:48px; color:var(--color-text-muted); margin-bottom:16px;"></i>
+          <div class="fw-700" style="font-size:18px; margin-bottom:8px;">You're Clocked Out</div>
+          <button class="ro-btn ro-btn--primary ro-btn--action ro-btn--full" onclick="toggleClock()" style="max-width:320px; margin-bottom:12px;"><i class="ti ti-plug"></i> CLOCK IN</button>
+          <div class="text-sm text-muted">Clock in to see available rides</div>
+        </div>`;
+      }
+
+      const availableRides = rides.filter(r => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
+
+      let ridesList = '';
+      if (availableRides.length === 0) {
+        ridesList = `<div class="ro-empty" style="padding:32px 16px;">
+          <i class="ti ti-inbox"></i>
+          <div class="ro-empty__title">No rides available</div>
+          <div class="ro-empty__message">Approved rides with no assigned driver will show up here.</div>
+        </div>`;
+      } else {
+        ridesList = `<div class="strip-list">${availableRides.map(renderAvailableRide).join('')}</div>`;
+      }
+
+      return `<div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+        <span style="width:10px; height:10px; border-radius:50%; background:var(--status-completed); display:inline-block;"></span>
+        <span class="fw-700" style="font-size:14px;">You're Online</span>
+      </div>
+      ${renderVehicleSelector()}
+      <button class="ro-btn ro-btn--outline ro-btn--action ro-btn--full" onclick="toggleClock()" style="margin-bottom:24px;"><i class="ti ti-plug-off"></i> CLOCK OUT</button>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <span class="fw-700" style="font-size:15px;">Available Rides</span>
+        <span class="text-xs text-muted">${availableRides.length} ${pluralize(availableRides.length, 'ride')}</span>
+      </div>
+      ${ridesList}`;
+    }
+
+    function renderRidesPanel(today) {
+      const actionableStatuses = ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'];
+      const doneStatuses = ['completed', 'no_show'];
+
+      const myActive = rides.filter(r =>
+        r.assignedDriverId === currentUser.id &&
+        r.requestedTime?.startsWith(today) &&
+        actionableStatuses.includes(r.status)
+      );
+      const myDone = rides.filter(r =>
+        r.assignedDriverId === currentUser.id &&
+        r.requestedTime?.startsWith(today) &&
+        doneStatuses.includes(r.status)
+      );
+
+      // Active ride hero (pick the most urgent one)
+      const activeRide = myActive.find(r => r.status === 'driver_arrived_grace')
+        || myActive.find(r => r.status === 'driver_on_the_way')
+        || myActive.find(r => r.status === 'scheduled');
+
+      let heroHtml = '';
+      if (activeRide) {
+        heroHtml = renderActiveRide(activeRide);
+      }
+
+      // Upcoming: remaining active rides that aren't the hero
+      const upcoming = myActive.filter(r => r.id !== activeRide?.id);
+      let upcomingHtml = '';
+      if (upcoming.length > 0) {
+        upcomingHtml = `<div style="margin-bottom:16px;">
+          <div class="fw-700 text-sm" style="margin-bottom:8px;">Upcoming</div>
+          <div class="strip-list">${upcoming.map(renderFutureRide).join('')}</div>
+        </div>`;
+      }
+
+      // Completed
+      let doneHtml = '';
+      if (myDone.length > 0) {
+        doneHtml = `<div style="margin-bottom:16px;">
+          <div class="fw-700 text-sm" style="margin-bottom:8px;">Completed</div>
+          ${myDone.map(renderCompletedRide).join('')}
+        </div>`;
+      }
+
+      if (!activeRide && upcoming.length === 0 && myDone.length === 0) {
+        return `<div class="ro-empty" style="padding:48px 16px;">
+          <i class="ti ti-road"></i>
+          <div class="ro-empty__title">No rides today</div>
+          <div class="ro-empty__message">Your assigned rides will appear here.</div>
+        </div>`;
+      }
+
+      return heroHtml + upcomingHtml + doneHtml;
+    }
+
+    function render() {
+      const savedVehicle = document.getElementById('active-vehicle')?.value || '';
+
+      const me = employees.find(e => e.id === currentUser.id);
+      const isActive = me?.active || false;
+      const today = todayLocal();
+
+      document.getElementById('home-content').innerHTML = renderHomePanel(isActive, today);
+      document.getElementById('rides-content').innerHTML = renderRidesPanel(today);
+
+      // Restore vehicle selection
+      const vehEl = document.getElementById('active-vehicle');
+      if (vehEl && savedVehicle) vehEl.value = savedVehicle;
+    }
+
+    function updateGraceTimers() {
+      document.querySelectorAll('.grace-timer[data-grace]').forEach(el => {
+        const elapsed = (Date.now() - new Date(el.dataset.grace).getTime()) / 1000;
+        const remaining = Math.max(0, 300 - elapsed);
+        const circumference = 452.4;
+        const offset = circumference * (1 - remaining / 300);
+
+        const progressCircle = el.querySelector('circle.progress');
+        const timeText = el.querySelector('.grace-timer__time');
+        const label = el.querySelector('.grace-timer__label');
+
+        if (progressCircle) {
+          progressCircle.style.strokeDashoffset = offset;
+          if (remaining <= 0) {
+            progressCircle.style.stroke = 'var(--status-no-show)';
+          }
+        }
+        if (timeText) {
+          const mins = Math.floor(remaining / 60);
+          const secs = Math.floor(remaining % 60);
+          timeText.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+        }
+        if (label) {
+          label.textContent = remaining <= 0 ? 'Grace period expired' : 'Waiting for rider';
+        }
+
+        // Enable no-show button when timer expires
+        if (remaining <= 0) {
+          const card = el.closest('[style]');
+          if (card) {
+            const noShowBtn = card.querySelector('.ro-btn--danger[disabled]');
+            if (noShowBtn) noShowBtn.disabled = false;
+          }
+        }
+      });
     }
 
     async function init() {
       try {
         const res = await fetch('/api/auth/me');
-        if (!res.ok) {
-          window.location.href = '/login';
-          return;
-        }
+        if (!res.ok) { window.location.href = '/login'; return; }
         currentUser = await res.json();
-        document.getElementById('user-name').textContent = currentUser.name;
+        document.getElementById('driver-name').textContent = currentUser.name;
+        applyTenantTheme();
+        initBottomTabs();
         await loadProfile();
         await loadData();
         setInterval(loadData, 3000);
@@ -165,11 +387,19 @@
     }
 
     async function loadData() {
-      const [empRes, ridesRes, vehRes] = await Promise.all([fetch('/api/employees'), fetch('/api/rides'), fetch('/api/vehicles')]);
-      employees = await empRes.json();
-      rides = await ridesRes.json();
-      vehicles = await vehRes.json();
-      render();
+      try {
+        const [empRes, ridesRes, vehRes] = await Promise.all([
+          fetch('/api/employees'),
+          fetch('/api/rides'),
+          fetch('/api/vehicles')
+        ]);
+        employees = await empRes.json();
+        rides = await ridesRes.json();
+        vehicles = await vehRes.json();
+        render();
+      } catch (e) {
+        console.warn('Failed to load data:', e);
+      }
     }
 
     async function loadProfile() {
@@ -181,16 +411,7 @@
         document.getElementById('profile-username').value = me.username || '';
         document.getElementById('profile-name').value = me.name || '';
         document.getElementById('profile-phone').value = me.phone || '';
-        const summaryEl = document.getElementById('account-summary');
-        if (summaryEl) {
-          const nm = me.name || '';
-          const em = me.email || '';
-          summaryEl.textContent = nm && em ? '\u2014 ' + nm + ' \u00b7 ' + em : nm ? '\u2014 ' + nm : '';
-        }
       } catch {}
-
-      const saveBtn = document.getElementById('profile-save');
-      if (saveBtn) saveBtn.onclick = saveProfile;
     }
 
     async function saveProfile() {
@@ -206,17 +427,13 @@
       const data = await res.json();
       if (!res.ok) {
         msg.textContent = data.error || 'Could not save profile';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       msg.textContent = 'Saved!';
-      document.getElementById('user-name').textContent = data.name;
-      const summaryEl = document.getElementById('account-summary');
-      if (summaryEl) {
-        const nm = data.name || '';
-        const em = document.getElementById('profile-email').value || '';
-        summaryEl.textContent = nm && em ? '\u2014 ' + nm + ' \u00b7 ' + em : nm ? '\u2014 ' + nm : '';
-      }
-      toggleProfileEdit(true);
+      msg.style.color = 'var(--status-completed)';
+      document.getElementById('driver-name').textContent = data.name;
+      showToastNew('Profile updated', 'success');
     }
 
     async function changePassword() {
@@ -228,17 +445,17 @@
       const confirm = document.getElementById('pw-confirm').value;
       if (!currentPassword || !newPassword || !confirm) {
         msg.textContent = 'All fields are required.';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       if (newPassword.length < 8) {
         msg.textContent = 'New password must be at least 8 characters.';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       if (newPassword !== confirm) {
         msg.textContent = 'Passwords do not match.';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       try {
@@ -250,187 +467,48 @@
         const data = await res.json();
         if (!res.ok) {
           msg.textContent = data.error || 'Failed to change password';
-          msg.style.color = '#c62828';
+          msg.style.color = 'var(--status-no-show)';
           return;
         }
         msg.textContent = 'Password updated successfully!';
-        msg.style.color = '#228b22';
+        msg.style.color = 'var(--status-completed)';
         document.getElementById('pw-current').value = '';
         document.getElementById('pw-new').value = '';
         document.getElementById('pw-confirm').value = '';
+        showToastNew('Password changed', 'success');
       } catch {
         msg.textContent = 'Connection error';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
       }
-    }
-
-    function toggleProfileEdit(forceClose) {
-      const content = document.getElementById('profile-content');
-      const btn = document.getElementById('profile-toggle');
-      if (!content || !btn) return;
-      const isOpen = content.style.display !== 'none';
-      if (forceClose || isOpen) {
-        content.style.display = 'none';
-        btn.textContent = '▸';
-      } else {
-        content.style.display = 'block';
-        btn.textContent = '▾';
-      }
-    }
-
-    function toggleDriverSection(id, btn) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const isHidden = el.style.display === 'none';
-      el.style.display = isHidden ? 'block' : 'none';
-      if (btn) btn.textContent = isHidden ? '▾' : '▸';
-    }
-
-    function render() {
-      const me = employees.find((e) => e.id === currentUser.id);
-      const isActive = me?.active || false;
-      document.getElementById('clock-status').textContent = isActive ? 'Clocked In' : 'Clocked Out';
-      document.getElementById('clock-status').className = `status ${isActive ? 'active' : 'inactive'}`;
-      document.getElementById('clock-btn').textContent = isActive ? 'Clock Out' : 'Clock In';
-      document.getElementById('clock-btn').className = `btn ${isActive ? 'secondary' : 'primary'}`;
-
-      const today = todayLocal();
-      const actionableStatuses = ['scheduled', 'driver_on_the_way', 'driver_arrived_grace', 'completed', 'no_show'];
-      const myRides = rides.filter(
-        (r) => r.assignedDriverId === currentUser.id && r.requestedTime?.startsWith(today) && actionableStatuses.includes(r.status)
-      );
-
-      const myRidesEl = document.getElementById('my-rides');
-      if (!myRides.length) {
-        showEmptyState(myRidesEl, {
-          icon: 'inbox',
-          title: 'No rides assigned today',
-          message: 'Your next assignments will appear here when dispatch adds them.'
-        });
-      } else {
-        myRidesEl.innerHTML = myRides.map((r) => renderRide(r, true)).join('');
-      }
-
-      const availableSection = document.getElementById('available-section');
-      const availableEl = document.getElementById('available-rides');
-      if (!isActive) {
-        availableSection.style.display = 'none';
-      } else {
-        availableSection.style.display = 'block';
-        const availableRides = rides.filter((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
-        if (!availableRides.length) {
-          showEmptyState(availableEl, {
-            icon: 'inbox',
-            title: 'No rides available',
-            message: 'Approved rides with no assigned driver will show up here.'
-          });
-        } else {
-          availableEl.innerHTML = availableRides.map((r) => renderRide(r, false)).join('');
-        }
-      }
-    }
-
-    function renderRide(ride, assigned) {
-      const labels = {
-        approved: 'Available',
-        scheduled: 'Scheduled',
-        driver_on_the_way: 'On The Way',
-        driver_arrived_grace: 'Waiting',
-        completed: 'Completed',
-        no_show: 'No-Show'
-      };
-      let grace = '';
-      let actions = '';
-      if (ride.status === 'driver_arrived_grace' && ride.graceStartTime) {
-        grace = `<div class="grace-timer" data-grace="${ride.graceStartTime}"></div>`;
-      }
-      if (assigned) {
-        if (ride.status === 'scheduled') {
-          const vehOpts = vehicles.filter(v => v.status === 'available').map(v =>
-            `<option value="${v.id}" ${v.id === ride.vehicleId ? 'selected' : ''}>${v.name}</option>`
-          ).join('');
-          const hasVehicle = !!ride.vehicleId;
-          const noVehWarn = hasVehicle ? '' : '<div class="no-vehicle-warning">Select a cart before starting</div>';
-          actions = `<select id="veh-sched-${ride.id}" class="vehicle-select" onchange="setVehicle('${ride.id}', this.value)">
-            <option value="">${hasVehicle ? 'Change cart...' : 'Select cart...'}</option>${vehOpts}
-          </select>${noVehWarn}<button class="btn primary" onclick="startRide('${ride.id}')">On My Way</button>`;
-        } else if (ride.status === 'driver_on_the_way') {
-          const vehChangeOpts = vehicles.filter(v => v.status === 'available').map(v =>
-            `<option value="${v.id}" ${v.id === ride.vehicleId ? 'selected' : ''}>${v.name}</option>`
-          ).join('');
-          const vehicleChange = `<select class="vehicle-select" onchange="setVehicle('${ride.id}', this.value)">
-            <option value="">Change cart...</option>${vehChangeOpts}
-          </select>`;
-          actions = `${vehicleChange}<button class="btn secondary" onclick="action('${ride.id}','here')">I'm Here</button><button class="btn primary" onclick="action('${ride.id}','complete')">Complete</button>`;
-        } else if (ride.status === 'driver_arrived_grace') {
-          const canNoShow = (Date.now() - new Date(ride.graceStartTime).getTime()) / 1000 >= 300;
-          actions = `<button class="btn primary" onclick="action('${ride.id}','complete')">Complete</button><button class="btn danger" onclick="action('${ride.id}','no-show')" ${canNoShow ? '' : 'disabled'}>No-Show</button>`;
-        }
-      } else {
-        const vehOpts = vehicles.filter(v => v.status === 'available').map(v => `<option value="${v.id}">${v.name}</option>`).join('');
-        actions = `<select id="veh-${ride.id}" class="vehicle-select"><option value="">Select cart...</option>${vehOpts}</select><button class="btn primary" onclick="claim('${ride.id}')">Claim</button>`;
-      }
-
-      // Urgency indicator
-      let urgencyClass = '';
-      let urgencyLabel = '';
-      if (ride.requestedTime && !['completed', 'no_show'].includes(ride.status)) {
-        const diffMs = new Date(ride.requestedTime).getTime() - Date.now();
-        const diffMin = Math.round(diffMs / 60000);
-        if (diffMin >= 0 && diffMin <= 15) {
-          urgencyClass = 'urgent';
-          urgencyLabel = `<div class="ride-urgency urgent"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">schedule</span> In ${diffMin} min</div>`;
-        } else if (diffMin > 15 && diffMin <= 30) {
-          urgencyClass = 'soon';
-          urgencyLabel = `<div class="ride-urgency soon">In ${diffMin} min</div>`;
-        }
-      }
-
-      const phone = ride.riderPhone || '';
-      const contactRow = `<div class="contact-row">${buildContactPill(phone, 'tel', 'Call', 'phone')}${buildContactPill(phone, 'sms', 'SMS', 'sms')}</div>`;
-      const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || '') : '';
-      const vehicleLine = vehicleName ? `<div class="time">Vehicle: ${vehicleName}</div>` : '';
-      return `<div class="ride-card ${urgencyClass}">${urgencyLabel}<div class="status-badge ${ride.status}">${labels[ride.status] || ride.status}</div><div class="rider-name">${ride.riderName}</div><div class="route">${ride.pickupLocation} → ${ride.dropoffLocation}</div><div class="time">${new Date(ride.requestedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>${vehicleLine}${contactRow}${grace}${actions ? `<div class="actions">${actions}</div>` : ''}</div>`;
-    }
-
-    function updateGraceTimers() {
-      document.querySelectorAll('.grace-timer').forEach((el) => {
-        const elapsed = (Date.now() - new Date(el.dataset.grace).getTime()) / 1000;
-        const remaining = Math.max(0, 300 - elapsed);
-        if (remaining <= 0) {
-          el.textContent = 'Rider did not show \u2014 you may mark no-show';
-          el.style.background = '#f8d7da';
-          const btn = el.closest('.ride-card')?.querySelector('.btn.danger');
-          if (btn) btn.disabled = false;
-        } else {
-          el.textContent = `Waiting for rider (${Math.floor(remaining / 60)}:${String(Math.floor(remaining % 60)).padStart(2, '0')})`;
-        }
-      });
     }
 
     async function toggleClock() {
-      const me = employees.find((e) => e.id === currentUser.id);
+      const me = employees.find(e => e.id === currentUser.id);
       if (!me) return;
 
       if (me.active) {
-        const activeRideCount = rides.filter((r) => r.assignedDriverId === currentUser.id && ACTIVE_STATUSES.includes(r.status)).length;
-        const assignedRideCount = rides.filter((r) => r.assignedDriverId === currentUser.id && ASSIGNED_OPEN_STATUSES.includes(r.status)).length;
+        const activeRideCount = rides.filter(r => r.assignedDriverId === currentUser.id && ACTIVE_STATUSES.includes(r.status)).length;
+        const assignedRideCount = rides.filter(r => r.assignedDriverId === currentUser.id && ASSIGNED_OPEN_STATUSES.includes(r.status)).length;
         let message = 'Are you sure you want to clock out?';
         if (activeRideCount > 0) {
           message = `You have ${activeRideCount} active ${pluralize(activeRideCount, 'ride')}. Clock out anyway?`;
         } else if (assignedRideCount > 0) {
           message = `You still have ${assignedRideCount} assigned ${pluralize(assignedRideCount, 'ride')}. Clock out anyway?`;
         }
-        const confirmed = await showConfirmModal({
+        showModalNew({
           title: 'Clock Out',
-          message,
+          body: message,
           confirmLabel: 'Clock Out',
-          cancelLabel: 'Stay Clocked In',
-          type: 'warning'
+          confirmClass: 'ro-btn--danger',
+          onConfirm: () => doClockToggle(me)
         });
-        if (!confirmed) return;
+        return;
       }
 
+      doClockToggle(me);
+    }
+
+    async function doClockToggle(me) {
       const endpoint = me.active ? 'clock-out' : 'clock-in';
       const response = await fetch(`/api/employees/${endpoint}`, {
         method: 'POST',
@@ -439,14 +517,15 @@
       });
       if (!response.ok) {
         const err = await response.json();
-        showToast(err.error || 'Could not update clock status', 'error');
+        showToastNew(err.error || 'Could not update clock status', 'error');
         return;
       }
+      showToastNew(me.active ? 'Clocked out' : 'Clocked in', 'success');
       await loadData();
     }
 
     async function claim(id) {
-      const vehSelect = document.getElementById(`veh-${id}`);
+      const vehSelect = document.getElementById('active-vehicle');
       const vehicleId = vehSelect?.value || null;
       const body = vehicleId ? JSON.stringify({ vehicleId }) : '{}';
       const response = await fetch(`/api/rides/${id}/claim`, {
@@ -456,58 +535,60 @@
       });
       if (!response.ok) {
         const err = await response.json();
-        showToast(err.error || 'Failed to claim ride', 'error');
+        showToastNew(err.error || 'Failed to claim ride', 'error');
       } else {
-        showToast('Ride claimed successfully', 'success');
+        showToastNew('Ride claimed successfully', 'success');
       }
       await loadData();
     }
 
     async function action(id, act) {
       if (act === 'complete') {
-        const confirmed = await showConfirmModal({
+        showModalNew({
           title: 'Complete Ride',
-          message: 'Mark this ride as completed?',
+          body: 'Mark this ride as completed?',
           confirmLabel: 'Complete',
-          cancelLabel: 'Keep Open',
-          type: 'warning'
+          confirmClass: 'ro-btn--success',
+          onConfirm: () => doAction(id, act)
         });
-        if (!confirmed) return;
+        return;
       }
-
       if (act === 'no-show') {
-        const confirmed = await showConfirmModal({
+        showModalNew({
           title: 'Confirm No-Show',
-          message: 'Mark this rider as a no-show? This increases their no-show count.',
+          body: 'Mark this rider as a no-show? This increases their no-show count.',
           confirmLabel: 'Mark No-Show',
-          cancelLabel: 'Go Back',
-          type: 'danger'
+          confirmClass: 'ro-btn--danger',
+          onConfirm: () => doAction(id, act)
         });
-        if (!confirmed) return;
+        return;
       }
+      doAction(id, act);
+    }
 
+    async function doAction(id, act) {
       const response = await fetch(`/api/rides/${id}/${act}`, { method: 'POST' });
       if (!response.ok) {
         const err = await response.json();
-        showToast(err.error || 'Action failed', 'error');
+        showToastNew(err.error || 'Action failed', 'error');
       } else {
         const messages = {
           'on-the-way': 'Marked as on the way',
-          here: 'Marked as arrived',
+          here: 'Marked as arrived — grace timer started',
           complete: 'Ride completed',
           'no-show': 'Marked as no-show'
         };
-        showToast(messages[act] || 'Action completed', 'success');
+        showToastNew(messages[act] || 'Action completed', 'success');
       }
       await loadData();
     }
 
     async function startRide(id) {
-      const selectEl = document.getElementById(`veh-sched-${id}`);
+      const selectEl = document.getElementById(`ride-vehicle-${id}`);
       const ride = rides.find(r => r.id === id);
       const vehicleId = selectEl?.value || ride?.vehicleId || null;
       if (!vehicleId) {
-        showToast('Please select a cart before starting this ride', 'warning');
+        showToastNew('Please select a cart before starting this ride', 'error');
         if (selectEl) selectEl.focus();
         return;
       }
@@ -518,9 +599,9 @@
       });
       if (!response.ok) {
         const err = await response.json();
-        showToast(err.error || 'Could not start ride', 'error');
+        showToastNew(err.error || 'Could not start ride', 'error');
       } else {
-        showToast('Marked as on the way', 'success');
+        showToastNew('Marked as on the way', 'success');
       }
       await loadData();
     }
@@ -534,10 +615,10 @@
       });
       if (!response.ok) {
         const err = await response.json();
-        showToast(err.error || 'Could not set vehicle', 'error');
+        showToastNew(err.error || 'Could not set vehicle', 'error');
       } else {
         const veh = vehicles.find(v => v.id === vehicleId);
-        showToast(`Vehicle set to ${veh?.name || 'cart'}`, 'success');
+        showToastNew(`Vehicle set to ${veh?.name || 'cart'}`, 'success');
       }
       await loadData();
     }
