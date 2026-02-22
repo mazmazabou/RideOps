@@ -65,8 +65,6 @@ let employees = [];
 let shifts = [];
 let rides = [];
 let vehicles = [];
-let selectedDriverId = null;
-let scheduleMode = 'weekly';
 let adminUsers = [];
 let filteredAdminUsers = [];
 let selectedAdminUser = null;
@@ -804,8 +802,144 @@ function getCurrentWeekDates() {
   return weekDates;
 }
 
+let shiftCalendar = null;
+
 function renderScheduleGrid() {
+  initShiftCalendar();
   renderShiftGrid();
+}
+
+function initShiftCalendar() {
+  const calendarEl = document.getElementById('shift-calendar');
+  if (!calendarEl) return;
+
+  if (shiftCalendar) {
+    // Just refresh events
+    shiftCalendar.removeAllEvents();
+    getShiftCalendarEvents().forEach(ev => shiftCalendar.addEvent(ev));
+    return;
+  }
+
+  shiftCalendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'timeGridWeek',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
+    slotMinTime: '07:00:00',
+    slotMaxTime: '20:00:00',
+    allDaySlot: false,
+    weekends: false,
+    height: 'auto',
+    events: getShiftCalendarEvents(),
+    selectable: true,
+    selectMirror: true,
+    select: onCalendarSelect,
+    eventClick: onShiftEventClick,
+    eventColor: 'var(--color-primary)',
+  });
+  shiftCalendar.render();
+}
+
+function getShiftCalendarEvents() {
+  const events = [];
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  monday.setHours(0, 0, 0, 0);
+
+  shifts.forEach(s => {
+    const emp = employees.find(e => e.id === s.employeeId);
+    const name = emp?.name || 'Unknown';
+    // Map dayOfWeek (0=Mon) to date
+    const eventDate = new Date(monday);
+    eventDate.setDate(monday.getDate() + s.dayOfWeek);
+    const dateStr = formatDateInputLocal(eventDate);
+    events.push({
+      id: s.id,
+      title: name,
+      start: `${dateStr}T${s.startTime}`,
+      end: `${dateStr}T${s.endTime}`,
+      color: emp?.active ? '#4682B4' : '#94A3B8',
+      extendedProps: { shiftId: s.id, employeeId: s.employeeId }
+    });
+  });
+  return events;
+}
+
+async function onCalendarSelect(info) {
+  // Determine day of week (Mon=0)
+  const jsDay = info.start.getDay();
+  const dayOfWeek = (jsDay + 6) % 7;
+  if (dayOfWeek > 4) return; // Skip weekends
+
+  const startTime = info.start.toTimeString().substring(0, 8);
+  const endTime = info.end.toTimeString().substring(0, 8);
+
+  // Show employee picker modal
+  const empId = await pickEmployeeForShift();
+  if (!empId) {
+    if (shiftCalendar) shiftCalendar.unselect();
+    return;
+  }
+
+  try {
+    await fetch('/api/shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId: empId, dayOfWeek, startTime, endTime })
+    });
+    await loadShifts();
+    showToast('Shift added', 'success');
+  } catch {
+    showToast('Failed to add shift', 'error');
+  }
+}
+
+async function onShiftEventClick(info) {
+  const shiftId = info.event.extendedProps.shiftId;
+  const empName = info.event.title;
+  const confirmed = await showConfirmModal({
+    title: 'Delete Shift',
+    message: `Delete ${empName}'s shift?`,
+    confirmLabel: 'Delete',
+    cancelLabel: 'Cancel',
+    type: 'danger'
+  });
+  if (!confirmed) return;
+  await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' });
+  await loadShifts();
+  showToast('Shift deleted', 'success');
+}
+
+function pickEmployeeForShift() {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    let empOptions = employees.map(e =>
+      `<option value="${e.id}">${e.name}${e.active ? ' (Active)' : ''}</option>`
+    ).join('');
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3>Add Shift</h3>
+        <p class="small-text">Select the driver for this shift:</p>
+        <select id="shift-modal-employee" style="width:100%;padding:8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13px;">
+          ${empOptions}
+        </select>
+        <div class="modal-actions" style="margin-top:16px;">
+          <button class="btn secondary" id="shift-modal-cancel">Cancel</button>
+          <button class="btn primary" id="shift-modal-confirm">Add Shift</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const cleanup = (val) => { overlay.remove(); resolve(val); };
+    overlay.querySelector('#shift-modal-cancel').onclick = () => cleanup(null);
+    overlay.querySelector('#shift-modal-confirm').onclick = () => {
+      const val = overlay.querySelector('#shift-modal-employee').value;
+      cleanup(val || null);
+    };
+    overlay.onclick = (e) => { if (e.target === overlay) cleanup(null); };
+  });
 }
 
 function renderRideScheduleGrid() {
@@ -883,42 +1017,8 @@ function renderRideScheduleGrid() {
   grid.innerHTML = html;
 }
 
-// ----- Daily Schedule View (Shifts + Rides) -----
-function initScheduleDate() {
-  const dateInput = document.getElementById('schedule-date');
-  dateInput.value = formatDateInputLocal(new Date());
-  renderSchedule();
-}
-
-function changeScheduleDay(delta) {
-  const dateInput = document.getElementById('schedule-date');
-  const current = getSelectedDate();
-  current.setDate(current.getDate() + delta);
-  dateInput.value = formatDateInputLocal(current);
-  renderSchedule();
-  renderShiftGrid();
-}
-
-function changeScheduleWeek(deltaWeeks) {
-  const dateInput = document.getElementById('schedule-date');
-  const current = getSelectedDate();
-  current.setDate(current.getDate() + deltaWeeks * 7);
-  dateInput.value = formatDateInputLocal(current);
-  renderSchedule();
-  renderShiftGrid();
-}
-
-function onScheduleDateChange() {
-  renderSchedule();
-  renderShiftGrid();
-}
-
 function renderSchedule() {
-  if (scheduleMode === 'daily') {
-    renderDailySchedule();
-  } else {
-    renderWeeklySchedule();
-  }
+  // Legacy: FullCalendar handles schedule view now
 }
 
 async function loadUserProfileData(userId) {
@@ -1098,111 +1198,6 @@ async function saveAdminProfile(userId) {
   } catch {
     if (msg) msg.textContent = 'Network error';
   }
-}
-function renderDailySchedule() {
-  const container = document.getElementById('day-schedule');
-  const dateInput = document.getElementById('schedule-date');
-  const selectedDate = getSelectedDate();
-  const dayOfWeek = (selectedDate.getDay() + 6) % 7; // Convert to Mon=0
-  const dateStr = formatDateInputLocal(selectedDate);
-
-  const timeSlots = generateTimeSlots();
-  let html = '';
-
-  timeSlots.forEach(slot => {
-    // Find shifts covering this time slot
-    const activeShifts = shifts.filter(s =>
-      s.dayOfWeek === dayOfWeek && s.startTime <= slot && s.endTime > slot
-    );
-
-    // Find rides at this time
-    const slotRides = rides.filter(r => {
-      if (!isRideOnDate(r, selectedDate)) return false;
-      const rideTime = new Date(r.requestedTime);
-      const rideSlot = getSlotInfo(rideTime).slot;
-      return rideSlot === slot && isRenderableRideStatus(r.status);
-    });
-
-    if (activeShifts.length || slotRides.length) {
-      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots">`;
-      activeShifts.forEach(s => {
-        const emp = employees.find(e => e.id === s.employeeId);
-        const name = emp?.name || 'Unknown';
-        const clickable = emp ? `<span data-user="${emp.id}" class="clickable-name">${name}</span>` : name;
-        html += `<span class="schedule-slot shift">${clickable}</span>`;
-      });
-      slotRides.forEach(r => {
-        const riderLink = r.riderId ? `<span data-user="${r.riderId}" class="clickable-name">${r.riderName}</span>` : r.riderName;
-        const offsetClass = getSlotInfo(new Date(r.requestedTime)).offset === 'mid' ? 'offset-mid' : '';
-        html += `<span class="schedule-slot ride ${offsetClass}">${riderLink} (${r.pickupLocation}→${r.dropoffLocation})</span>`;
-      });
-      html += '</div></div>';
-    } else {
-      html += `<div class="schedule-row"><div class="time-label">${slot}</div><div class="slots"></div></div>`;
-    }
-  });
-
-  container.innerHTML = html;
-}
-
-function renderWeeklySchedule() {
-  const container = document.getElementById('day-schedule');
-  const selectedDate = getSelectedDate();
-  const weekDates = getWeekDates(selectedDate);
-  const timeSlots = generateTimeSlots();
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-  let html = '<div class="weekly-table-wrapper"><table class="grid-table ride-schedule-table"><thead><tr><th class="time-col">Time</th>';
-  days.forEach((day, idx) => {
-    const dateLabel = formatShortDate(weekDates[idx]);
-    html += `<th>${day} (${dateLabel})</th>`;
-  });
-  html += '</tr></thead><tbody>';
-
-  timeSlots.forEach((slot) => {
-    html += `<tr><td class="time-col">${slot}</td>`;
-    days.forEach((_, idx) => {
-      const slotShifts = shifts.filter((s) => s.dayOfWeek === idx && s.startTime <= slot && s.endTime > slot);
-      const dateStr = formatDateInputLocal(weekDates[idx]);
-      const slotRides = rides.filter((r) => {
-        if (!isRideOnDate(r, weekDates[idx])) return false;
-        const rideTime = new Date(r.requestedTime);
-        const rideSlot = getSlotInfo(rideTime).slot;
-        return rideSlot === slot && isRenderableRideStatus(r.status);
-      });
-
-      const cellParts = [];
-      slotShifts.forEach((s) => {
-        const emp = employees.find((e) => e.id === s.employeeId);
-        const name = emp?.name || 'Unknown';
-        const clickable = emp ? `<span data-user="${emp.id}" data-email="${emp.email || ''}" class="clickable-name">${name}</span>` : name;
-        cellParts.push(`<span class="schedule-slot shift">${clickable}</span>`);
-      });
-      slotRides.forEach((r) => {
-        const clickable = r.riderId ? `<span data-user="${r.riderId}" data-email="${r.riderEmail || ''}" class="clickable-name">${r.riderName}</span>` : r.riderName;
-        const offsetClass = getSlotInfo(new Date(r.requestedTime)).offset === 'mid' ? 'offset-mid' : '';
-        cellParts.push(`<span class="schedule-slot ride ${offsetClass}">${clickable}</span>`);
-      });
-      const cellContent = cellParts.length ? `<div class="cell-stack">${cellParts.join('')}</div>` : '';
-      html += `<td>${cellContent}</td>`;
-    });
-    html += '</tr>';
-  });
-  html += '</tbody></table></div>';
-
-  container.innerHTML = html;
-}
-
-function setScheduleMode(mode) {
-  scheduleMode = mode;
-  updateScheduleToggleUI();
-  renderSchedule();
-}
-
-function updateScheduleToggleUI() {
-  document.querySelectorAll('[data-schedule-mode]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.scheduleMode === scheduleMode);
-  });
 }
 
 // ----- Interactive Shift Grid -----
@@ -1691,137 +1686,101 @@ function buildHistoryItem(ride) {
 }
 
 // ----- Ride Lists -----
+let rideStatusFilter = 'all';
+let ridesDateFilter = '';
+
 function renderRideLists() {
-  const unassignedEl = document.getElementById('unassigned-items');
-  const pendingEl = document.getElementById('pending-items');
-  const approvedEl = document.getElementById('approved-items');
+  const tbody = document.getElementById('rides-tbody');
   const historyEl = document.getElementById('history-items');
-  unassignedEl.innerHTML = '';
-  pendingEl.innerHTML = '';
-  approvedEl.innerHTML = '';
-  historyEl.innerHTML = '';
+  if (!tbody) return;
+  if (historyEl) historyEl.innerHTML = '';
 
-  // Unassigned rides: approved, no driver, today only
-  const today = getTodayLocalDate();
-  const unassignedAll = rides.filter((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
-  const unassigned = unassignedAll.filter((r) => rideMatchesFilter(r, rideFilterText));
-  unassigned.forEach((ride) => {
-    const item = document.createElement('div');
-    item.className = 'item ride-needs-action';
-    item.innerHTML = `
-      <div><span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
-      <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-      <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
-      <div class="ride-hint">Needs driver assignment</div>
-    `;
-    const actionRow = document.createElement('div');
-    actionRow.className = 'ride-actions-compact';
-    actionRow.appendChild(buildAssignDropdown(ride, () => loadRides()));
-    item.appendChild(actionRow);
-    unassignedEl.appendChild(item);
-  });
-  document.getElementById('unassigned-list').style.display = unassigned.length ? '' : 'none';
+  // Apply filters
+  let filtered = rides;
 
-  const pendingAll = rides.filter((r) => r.status === 'pending');
-  const pending = pendingAll.filter((r) => rideMatchesFilter(r, rideFilterText));
-  const approvedAll = rides.filter((r) => ['approved', 'scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(r.status));
-  const approved = approvedAll.filter((r) => rideMatchesFilter(r, rideFilterText));
-  const historyAll = rides.filter((r) => ['completed', 'no_show', 'denied', 'cancelled'].includes(r.status));
-  const history = historyAll.filter((r) => rideMatchesFilter(r, historyFilterText));
-
-  pending.forEach((ride) => {
-    const item = document.createElement('div');
-    item.className = 'item';
-    const terminated = ride.consecutiveMisses >= 5;
-    item.innerHTML = `
-      <div><span class="status-tag pending">Pending</span> <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span> (${ride.riderEmail})</div>
-      <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-      <div class="small-text">Requested: ${formatDate(ride.requestedTime)}</div>
-      ${terminated ? '<div class="alert">SERVICE TERMINATED after five consecutive no-shows.</div>' : ''}
-      <div class="flex-row">
-        <button class="btn success" ${terminated ? 'disabled' : ''}>Approve</button>
-        <button class="btn danger" data-role="deny">Deny</button>
-      </div>
-    `;
-    item.querySelector('.btn.success').onclick = () => updateRide(`/api/rides/${ride.id}/approve`);
-    item.querySelector('[data-role="deny"]').onclick = () => updateRide(`/api/rides/${ride.id}/deny`);
-    item.appendChild(buildKebabMenu(ride, () => loadRides()));
-    pendingEl.appendChild(item);
-  });
-  document.getElementById('pending-list').style.display = pending.length ? '' : 'none';
-
-  approved.forEach((ride) => {
-    const item = document.createElement('div');
-    item.className = 'item';
-    if (ride.status === 'approved' && !ride.assignedDriverId) {
-      item.classList.add('ride-needs-action');
-    } else if (ride.status === 'scheduled') {
-      item.classList.add('ride-assigned');
-    } else if (ride.status === 'driver_on_the_way' || ride.status === 'driver_arrived_grace') {
-      item.classList.add('ride-in-transit');
-    }
-    const driverName = employees.find((e) => e.id === ride.assignedDriverId)?.name || 'Unassigned';
-    const rideVehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name) : null;
-    const driverDisplay = ride.assignedDriverId ? `<span class="ride-driver-prominent clickable-name" data-user="${ride.assignedDriverId}">${driverName}</span>` : driverName;
-    item.innerHTML = `
-      <div>${statusTag(ride.status)} <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
-      <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-      <div class="small-text ride-meta">When: ${formatDate(ride.requestedTime)} · Driver: ${driverDisplay}${rideVehicleName ? ` · Cart: ${rideVehicleName}` : ''}</div>
-      ${ride.status === 'approved' && !ride.assignedDriverId ? '<div class="ride-hint">Needs driver assignment</div>' : ''}
-    `;
-    const contactSpan = document.createElement('span');
-    contactSpan.className = 'contact-inline';
-    contactSpan.append(
-      buildContactPill('tel', ride.riderPhone, '☎', 'Call'),
-      buildContactPill('sms', ride.riderPhone, '✉', 'Text')
-    );
-    item.querySelector('.ride-meta').appendChild(contactSpan);
-
-    // Office quick actions
-    if (!ride.assignedDriverId) {
-      const assignRow = document.createElement('div');
-      assignRow.className = 'ride-actions-compact';
-      assignRow.appendChild(buildAssignDropdown(ride, () => loadRides()));
-      item.appendChild(assignRow);
-    } else if (['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
-      if (['driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
-        item.appendChild(buildWarningBanner(driverName));
-      }
-      const actionRow = document.createElement('div');
-      actionRow.className = 'ride-actions-compact';
-      const unassignBtn = buildUnassignButton(ride, driverName, () => loadRides());
-      unassignBtn.classList.add('small');
-      actionRow.appendChild(unassignBtn);
-      actionRow.appendChild(buildReassignDropdown(ride, ride.assignedDriverId, () => loadRides()));
-      item.appendChild(actionRow);
-    }
-
-    item.appendChild(buildKebabMenu(ride, () => loadRides()));
-    approvedEl.appendChild(item);
-  });
-  document.getElementById('approved-list').style.display = (rideFilterText && !approved.length) ? 'none' : '';
-  if (!approved.length && !rideFilterText) {
-    showEmptyState(approvedEl, {
-      icon: 'inbox',
-      title: 'No approved or scheduled rides',
-      message: 'Approved rides in progress will show in this section.'
-    });
+  // Status filter
+  if (rideStatusFilter === 'in_progress') {
+    filtered = filtered.filter(r => ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(r.status));
+  } else if (rideStatusFilter !== 'all') {
+    filtered = filtered.filter(r => r.status === rideStatusFilter);
   }
 
-  // Sort history by requestedTime descending
-  const sortedHistory = [...history].sort((a, b) => {
+  // Date filter
+  if (ridesDateFilter) {
+    filtered = filtered.filter(r => r.requestedTime && r.requestedTime.startsWith(ridesDateFilter));
+  }
+
+  // Text filter
+  if (rideFilterText) {
+    filtered = filtered.filter(r => rideMatchesFilter(r, rideFilterText));
+  }
+
+  // Sort by requestedTime descending
+  filtered.sort((a, b) => {
     const da = a.requestedTime ? new Date(a.requestedTime).getTime() : 0;
     const db = b.requestedTime ? new Date(b.requestedTime).getTime() : 0;
     return db - da;
   });
 
-  // Group by date
+  tbody.innerHTML = '';
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-text-muted);">No rides match the current filters.</td></tr>';
+  } else {
+    filtered.forEach(ride => {
+      const tr = document.createElement('tr');
+      const driverName = ride.assignedDriverId ? (employees.find(e => e.id === ride.assignedDriverId)?.name || '—') : '—';
+      const pickup = abbreviateLocation(ride.pickupLocation);
+      const dropoff = abbreviateLocation(ride.dropoffLocation);
+      tr.innerHTML = `
+        <td>${formatDate(ride.requestedTime)}</td>
+        <td><span class="clickable-name" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}">${ride.riderName}</span></td>
+        <td title="${ride.pickupLocation} → ${ride.dropoffLocation}">${pickup} → ${dropoff}</td>
+        <td>${statusBadge(ride.status)}</td>
+        <td>${ride.assignedDriverId ? `<span class="clickable-name" data-user="${ride.assignedDriverId}">${driverName}</span>` : '—'}</td>
+        <td></td>
+      `;
+      // Quick actions in last cell
+      const actionsCell = tr.querySelectorAll('td')[5];
+      if (ride.status === 'pending') {
+        const approveBtn = document.createElement('button');
+        approveBtn.className = 'ro-btn ro-btn--success ro-btn--sm';
+        approveBtn.textContent = 'Approve';
+        approveBtn.onclick = (e) => { e.stopPropagation(); updateRide(`/api/rides/${ride.id}/approve`); };
+        actionsCell.appendChild(approveBtn);
+      }
+      tr.style.cursor = 'pointer';
+      tr.onclick = (e) => {
+        if (e.target.closest('.ro-btn') || e.target.closest('.clickable-name') || e.target.closest('select')) return;
+        openRideDrawer(ride);
+      };
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Update count
+  const countEl = document.getElementById('ride-filter-count');
+  if (countEl) countEl.textContent = `${filtered.length} ride${filtered.length !== 1 ? 's' : ''}`;
+
+  // History tab (still uses old format)
+  const historyAll = rides.filter(r => ['completed', 'no_show', 'denied', 'cancelled'].includes(r.status));
+  const history = historyAll.filter(r => rideMatchesFilter(r, historyFilterText));
+  if (historyEl) renderHistory(history);
+}
+
+function renderHistory(history) {
+  const historyEl = document.getElementById('history-items');
+  if (!historyEl) return;
+
+  const sorted = [...history].sort((a, b) => {
+    const da = a.requestedTime ? new Date(a.requestedTime).getTime() : 0;
+    const db = b.requestedTime ? new Date(b.requestedTime).getTime() : 0;
+    return db - da;
+  });
+
   const dateGroups = new Map();
-  sortedHistory.forEach((ride) => {
+  sorted.forEach(ride => {
     const dk = getDateKey(ride.requestedTime);
-    if (!dateGroups.has(dk)) {
-      dateGroups.set(dk, { label: formatHistoryDateHeader(ride.requestedTime), rides: [] });
-    }
+    if (!dateGroups.has(dk)) dateGroups.set(dk, { label: formatHistoryDateHeader(ride.requestedTime), rides: [] });
     dateGroups.get(dk).rides.push(ride);
   });
 
@@ -1831,74 +1790,42 @@ function renderRideLists() {
     dateHeader.textContent = group.label;
     historyEl.appendChild(dateHeader);
 
-    // Detect consecutive runs of same groupKey
     const ridesInDay = group.rides;
     let i = 0;
     while (i < ridesInDay.length) {
       const currentKey = historyGroupKey(ridesInDay[i]);
       let runEnd = i + 1;
-      while (runEnd < ridesInDay.length && historyGroupKey(ridesInDay[runEnd]) === currentKey) {
-        runEnd++;
-      }
+      while (runEnd < ridesInDay.length && historyGroupKey(ridesInDay[runEnd]) === currentKey) runEnd++;
       const runLength = runEnd - i;
 
       if (runLength === 1) {
         historyEl.appendChild(buildHistoryItem(ridesInDay[i]));
       } else {
-        // Collapsed group
         const groupId = `${dateKey}|${currentKey}`;
         const isExpanded = historyExpandedGroups.has(groupId);
         const firstRide = ridesInDay[i];
         const summary = document.createElement('div');
         summary.className = 'history-group-summary';
-        summary.innerHTML = `
-          ${statusTag(firstRide.status)}
-          <strong>${firstRide.riderName}</strong>
-          <span class="small-text">${firstRide.pickupLocation} → ${firstRide.dropoffLocation}</span>
-          <span class="history-group-count">${runLength}</span>
-          <button class="history-group-toggle">${isExpanded ? 'Hide' : 'Show all'}</button>
-        `;
-
+        summary.innerHTML = `${statusTag(firstRide.status)} <strong>${firstRide.riderName}</strong> <span class="small-text">${firstRide.pickupLocation} → ${firstRide.dropoffLocation}</span> <span class="history-group-count">${runLength}</span> <button class="history-group-toggle">${isExpanded ? 'Hide' : 'Show all'}</button>`;
         const container = document.createElement('div');
         container.className = 'history-group-rides' + (isExpanded ? ' expanded' : '');
-        for (let j = i; j < runEnd; j++) {
-          container.appendChild(buildHistoryItem(ridesInDay[j]));
-        }
-
+        for (let j = i; j < runEnd; j++) container.appendChild(buildHistoryItem(ridesInDay[j]));
         summary.querySelector('.history-group-toggle').onclick = () => {
           const nowExpanded = container.classList.toggle('expanded');
           summary.querySelector('.history-group-toggle').textContent = nowExpanded ? 'Hide' : 'Show all';
-          if (nowExpanded) {
-            historyExpandedGroups.add(groupId);
-          } else {
-            historyExpandedGroups.delete(groupId);
-          }
+          if (nowExpanded) historyExpandedGroups.add(groupId);
+          else historyExpandedGroups.delete(groupId);
         };
-
         historyEl.appendChild(summary);
         historyEl.appendChild(container);
       }
-
       i = runEnd;
     }
   });
 
-  document.getElementById('history-list').style.display = (historyFilterText && !history.length) ? 'none' : '';
   if (!history.length && !historyFilterText) {
-    showEmptyState(historyEl, {
-      icon: 'inbox',
-      title: 'No completed history yet',
-      message: 'Completed and no-show rides will appear here after dispatch activity.'
-    });
+    showEmptyState(historyEl, { icon: 'inbox', title: 'No completed history yet', message: 'Completed and no-show rides will appear here.' });
   }
-
-  // Update filter match count
-  const countEl = document.getElementById('ride-filter-count');
-  if (countEl) {
-    const totalShown = unassigned.length + pending.length + approved.length;
-    countEl.textContent = rideFilterText ? `${totalShown} match${totalShown !== 1 ? 'es' : ''}` : '';
-  }
-
 }
 
 async function updateRide(url, body = null) {
@@ -1930,12 +1857,11 @@ async function claimRide(rideId, driverId) {
   await loadRides();
 }
 
-// ----- Dispatch & Monitoring (Driver Dashboard) -----
+// ----- Dispatch & Monitoring -----
 function renderDriverConsole() {
   renderDispatchSummary();
-  renderDriverDashboard();
-  renderDriverDetail();
-  renderAllActiveRides();
+  renderPendingQueue();
+  renderDispatchGrid();
 }
 
 function renderDispatchSummary() {
@@ -1951,380 +1877,290 @@ function renderDispatchSummary() {
   el('dispatch-completed-today', completedToday);
 }
 
-function renderDriverDashboard() {
-  const dashboard = document.getElementById('driver-dashboard');
-  if (!dashboard) return;
-  dashboard.innerHTML = '';
-  const today = getTodayLocalDate();
-
-  employees.forEach((emp) => {
-    const card = document.createElement('div');
-    card.className = 'driver-card' + (emp.id === selectedDriverId ? ' selected' : '');
-
-    const todayRides = rides.filter((r) => r.assignedDriverId === emp.id && r.requestedTime?.startsWith(today)
-      && !['denied', 'cancelled'].includes(r.status));
-    const rideCount = todayRides.length;
-
-    // Find active ride
-    const activeRide = todayRides.find((r) => ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(r.status));
-    let currentStatus = '';
-    if (activeRide) {
-      const statusLabels = {
-        scheduled: 'Scheduled',
-        driver_on_the_way: 'On the way to',
-        driver_arrived_grace: 'Waiting at'
-      };
-      const dest = activeRide.status === 'driver_on_the_way' ? activeRide.dropoffLocation : activeRide.pickupLocation;
-      currentStatus = `Currently: ${statusLabels[activeRide.status]} ${dest}`;
-      if (activeRide.status === 'driver_arrived_grace' && activeRide.graceStartTime) {
-        const elapsed = (Date.now() - new Date(activeRide.graceStartTime).getTime()) / 1000;
-        const remaining = Math.max(0, 300 - elapsed);
-        const minutes = Math.floor(remaining / 60);
-        const seconds = Math.floor(remaining % 60).toString().padStart(2, '0');
-        currentStatus += ` (${minutes}:${seconds} remaining)`;
-      }
-    }
-
-    card.innerHTML = `
-      <span class="driver-status-dot ${emp.active ? 'active' : 'inactive'}"></span>
-      <span class="driver-card-name clickable-name" data-user="${emp.id}">${emp.name}</span>
-      <span class="driver-card-info">${emp.active ? 'Clocked In' : 'Clocked Out'} &mdash; ${rideCount} ${rideCount === 1 ? 'ride' : 'rides'} today${currentStatus ? ' &mdash; ' + currentStatus : ''}</span>
-    `;
-    card.onclick = () => {
-      selectedDriverId = emp.id;
-      renderDriverDashboard();
-      renderDriverDetail();
-      const detail = document.getElementById('driver-detail');
-      if (detail) detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    dashboard.appendChild(card);
-  });
-
-  if (!employees.length) {
-    showEmptyState(dashboard, {
-      icon: 'inbox',
-      title: 'No drivers registered',
-      message: 'Add drivers in Admin Settings to see them here.'
-    });
-  }
-}
-
-function renderDriverDetail() {
-  const detail = document.getElementById('driver-detail');
-  const title = document.getElementById('driver-detail-title');
-  const list = document.getElementById('driver-ride-list');
-  const clockBtn = document.getElementById('admin-clock-toggle');
-  if (!detail || !list) return;
-
-  const driver = employees.find((e) => e.id === selectedDriverId);
-  if (!driver) {
-    detail.style.display = 'none';
-    return;
-  }
-  detail.style.display = 'block';
-  title.textContent = `Driver: ${driver.name}`;
-  clockBtn.textContent = driver.active ? 'Clock Out' : 'Clock In';
-  clockBtn.className = driver.active ? 'btn secondary' : 'btn primary';
-  clockBtn.onclick = () => adminClockToggle(driver);
-
-  list.innerHTML = '';
-  const today = getTodayLocalDate();
-
-  // Show claimable rides (approved, unassigned, today) if driver is active
-  if (driver.active) {
-    const claimable = rides.filter((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today));
-    if (claimable.length) {
-      const claimSection = document.createElement('div');
-      claimSection.innerHTML = '<h4>Available to Claim</h4>';
-      claimable.forEach((ride) => {
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.innerHTML = `
-          <div><span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
-          <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-          <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
-        `;
-        const claimBtn = document.createElement('button');
-        claimBtn.className = 'btn primary';
-        claimBtn.textContent = 'Claim Ride';
-        claimBtn.onclick = () => claimRide(ride.id, driver.id);
-        item.appendChild(claimBtn);
-        claimSection.appendChild(item);
-      });
-      list.appendChild(claimSection);
-    }
-  }
-
-  const driverRides = rides.filter((r) => r.assignedDriverId === driver.id && r.requestedTime?.startsWith(today));
-  if (!driverRides.length && !(driver.active && rides.some((r) => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today)))) {
-    showEmptyState(list, {
-      icon: 'inbox',
-      title: 'No rides for today',
-      message: 'This driver has no assigned or claimable rides right now.'
-    });
-    return;
-  }
-
-  driverRides.forEach((ride) => {
-    const item = document.createElement('div');
-    item.className = 'item';
-    const graceInfo = buildGraceInfo(ride);
-
-    // Admin warning banner — only for active in-progress statuses
-    if (['driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
-      item.appendChild(buildWarningBanner(driver.name));
-    }
-
-    const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || 'Unknown') : null;
-    const rideInfo = document.createElement('div');
-    rideInfo.innerHTML = `
-      <div>${statusTag(ride.status)} <span data-user="${ride.riderId || ''}" class="clickable-name">${ride.riderName}</span></div>
-      <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-      ${ride.notes ? `<div class="small-text">Notes: ${ride.notes}</div>` : ''}
-      <div class="small-text">Time: ${formatDate(ride.requestedTime)}</div>
-      <div class="small-text">Rider misses: ${ride.consecutiveMisses || 0}</div>
-      ${vehicleName ? `<div class="small-text">Cart: <strong>${vehicleName}</strong></div>` : '<div class="small-text" style="color:#856404;">No vehicle assigned</div>'}
-    `;
-    item.appendChild(rideInfo);
-
-    const contactRow = document.createElement('div');
-    contactRow.className = 'contact-row';
-    contactRow.append(
-      buildContactPill('tel', ride.riderPhone, '☎', 'Call'),
-      buildContactPill('sms', ride.riderPhone, '✉', 'SMS')
-    );
-    item.appendChild(contactRow);
-
-    // Vehicle selector for active rides
-    if (['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
-      const vehRow = document.createElement('div');
-      vehRow.style.cssText = 'margin-top:4px;margin-bottom:4px;';
-      const vehSelect = document.createElement('select');
-      vehSelect.style.cssText = 'width:100%;padding:0.4rem;border:1px solid #ddd;border-radius:4px;font-size:0.85rem;';
-      const defaultOpt = document.createElement('option');
-      defaultOpt.value = '';
-      defaultOpt.textContent = ride.vehicleId ? 'Change cart...' : 'Select cart...';
-      vehSelect.appendChild(defaultOpt);
-      vehicles.filter(v => v.status === 'available').forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v.id;
-        opt.textContent = v.name;
-        if (v.id === ride.vehicleId) opt.selected = true;
-        vehSelect.appendChild(opt);
-      });
-      vehSelect.onchange = async () => {
-        if (!vehSelect.value) return;
-        const ok = await updateRide(`/api/rides/${ride.id}/set-vehicle`, { vehicleId: vehSelect.value });
-        if (ok) showToast('Vehicle updated', 'success');
-      };
-      vehRow.appendChild(vehSelect);
-      item.appendChild(vehRow);
-    }
-
-    if (graceInfo.message) {
-      const message = document.createElement('div');
-      message.className = 'small-text';
-      message.textContent = graceInfo.message;
-      item.appendChild(message);
-    }
-
-    // Driver action buttons
-    const actionable = ['scheduled','driver_on_the_way','driver_arrived_grace'];
-    if (actionable.includes(ride.status)) {
-      const driverLabel = document.createElement('div');
-      driverLabel.className = 'small-text';
-      driverLabel.style.cssText = 'margin-top:8px;margin-bottom:4px;font-weight:700;';
-      driverLabel.textContent = 'Driver Actions';
-      item.appendChild(driverLabel);
-
-      const actions = document.createElement('div');
-      actions.className = 'flex-row';
-      actions.style.flexWrap = 'wrap';
-
-      const onWayBtn = document.createElement('button');
-      onWayBtn.className = 'btn primary';
-      onWayBtn.textContent = 'On My Way';
-      onWayBtn.onclick = async () => {
-        if (!ride.vehicleId) {
-          const vehSelect = item.querySelector('select');
-          const selectedVehicle = vehSelect?.value;
-          if (selectedVehicle) {
-            await updateRide(`/api/rides/${ride.id}/on-the-way`, { vehicleId: selectedVehicle });
-          } else {
-            showToast('Please select a vehicle before starting this ride', 'warning');
-          }
-          return;
-        }
-        await updateRide(`/api/rides/${ride.id}/on-the-way`);
-      };
-      actions.appendChild(onWayBtn);
-
-      const hereBtn = document.createElement('button');
-      hereBtn.className = 'btn secondary';
-      hereBtn.textContent = "I'm Here";
-      hereBtn.onclick = () => updateRide(`/api/rides/${ride.id}/here`);
-      actions.appendChild(hereBtn);
-
-      const completeBtn = document.createElement('button');
-      completeBtn.className = 'btn primary';
-      completeBtn.textContent = 'Complete';
-      completeBtn.onclick = async () => {
-        if (!ride.vehicleId) {
-          const vehicleId = await showVehiclePromptModal();
-          if (!vehicleId) return;
-          const confirmed = await showConfirmModal({
-            title: 'Complete Ride',
-            message: 'Mark this ride as completed?',
-            confirmLabel: 'Complete',
-            cancelLabel: 'Keep Open',
-            type: 'warning'
-          });
-          if (confirmed) await updateRide(`/api/rides/${ride.id}/complete`, { vehicleId });
-          return;
-        }
-        const confirmed = await showConfirmModal({
-          title: 'Complete Ride',
-          message: 'Mark this ride as completed?',
-          confirmLabel: 'Complete',
-          cancelLabel: 'Keep Open',
-          type: 'warning'
-        });
-        if (confirmed) await updateRide(`/api/rides/${ride.id}/complete`);
-      };
-      actions.appendChild(completeBtn);
-
-      const noShowBtn = document.createElement('button');
-      noShowBtn.className = 'btn danger';
-      noShowBtn.textContent = 'No-Show';
-      const { canNoShow } = graceInfo;
-      noShowBtn.disabled = !canNoShow;
-      noShowBtn.onclick = async () => {
-        const confirmed = await showConfirmModal({
-          title: 'Confirm No-Show',
-          message: 'Mark this rider as a no-show? This increases their no-show count.',
-          confirmLabel: 'Mark No-Show',
-          cancelLabel: 'Go Back',
-          type: 'danger'
-        });
-        if (confirmed) await updateRide(`/api/rides/${ride.id}/no-show`);
-      };
-      actions.appendChild(noShowBtn);
-      item.appendChild(actions);
-    }
-
-    // Office override buttons
-    const hasOverrides = actionable.includes(ride.status) || !['completed', 'no_show', 'cancelled', 'denied'].includes(ride.status);
-    if (hasOverrides) {
-      const officeLabel = document.createElement('div');
-      officeLabel.className = 'small-text';
-      officeLabel.style.cssText = 'margin-top:12px;margin-bottom:4px;font-weight:700;color:var(--cardinal);';
-      officeLabel.textContent = 'Office Overrides';
-      item.appendChild(officeLabel);
-
-      const adminActions = document.createElement('div');
-      adminActions.className = 'flex-row';
-      adminActions.style.flexWrap = 'wrap';
-
-      if (actionable.includes(ride.status)) {
-        adminActions.appendChild(buildUnassignButton(ride, driver.name, () => loadRides()));
-        adminActions.appendChild(buildReassignDropdown(ride, driver.id, () => loadRides()));
-      }
-      item.appendChild(adminActions);
-    }
-    item.appendChild(buildKebabMenu(ride, () => loadRides()));
-    list.appendChild(item);
-  });
-}
-
-async function adminClockToggle(driver) {
-  if (driver.active) {
-    const today = getTodayLocalDate();
-    const activeRideCount = rides.filter((r) => r.assignedDriverId === driver.id
-      && ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(r.status)
-      && r.requestedTime?.startsWith(today)).length;
-    let message = `Clock out ${driver.name}?`;
-    if (activeRideCount > 0) {
-      message = `${driver.name} has ${activeRideCount} active ride${activeRideCount === 1 ? '' : 's'} assigned. Clocking out will NOT unassign those rides, but the driver won't be able to claim new ones. Continue?`;
-    }
-    const confirmed = await showConfirmModal({
-      title: 'Clock Out Driver',
-      message,
-      confirmLabel: 'Clock Out',
-      cancelLabel: 'Cancel',
-      type: 'warning'
-    });
-    if (!confirmed) return;
-  }
-  await clockEmployee(driver.id, !driver.active);
-}
-
-function renderAllActiveRides() {
-  const list = document.getElementById('all-active-rides-list');
+function renderPendingQueue() {
+  const list = document.getElementById('pending-queue-list');
   if (!list) return;
   const today = getTodayLocalDate();
-  const activeStatuses = ['pending', 'approved', 'scheduled', 'driver_on_the_way', 'driver_arrived_grace'];
-  const activeRides = rides.filter((r) => activeStatuses.includes(r.status) && r.requestedTime?.startsWith(today));
-
-  // Update count in header
-  const countEl = document.getElementById('active-rides-count');
-  if (countEl) countEl.textContent = activeRides.length ? `(${activeRides.length})` : '';
-
-  if (!activeRides.length) {
-    showEmptyState(list, {
-      icon: 'inbox',
-      title: 'No active rides today',
-      message: 'Active rides across all drivers will appear here.'
-    });
+  const pending = rides.filter(r => r.status === 'pending');
+  if (!pending.length) {
+    list.innerHTML = '<div class="ro-empty"><div class="ro-empty__title">No pending rides</div><div class="ro-empty__message">All ride requests have been processed.</div></div>';
     return;
   }
-
-  // Sort by urgency — soonest requested time first
-  activeRides.sort((a, b) => new Date(a.requestedTime) - new Date(b.requestedTime));
-
   list.innerHTML = '';
-  activeRides.forEach((ride) => {
-    const item = document.createElement('div');
-    item.className = 'item';
-    const driverName = ride.assignedDriverId
-      ? (employees.find((e) => e.id === ride.assignedDriverId)?.name || 'Unknown')
-      : 'Unassigned';
-    const driverClickable = ride.assignedDriverId ? `<span class="clickable-name" data-user="${ride.assignedDriverId}">${driverName}</span>` : driverName;
-    item.innerHTML = `
-      <div>
-        ${statusTag(ride.status)}
-        <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span>
+  pending.forEach(ride => {
+    const row = document.createElement('div');
+    row.className = 'strip-row';
+    const terminated = ride.consecutiveMisses >= 5;
+    row.innerHTML = `
+      <div style="flex:1;">
+        <div>${statusBadge('pending')} <span class="clickable-name" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}">${ride.riderName}</span></div>
+        <div class="text-sm text-muted" style="margin-top:2px;">${ride.pickupLocation} → ${ride.dropoffLocation} · ${formatDate(ride.requestedTime)}</div>
+        ${terminated ? '<div class="alert" style="margin-top:4px;">SERVICE TERMINATED — 5 consecutive no-shows</div>' : ''}
       </div>
-      <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-      <div class="small-text">Time: ${formatDate(ride.requestedTime)} | Driver: ${driverClickable}</div>
     `;
-    if (ride.assignedDriverId) {
-      const viewLink = document.createElement('span');
-      viewLink.className = 'small-text';
-      viewLink.style.cssText = 'font-weight:700; color:var(--cardinal); cursor:pointer;';
-      viewLink.textContent = 'View in dispatch';
-      viewLink.onclick = (e) => {
-        e.stopPropagation();
-        selectedDriverId = ride.assignedDriverId;
-        renderDriverConsole();
-        document.getElementById('driver-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      };
-      item.appendChild(viewLink);
-    } else {
-      item.appendChild(buildAssignDropdown(ride, () => loadRides()));
-    }
-    item.appendChild(buildKebabMenu(ride, () => loadRides()));
-    list.appendChild(item);
+    const actions = document.createElement('div');
+    actions.className = 'strip-row__actions';
+    const approveBtn = document.createElement('button');
+    approveBtn.className = 'ro-btn ro-btn--success ro-btn--sm';
+    approveBtn.textContent = 'Approve';
+    approveBtn.disabled = terminated;
+    approveBtn.onclick = (e) => { e.stopPropagation(); updateRide(`/api/rides/${ride.id}/approve`); };
+    const denyBtn = document.createElement('button');
+    denyBtn.className = 'ro-btn ro-btn--danger ro-btn--sm';
+    denyBtn.textContent = 'Deny';
+    denyBtn.onclick = (e) => { e.stopPropagation(); updateRide(`/api/rides/${ride.id}/deny`); };
+    actions.appendChild(approveBtn);
+    actions.appendChild(denyBtn);
+    row.appendChild(actions);
+    row.onclick = () => openRideDrawer(ride);
+    list.appendChild(row);
   });
 }
 
-function toggleAllActiveRides(header) {
-  const el = document.getElementById('all-active-rides');
-  if (!el) return;
-  const isHidden = el.style.display === 'none';
-  el.style.display = isHidden ? 'block' : 'none';
-  const chevron = document.getElementById('active-rides-chevron');
-  if (chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : '';
+function renderDispatchGrid() {
+  const grid = document.getElementById('dispatch-grid');
+  if (!grid) return;
+  const dateInput = document.getElementById('dispatch-date');
+  const selectedDate = dateInput?.value ? parseDateInputLocal(dateInput.value) : new Date();
+  const dateStr = formatDateInputLocal(selectedDate || new Date());
+  const cols = 13; // 7am to 7pm (hours 7-19)
+  const startHour = 7;
+
+  // Classify drivers
+  const activeDrivers = employees.filter(e => e.active);
+  const inactiveDrivers = employees.filter(e => !e.active);
+
+  // Get today's rides
+  const dayRides = rides.filter(r => r.requestedTime && r.requestedTime.startsWith(dateStr) && !['denied', 'cancelled'].includes(r.status));
+
+  // Unassigned approved rides
+  const unassignedRides = dayRides.filter(r => r.status === 'approved' && !r.assignedDriverId);
+
+  const gridColStyle = `grid-template-columns: 100px repeat(${cols}, 1fr)`;
+
+  let html = '';
+
+  // Header row
+  html += `<div class="time-grid__header" style="${gridColStyle}">`;
+  html += `<div class="time-grid__time-label" style="font-weight:700;">Driver</div>`;
+  for (let h = startHour; h < startHour + cols; h++) {
+    const label = h <= 12 ? h + 'a' : (h - 12) + 'p';
+    html += `<div class="time-grid__time-label">${label}</div>`;
+  }
+  html += '</div>';
+
+  // Active drivers
+  activeDrivers.forEach(driver => {
+    const driverRides = dayRides.filter(r => r.assignedDriverId === driver.id);
+    html += buildDriverGridRow(driver, driverRides, cols, startHour, gridColStyle, true);
+  });
+
+  // Unassigned separator
+  if (unassignedRides.length) {
+    html += `<div class="time-grid__separator">Unassigned (${unassignedRides.length})</div>`;
+    html += `<div class="time-grid__row" style="${gridColStyle}">`;
+    html += `<div class="time-grid__driver"><span class="time-grid__driver-dot time-grid__driver-dot--offline"></span>Unassigned</div>`;
+    for (let h = startHour; h < startHour + cols; h++) {
+      html += `<div class="time-grid__shift-band" style="position:relative;">`;
+      unassignedRides.forEach(r => {
+        const rideHour = new Date(r.requestedTime).getHours();
+        if (rideHour === h) {
+          const mins = new Date(r.requestedTime).getMinutes();
+          const left = (mins / 60 * 100) + '%';
+          const lastName = (r.riderName || '').split(' ').pop();
+          const abbrev = abbreviateLocation(r.pickupLocation);
+          html += `<div class="time-grid__ride-strip" data-ride-id="${r.id}" style="left:${left};width:50%;background:var(--status-approved);" title="${r.riderName}: ${r.pickupLocation} → ${r.dropoffLocation}">${lastName} · ${abbrev}</div>`;
+        }
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Off-shift separator
+  if (inactiveDrivers.length) {
+    html += `<div class="time-grid__separator">Off Shift (${inactiveDrivers.length})</div>`;
+    inactiveDrivers.forEach(driver => {
+      const driverRides = dayRides.filter(r => r.assignedDriverId === driver.id);
+      html += buildDriverGridRow(driver, driverRides, cols, startHour, gridColStyle, false);
+    });
+  }
+
+  if (!activeDrivers.length && !unassignedRides.length && !inactiveDrivers.length) {
+    html = '<div class="ro-empty"><i class="ti ti-calendar-off"></i><div class="ro-empty__title">No activity</div><div class="ro-empty__message">No drivers or rides for this date.</div></div>';
+  }
+
+  grid.innerHTML = html;
+
+  // Add click handlers to ride strips
+  grid.querySelectorAll('.time-grid__ride-strip[data-ride-id]').forEach(strip => {
+    strip.onclick = (e) => {
+      e.stopPropagation();
+      const ride = rides.find(r => r.id === strip.dataset.rideId);
+      if (ride) openRideDrawer(ride);
+    };
+  });
 }
+
+function buildDriverGridRow(driver, driverRides, cols, startHour, gridColStyle, isActive) {
+  const dotClass = isActive ? 'time-grid__driver-dot--online' : 'time-grid__driver-dot--offline';
+  let html = `<div class="time-grid__row" style="${gridColStyle}${!isActive ? ';opacity:0.5;' : ''}">`;
+  html += `<div class="time-grid__driver"><span class="time-grid__driver-dot ${dotClass}"></span><span class="clickable-name" data-user="${driver.id}">${driver.name}</span></div>`;
+
+  // Find driver's shifts for the selected day
+  const dateInput = document.getElementById('dispatch-date');
+  const selectedDate = dateInput?.value ? parseDateInputLocal(dateInput.value) : new Date();
+  const dayOfWeek = selectedDate ? ((selectedDate.getDay() + 6) % 7) : ((new Date().getDay() + 6) % 7); // Mon=0
+
+  for (let h = startHour; h < startHour + cols; h++) {
+    const slot = `${String(h).padStart(2, '0')}:00`;
+    const hasShift = shifts.some(s => s.employeeId === driver.id && s.dayOfWeek === dayOfWeek && s.startTime <= slot && s.endTime > slot);
+    const bgStyle = hasShift ? 'background:var(--color-primary-subtle);' : '';
+    html += `<div style="position:relative;${bgStyle}border-right:1px solid var(--color-border-light);">`;
+
+    // Render rides at this hour
+    driverRides.forEach(r => {
+      const rideTime = new Date(r.requestedTime);
+      const rideHour = rideTime.getHours();
+      if (rideHour === h) {
+        const mins = rideTime.getMinutes();
+        const left = (mins / 60 * 100) + '%';
+        const statusColors = {
+          approved: 'var(--status-approved)', scheduled: 'var(--status-scheduled)',
+          driver_on_the_way: 'var(--status-on-the-way)', driver_arrived_grace: 'var(--status-grace)',
+          completed: 'var(--status-completed)', no_show: 'var(--status-no-show)', pending: 'var(--status-pending)'
+        };
+        const bg = statusColors[r.status] || 'var(--status-pending)';
+        const lastName = (r.riderName || '').split(' ').pop();
+        const abbrev = abbreviateLocation(r.pickupLocation);
+        html += `<div class="time-grid__ride-strip" data-ride-id="${r.id}" style="left:${left};width:50%;background:${bg};" title="${r.riderName}: ${r.pickupLocation} → ${r.dropoffLocation}">${lastName} · ${abbrev}</div>`;
+      }
+    });
+
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function abbreviateLocation(location) {
+  if (!location) return '?';
+  // Extract abbreviation from parentheses, e.g. "Some Building (ABC)" → "ABC"
+  const match = location.match(/\(([^)]+)\)\s*$/);
+  if (match) return match[1];
+  // Fall back to first 6 chars
+  return location.substring(0, 6);
+}
+
+function openRideDrawer(ride) {
+  const driverName = ride.assignedDriverId ? (employees.find(e => e.id === ride.assignedDriverId)?.name || 'Unknown') : 'Unassigned';
+  const vehicleName = ride.vehicleId ? (vehicles.find(v => v.id === ride.vehicleId)?.name || ride.vehicleId) : null;
+  const graceInfo = buildGraceInfo(ride);
+  const isTerminal = ['completed', 'no_show', 'cancelled', 'denied'].includes(ride.status);
+
+  let html = '';
+  html += `<div style="margin-bottom:16px;">`;
+  html += `<div style="margin-bottom:8px;">${statusBadge(ride.status)}</div>`;
+  html += `<div style="font-size:15px;font-weight:700;margin-bottom:4px;"><span class="clickable-name" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}">${ride.riderName}</span></div>`;
+  html += `<div class="text-sm text-muted">${ride.riderEmail || ''}</div>`;
+  html += `</div>`;
+
+  // Route
+  html += `<div class="drawer-section">`;
+  html += `<div class="drawer-section-title">Route</div>`;
+  html += `<div class="drawer-field"><div class="drawer-field-label">Pickup</div><div class="drawer-field-value">${ride.pickupLocation}</div></div>`;
+  html += `<div class="drawer-field"><div class="drawer-field-label">Dropoff</div><div class="drawer-field-value">${ride.dropoffLocation}</div></div>`;
+  html += `<div class="drawer-field"><div class="drawer-field-label">Requested</div><div class="drawer-field-value">${formatDate(ride.requestedTime)}</div></div>`;
+  html += `<div class="drawer-field"><div class="drawer-field-label">Driver</div><div class="drawer-field-value">${ride.assignedDriverId ? `<span class="clickable-name" data-user="${ride.assignedDriverId}">${driverName}</span>` : 'Unassigned'}</div></div>`;
+  if (vehicleName) html += `<div class="drawer-field"><div class="drawer-field-label">Vehicle</div><div class="drawer-field-value">${vehicleName}</div></div>`;
+  if (ride.notes) html += `<div class="drawer-field"><div class="drawer-field-label">Notes</div><div class="drawer-field-value">${ride.notes}</div></div>`;
+  html += `<div class="drawer-field"><div class="drawer-field-label">No-shows</div><div class="drawer-field-value">${ride.consecutiveMisses || 0}</div></div>`;
+  html += `</div>`;
+
+  // Contact
+  if (ride.riderPhone) {
+    html += `<div class="drawer-section"><div class="drawer-section-title">Contact</div>`;
+    html += `<div class="contact-row">`;
+    html += `<a class="contact-pill" href="tel:${ride.riderPhone}"><span class="icon">☎</span>Call</a>`;
+    html += `<a class="contact-pill" href="sms:${ride.riderPhone}"><span class="icon">✉</span>Text</a>`;
+    html += `</div></div>`;
+  }
+
+  // Grace info
+  if (graceInfo.message) {
+    html += `<div class="text-sm" style="padding:8px 0;font-weight:600;${graceInfo.canNoShow ? 'color:var(--status-no-show);' : 'color:var(--status-grace);'}">${graceInfo.message}</div>`;
+  }
+
+  // Actions
+  html += `<div class="drawer-section"><div class="drawer-section-title">Actions</div>`;
+  html += `<div id="ride-drawer-actions" style="display:flex;flex-direction:column;gap:8px;"></div>`;
+  html += `</div>`;
+
+  openDrawer(html);
+
+  // Wire action buttons
+  const actionsEl = document.getElementById('ride-drawer-actions');
+  if (!actionsEl) return;
+
+  const reload = async () => { await loadRides(); closeDrawer(); };
+
+  if (ride.status === 'pending') {
+    const terminated = ride.consecutiveMisses >= 5;
+    actionsEl.appendChild(makeBtn('Approve', 'ro-btn ro-btn--success ro-btn--full', () => updateRide(`/api/rides/${ride.id}/approve`).then(reload), terminated));
+    actionsEl.appendChild(makeBtn('Deny', 'ro-btn ro-btn--danger ro-btn--full', () => updateRide(`/api/rides/${ride.id}/deny`).then(reload)));
+  }
+
+  if (ride.status === 'approved' && !ride.assignedDriverId) {
+    const select = buildAssignDropdown(ride, reload);
+    select.style.width = '100%';
+    actionsEl.appendChild(select);
+  }
+
+  if (['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
+    actionsEl.appendChild(makeBtn('On My Way', 'ro-btn ro-btn--primary ro-btn--full', () => updateRide(`/api/rides/${ride.id}/on-the-way`).then(reload)));
+    actionsEl.appendChild(makeBtn("I'm Here", 'ro-btn ro-btn--outline ro-btn--full', () => updateRide(`/api/rides/${ride.id}/here`).then(reload)));
+    actionsEl.appendChild(makeBtn('Complete', 'ro-btn ro-btn--success ro-btn--full', async () => {
+      const confirmed = await showConfirmModal({ title: 'Complete Ride', message: 'Mark this ride as completed?', confirmLabel: 'Complete', type: 'warning' });
+      if (confirmed) { await updateRide(`/api/rides/${ride.id}/complete`); reload(); }
+    }));
+    actionsEl.appendChild(makeBtn('No-Show', 'ro-btn ro-btn--danger ro-btn--full', async () => {
+      const confirmed = await showConfirmModal({ title: 'Confirm No-Show', message: 'Mark this rider as a no-show?', confirmLabel: 'Mark No-Show', type: 'danger' });
+      if (confirmed) { await updateRide(`/api/rides/${ride.id}/no-show`); reload(); }
+    }, !graceInfo.canNoShow));
+  }
+
+  if (ride.assignedDriverId && ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(ride.status)) {
+    const hr = document.createElement('hr');
+    hr.style.cssText = 'border:none;border-top:1px solid var(--color-border);margin:8px 0;';
+    actionsEl.appendChild(hr);
+    actionsEl.appendChild(makeBtn('Unassign Driver', 'ro-btn ro-btn--outline ro-btn--full', async () => {
+      const confirmed = await showConfirmModal({ title: 'Unassign Driver', message: `Unassign ${driverName}?`, confirmLabel: 'Unassign', type: 'warning' });
+      if (confirmed) { await fetch(`/api/rides/${ride.id}/unassign`, { method: 'POST' }); reload(); }
+    }));
+    const reassignSelect = buildReassignDropdown(ride, ride.assignedDriverId, reload);
+    reassignSelect.style.width = '100%';
+    actionsEl.appendChild(reassignSelect);
+  }
+
+  if (!isTerminal) {
+    actionsEl.appendChild(makeBtn('Cancel Ride', 'ro-btn ro-btn--danger ro-btn--full', async () => {
+      const confirmed = await showConfirmModal({ title: 'Cancel Ride', message: 'Cancel this ride?', confirmLabel: 'Cancel Ride', type: 'danger' });
+      if (confirmed) { await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' }); reload(); }
+    }));
+  }
+
+  actionsEl.appendChild(makeBtn('Edit Ride', 'ro-btn ro-btn--outline ro-btn--full', () => { closeDrawer(); showEditRideModal(ride, () => loadRides()); }));
+}
+
+function makeBtn(label, className, onclick, disabled) {
+  const btn = document.createElement('button');
+  btn.className = className;
+  btn.textContent = label;
+  btn.onclick = onclick;
+  if (disabled) btn.disabled = true;
+  return btn;
+}
+
 
 function buildGraceInfo(ride) {
   if (ride.status !== 'driver_arrived_grace' || !ride.graceStartTime) {
@@ -2980,13 +2816,41 @@ async function reactivateVehicle(vehicleId, vehicleName) {
 }
 
 async function addVehicle() {
-  const name = prompt('Vehicle name:');
-  if (!name) return;
-  const type = prompt('Type (standard / accessible):', 'standard') || 'standard';
+  const result = await new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay show';
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3>Add Vehicle</h3>
+        <label>Vehicle Name<input type="text" id="add-veh-name" placeholder="e.g. Cart #5"></label>
+        <label>Type
+          <select id="add-veh-type">
+            <option value="standard">Standard</option>
+            <option value="accessible">Accessible</option>
+          </select>
+        </label>
+        <div class="modal-actions" style="margin-top:16px;">
+          <button class="btn secondary" id="add-veh-cancel">Cancel</button>
+          <button class="btn primary" id="add-veh-confirm">Add Vehicle</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const cleanup = (val) => { overlay.remove(); resolve(val); };
+    overlay.querySelector('#add-veh-cancel').onclick = () => cleanup(null);
+    overlay.querySelector('#add-veh-confirm').onclick = () => {
+      const name = overlay.querySelector('#add-veh-name').value.trim();
+      const type = overlay.querySelector('#add-veh-type').value;
+      if (!name) { showToast('Name is required', 'error'); return; }
+      cleanup({ name, type });
+    };
+    overlay.onclick = (e) => { if (e.target === overlay) cleanup(null); };
+  });
+  if (!result) return;
   const res = await fetch('/api/vehicles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, type })
+    body: JSON.stringify(result)
   });
   if (!res.ok) {
     const err = await res.json();
@@ -3067,7 +2931,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Navigation is initialized via rideops-utils.js initSidebar() + initSubTabs() in index.html
   await initForms();
 
-  // Ride filter input
+  // Ride filter pills
+  document.querySelectorAll('#rides-filter-bar .filter-pill[data-ride-status]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('#rides-filter-bar .filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      rideStatusFilter = pill.dataset.rideStatus;
+      renderRideLists();
+    });
+  });
+
+  // Rides date filter
+  const ridesDateFilterInput = document.getElementById('rides-date-filter');
+  if (ridesDateFilterInput) {
+    ridesDateFilterInput.addEventListener('change', () => {
+      ridesDateFilter = ridesDateFilterInput.value || '';
+      renderRideLists();
+    });
+  }
+
+  // Ride text filter input
   const rideFilterInput = document.getElementById('ride-filter-input');
   if (rideFilterInput) {
     rideFilterInput.addEventListener('input', debounce(() => {
@@ -3112,8 +2995,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (currentUser?.id) {
     await loadUserProfileData(currentUser.id);
   }
-  initScheduleDate();
-  updateScheduleToggleUI();
+  // Dispatch date picker
+  const dispatchDate = document.getElementById('dispatch-date');
+  if (dispatchDate) {
+    dispatchDate.value = getTodayLocalDate();
+    dispatchDate.addEventListener('change', () => renderDispatchGrid());
+  }
 
   // Re-render shift grid when employee changes
   document.getElementById('shift-employee').addEventListener('change', renderShiftGrid);

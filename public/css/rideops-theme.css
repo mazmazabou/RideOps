@@ -266,7 +266,298 @@ body {
 .step-dot.active { background: var(--color-primary); }
 .step-dot.completed { background: var(--status-completed); }
 
-/* ── Section 25: Responsive ── */
+/* ── Section 25: Employee bar ── */
+.employee-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.emp-chip { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); font-size: 12px; transition: box-shadow 0.15s; }
+.emp-chip.active { border-color: var(--status-completed); box-shadow: inset 0 0 0 1px var(--status-completed); }
+.emp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-text-muted); flex-shrink: 0; }
+.emp-dot.active { background: var(--status-completed); }
+.emp-name { font-weight: 600; cursor: pointer; }
+.emp-name:hover { text-decoration: underline; }
+.emp-status-label { font-size: 11px; color: var(--color-text-muted); }
+.emp-status-label.clocked-in { color: var(--status-completed); }
+.emp-status-label.clocked-out { color: var(--color-text-muted); }
+.emp-action-btn { padding: 3px 10px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-secondary); margin-left: auto; }
+.emp-action-btn.clock-in { border-color: var(--color-primary); color: var(--color-primary); }
+.emp-action-btn.clock-out { border-color: var(--status-no-show); color: var(--status-no-show); }
+.emp-action-btn:hover { opacity: 0.8; }
+
+/* ── Section 26: Vehicle cards ── */
+.vehicles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.vehicle-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; }
+.vehicle-card.maintenance-overdue { border-color: var(--status-on-the-way); }
+.vehicle-card.vehicle-retired { opacity: 0.6; }
+.vehicle-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.vehicle-meta { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.maintenance-alert { font-size: 11px; color: var(--status-on-the-way); font-weight: 600; margin-top: 6px; padding: 4px 8px; background: rgba(245,158,11,0.08); border-radius: var(--radius-sm); }
+.retired-badge { font-size: 10px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--color-text-muted); color: #fff; font-weight: 600; }
+
+/* ── Section 27: Bar chart ── */
+.bar-chart { display: flex; flex-direction: column; gap: 6px; }
+.bar-chart-row { display: flex; align-items: center; gap: 8px; }
+.bar-chart-label { width: 60px; font-size: 11px; color: var(--color-text-secondary); text-align: right; flex-shrink: 0; }
+.bar-chart-track { flex: 1; height: 20px; background: var(--color-border-light); border-radius: var(--radius-sm); overflow: hidden; }
+.bar-chart-fill { height: 100%; background: var(--color-primary); border-radius: var(--radius-sm); transition: width 0.3s ease; }
+.bar-chart-fill.gold { background: var(--color-accent-dark); }
+.bar-chart-fill.green { background: var(--status-completed); }
+.bar-chart-fill.red { background: var(--status-no-show); }
+.bar-chart-fill.orange { background: var(--status-on-the-way); }
+.bar-chart-count { width: 40px; font-size: 11px; font-weight: 700; color: var(--color-text); }
+.chart-ylabel { writing-mode: vertical-lr; transform: rotate(180deg); font-size: 11px; color: var(--color-text-muted); padding-right: 8px; display: flex; align-items: center; }
+
+/* ── Section 28: Hotspot list ── */
+.hotspot-list { display: flex; flex-direction: column; gap: 6px; }
+.hotspot-item { display: flex; align-items: center; gap: 8px; }
+.hotspot-rank { width: 28px; font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-align: center; flex-shrink: 0; }
+.hotspot-name { width: 200px; font-size: 12px; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.hotspot-bar { flex: 1; height: 16px; background: var(--color-border-light); border-radius: var(--radius-sm); overflow: hidden; }
+.hotspot-bar-fill { height: 100%; background: var(--color-primary); border-radius: var(--radius-sm); transition: width 0.3s ease; }
+.hotspot-bar-fill.darkgold { background: var(--color-accent-dark); }
+.hotspot-bar-fill.gold { background: var(--color-accent); }
+.hotspot-count { width: 40px; font-size: 11px; font-weight: 700; color: var(--color-text); text-align: right; }
+
+/* ── Section 29: Milestones ── */
+.milestone-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.milestone-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; }
+.milestone-name { font-size: 14px; font-weight: 700; }
+.milestone-count { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+.milestone-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+.milestone-badge { font-size: 11px; padding: 2px 6px; border-radius: var(--radius-pill); background: var(--color-border-light); color: var(--color-text-muted); }
+.milestone-badge.earned { background: var(--color-accent); color: var(--color-text); }
+.progress-bar-track { height: 6px; background: var(--color-border-light); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.3s ease; }
+.progress-label { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; }
+
+/* ── Section 30: History items ── */
+.history-date-header { font-size: 13px; font-weight: 700; color: var(--color-text); padding: 12px 0 6px; border-bottom: 1px solid var(--color-border-light); margin-bottom: 6px; }
+.history-group-summary { display: flex; align-items: center; gap: 8px; padding: 8px 0; flex-wrap: wrap; }
+.history-group-count { background: var(--color-primary-subtle); color: var(--color-primary); font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: var(--radius-pill); }
+.history-group-toggle { background: none; border: none; color: var(--color-primary); font-size: 11px; font-weight: 600; cursor: pointer; padding: 2px 6px; }
+.history-group-toggle:hover { text-decoration: underline; }
+.history-group-rides { display: none; padding-left: 16px; }
+.history-group-rides.expanded { display: block; }
+
+/* ── Section 31: Contact pills ── */
+.contact-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: var(--radius-pill); border: 1px solid var(--color-border); font-size: 11px; font-weight: 600; color: var(--color-text-secondary); text-decoration: none; transition: all 0.15s; cursor: pointer; }
+.contact-pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.contact-pill .icon { font-size: 13px; }
+.contact-row { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.contact-inline { display: inline-flex; gap: 6px; margin-left: 8px; }
+
+/* ── Section 32: Loader ── */
+.loader { display: flex; flex-direction: column; align-items: center; padding: 32px; gap: 12px; }
+.loader-spinner { width: 32px; height: 32px; border: 3px solid var(--color-border); border-top-color: var(--color-primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loader-text { font-size: 13px; color: var(--color-text-muted); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Section 33: Alert ── */
+.alert { padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; background: rgba(239,68,68,0.08); color: var(--status-no-show); margin-top: 4px; }
+.admin-warning-banner { padding: 6px 10px; border-radius: var(--radius-sm); font-size: 11px; background: rgba(245,158,11,0.1); color: var(--status-on-the-way); margin-bottom: 6px; }
+
+/* ── Section 34: Clickable names ── */
+.clickable-name { cursor: pointer; font-weight: 600; }
+.clickable-name:hover { text-decoration: underline; color: var(--color-primary); }
+
+/* ── Section 35: Ride helpers ── */
+.ride-hint { font-size: 11px; color: var(--status-on-the-way); font-weight: 600; margin-top: 2px; }
+.ride-actions-compact { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.ride-needs-action { border-left: 3px solid var(--status-on-the-way); }
+.ride-assigned { border-left: 3px solid var(--status-scheduled); }
+.ride-in-transit { border-left: 3px solid var(--status-grace); }
+.ride-driver-prominent { color: var(--color-primary); font-weight: 700; }
+.ride-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+
+/* ── Section 36: Kebab menu ── */
+.kebab-menu-wrapper { position: relative; display: inline-block; }
+.kebab-btn { background: none; border: none; cursor: pointer; padding: 4px; color: var(--color-text-muted); border-radius: var(--radius-sm); }
+.kebab-btn:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.kebab-dropdown { position: absolute; right: 0; top: 100%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); min-width: 160px; z-index: 60; display: none; overflow: hidden; }
+.kebab-dropdown.open { display: block; }
+.kebab-dropdown button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 12px; font-family: inherit; color: var(--color-text); }
+.kebab-dropdown button:hover { background: var(--color-surface-hover); }
+.kebab-dropdown .delete-option { color: var(--status-no-show); }
+.kebab-dropdown .delete-option:hover { background: rgba(239,68,68,0.05); }
+
+/* ── Section 37: Schedule grid ── */
+.day-schedule { display: flex; flex-direction: column; }
+.schedule-row { display: flex; border-bottom: 1px solid var(--color-border-light); min-height: 32px; }
+.schedule-row .time-label { width: 60px; font-size: 11px; color: var(--color-text-muted); padding: 6px 8px; flex-shrink: 0; text-align: right; }
+.schedule-row .slots { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px; align-items: center; }
+.schedule-slot { padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; }
+.schedule-slot.shift { background: var(--color-primary-subtle); color: var(--color-primary-dark); }
+.schedule-slot.ride { background: rgba(245,158,11,0.1); color: var(--status-on-the-way); }
+.schedule-legend { display: flex; gap: 16px; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-muted); }
+.legend-color { width: 12px; height: 12px; border-radius: 3px; }
+.legend-color.shift { background: var(--color-primary-subtle); border: 1px solid var(--color-primary); }
+.legend-color.ride { background: rgba(245,158,11,0.1); border: 1px solid var(--status-on-the-way); }
+.grid-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.grid-table th, .grid-table td { border: 1px solid var(--color-border-light); padding: 4px 6px; text-align: center; }
+.grid-table th { background: var(--color-surface-hover); font-weight: 600; font-size: 11px; color: var(--color-text-secondary); }
+.grid-table td { vertical-align: top; }
+.grid-table .time-col { width: 60px; font-size: 11px; color: var(--color-text-muted); }
+.cell-stack { display: flex; flex-direction: column; gap: 2px; }
+.weekly-table-wrapper { overflow-x: auto; }
+.ride-chip { display: inline-flex; flex-direction: column; align-items: flex-start; padding: 2px 6px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 600; margin: 1px 0; }
+.ride-chip.status-pending { background: rgba(148,163,184,0.15); color: var(--status-pending); }
+.ride-chip.status-approved { background: rgba(59,130,246,0.1); color: var(--status-approved); }
+.ride-chip.status-scheduled { background: rgba(99,102,241,0.1); color: var(--status-scheduled); }
+.ride-chip.status-driver_on_the_way { background: rgba(245,158,11,0.1); color: var(--status-on-the-way); }
+.ride-chip.status-driver_arrived_grace { background: rgba(6,182,212,0.1); color: var(--status-grace); }
+.ride-chip.status-completed { background: rgba(16,185,129,0.1); color: var(--status-completed); }
+.ride-chip.status-no_show { background: rgba(239,68,68,0.1); color: var(--status-no-show); }
+.ride-chip .time { font-size: 9px; color: var(--color-text-muted); }
+
+/* ── Section 38: Shift editor grid ── */
+.shift-grid { display: grid; grid-template-columns: 60px repeat(5, 1fr); gap: 1px; background: var(--color-border-light); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+.shift-grid .header-cell { background: var(--color-surface-hover); padding: 6px; text-align: center; font-size: 11px; font-weight: 600; color: var(--color-text-secondary); }
+.shift-grid .time-cell { background: var(--color-surface); padding: 4px 6px; font-size: 10px; color: var(--color-text-muted); text-align: right; }
+.shift-grid .grid-cell { background: var(--color-surface); min-height: 20px; cursor: crosshair; transition: background 0.1s; }
+.shift-grid .grid-cell:hover { background: var(--color-primary-subtle); }
+.shift-grid .grid-cell.has-shift { background: var(--color-primary); opacity: 0.3; cursor: pointer; }
+.shift-grid .grid-cell.selected { background: var(--color-primary); opacity: 0.5; }
+
+/* ── Section 39: Semester / Wrapped ── */
+.semester-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.semester-period h4 { font-size: 14px; font-weight: 700; margin: 0 0 8px; }
+.semester-stat { display: inline-flex; flex-direction: column; margin-right: 20px; margin-bottom: 8px; }
+.semester-stat .stat-value { font-size: 24px; font-weight: 800; color: var(--color-text); }
+.semester-stat .stat-label { font-size: 11px; color: var(--color-text-muted); }
+.dart-wrapped { padding: 16px; background: var(--color-primary-subtle); border-radius: var(--radius-md); }
+.wrapped-big { font-size: 28px; font-weight: 800; color: var(--color-primary); margin-bottom: 8px; }
+.wrapped-line { font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; line-height: 1.6; }
+
+/* ── Section 40: Status legend (analytics) ── */
+.status-legend-row { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.status-legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--color-text-muted); }
+.status-legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); }
+.status-legend-dot.green { background: var(--status-completed); }
+.status-legend-dot.red { background: var(--status-no-show); }
+.status-legend-dot.orange { background: var(--status-on-the-way); }
+.status-legend-dot.gold { background: var(--color-accent); }
+
+/* ── Section 41: KPI analytics colors ── */
+.kpi-card--good { border-top: 3px solid var(--status-completed); }
+.kpi-card--warning { border-top: 3px solid var(--status-on-the-way); }
+.kpi-card--danger { border-top: 3px solid var(--status-no-show); }
+.kpi-card--neutral { border-top: 3px solid var(--color-border); }
+.kpi-value { font-size: 28px; font-weight: 800; }
+.kpi-label { font-size: 11px; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+/* ── Section 42: Drawer internal sections ── */
+.drawer-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0; }
+.drawer-section { margin-bottom: 20px; }
+.drawer-section-title { font-size: 13px; font-weight: 700; color: var(--color-text); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.drawer-field { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--color-border-light); font-size: 13px; }
+.drawer-field-label { color: var(--color-text-muted); }
+.drawer-field-value { font-weight: 600; }
+.drawer-divider { border: none; border-top: 1px solid var(--color-border); margin: 16px 0; }
+.drawer-danger-zone { padding: 12px; border: 1px solid var(--status-no-show); border-radius: var(--radius-md); background: rgba(239,68,68,0.03); }
+.drawer-noshows-banner { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 16px; }
+.drawer-noshows-banner.noshows-clear { background: rgba(16,185,129,0.08); }
+.drawer-noshows-banner.noshows-warn { background: rgba(245,158,11,0.08); }
+.drawer-noshows-banner.noshows-critical { background: rgba(239,68,68,0.08); }
+.drawer-noshows-count { font-size: 24px; font-weight: 800; }
+.drawer-noshows-label { font-size: 12px; color: var(--color-text-secondary); }
+
+/* ── Section 43: Drawer form inputs ── */
+.drawer-section label { display: block; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 8px; }
+.drawer-section input, .drawer-section select, .drawer-section textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; margin-top: 4px; }
+.drawer-section input:focus, .drawer-section select:focus, .drawer-section textarea:focus { outline: none; border-color: var(--color-primary); }
+
+/* ── Section 44: Profile ── */
+.profile-block { margin-bottom: 16px; }
+.profile-block strong { font-size: 16px; }
+
+/* ── Section 45: Role badges ── */
+.role-badge { display: inline-block; padding: 1px 8px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.role-badge.role-office { background: rgba(99,102,241,0.1); color: var(--status-scheduled); }
+.role-badge.role-driver { background: rgba(16,185,129,0.1); color: var(--status-completed); }
+.role-badge.role-rider { background: rgba(59,130,246,0.1); color: var(--status-approved); }
+
+/* ── Section 46: Admin user table helpers ── */
+.admin-name-primary { font-weight: 600; }
+.admin-name-secondary { font-size: 11px; color: var(--color-text-muted); }
+.admin-chevron { font-size: 16px; color: var(--color-text-muted); }
+
+/* ── Section 47: Email status ── */
+.email-status-badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; }
+.email-status-badge.active { background: rgba(16,185,129,0.1); color: var(--status-completed); }
+.email-status-badge.inactive { background: rgba(245,158,11,0.1); color: var(--status-on-the-way); }
+
+/* ── Section 48: Form grid ── */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.field-group { display: flex; flex-direction: column; }
+
+/* ── Section 49: Reassign select ── */
+.reassign-select { padding: 4px 8px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 12px; font-family: inherit; background: var(--color-surface); }
+
+/* ── Section 50: Modal overlay (legacy compat) ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 150; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal-overlay.hiding { opacity: 0; pointer-events: none; }
+.modal-box { background: var(--color-surface); border-radius: var(--radius-lg); padding: 24px; max-width: 420px; width: 90%; box-shadow: var(--shadow-lg); }
+.modal-box h3, .modal-title { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+.modal-box p, .modal-message { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 16px; line-height: 1.6; }
+.modal-box label { display: block; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 8px; }
+.modal-box input, .modal-box select, .modal-box textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; margin-top: 4px; }
+.modal-box input:focus, .modal-box select:focus, .modal-box textarea:focus { outline: none; border-color: var(--color-primary); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* ── Section 51: Legacy button compat ── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; line-height: 1.4; font-family: inherit; background: transparent; color: var(--color-text-secondary); border-color: var(--color-border); }
+.btn:hover { background: var(--color-surface-hover); }
+.btn.primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.btn.primary:hover { background: var(--color-primary-dark); }
+.btn.secondary { background: transparent; color: var(--color-text-secondary); border-color: var(--color-border); }
+.btn.danger { background: transparent; color: var(--status-no-show); border-color: var(--status-no-show); }
+.btn.danger:hover { background: rgba(239,68,68,0.05); }
+.btn.success { background: var(--status-completed); color: #fff; border-color: var(--status-completed); }
+.btn.success:hover { opacity: 0.9; }
+.btn.small { padding: 4px 10px; font-size: 11px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Section 52: Legacy status tag ── */
+.status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap; }
+.status-tag.pending { background: var(--status-pending); }
+.status-tag.approved { background: var(--status-approved); }
+.status-tag.scheduled { background: var(--status-scheduled); }
+.status-tag.driver_on_the_way { background: var(--status-on-the-way); }
+.status-tag.driver_arrived_grace { background: var(--status-grace); }
+.status-tag.completed { background: var(--status-completed); }
+.status-tag.no_show { background: var(--status-no-show); }
+.status-tag.denied { background: var(--status-denied); }
+.status-tag.cancelled { background: var(--status-cancelled); }
+
+/* ── Section 53: Legacy layout helpers ── */
+.flex-row { display: flex; align-items: center; }
+.small-text { font-size: 12px; color: var(--color-text-muted); }
+.item { padding: 10px 16px; border-bottom: 1px solid var(--color-border-light); font-size: 13px; position: relative; }
+.item:last-child { border-bottom: none; }
+.driver-card { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--color-border-light); cursor: pointer; transition: background 0.1s; }
+.driver-card:hover { background: var(--color-surface-hover); }
+.driver-card.selected { background: var(--color-primary-subtle); }
+.driver-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.driver-status-dot.active { background: var(--status-completed); }
+.driver-status-dot.inactive { background: var(--color-text-muted); }
+.driver-card-name { font-weight: 600; cursor: pointer; }
+.driver-card-info { font-size: 12px; color: var(--color-text-secondary); }
+
+/* ── Section 54: Toast compat (old utils.js) ── */
+.toast { position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%); padding: 10px 20px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; z-index: 200; transition: bottom 0.3s ease; box-shadow: var(--shadow-md); max-width: 400px; }
+.toast.show { bottom: 24px; }
+.toast-success { background: var(--status-completed); color: #fff; }
+.toast-error { background: var(--status-no-show); color: #fff; }
+.toast-warning { background: var(--status-on-the-way); color: #fff; }
+.toast-info { background: var(--color-primary); color: #fff; }
+
+/* ── Section 55: Empty state (old utils.js) ── */
+.empty-state { text-align: center; padding: 32px; color: var(--color-text-muted); }
+.empty-icon { font-size: 40px; margin-bottom: 8px; }
+.empty-title { font-size: 14px; font-weight: 600; color: var(--color-text-secondary); margin: 0 0 4px; }
+.empty-message { font-size: 12px; margin: 0 0 12px; }
+
+/* ── Section 56: Responsive ── */
 @media (max-width: 768px) {
   .ro-shell { grid-template-columns: var(--sidebar-collapsed) 1fr; }
   .ro-sidebar { width: var(--sidebar-collapsed); }

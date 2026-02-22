@@ -8,8 +8,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
-  <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
+  <script src="/usc_building_options.js"></script>
   <script src="/demo-config.js"></script>
 </head>
 <body>
@@ -97,43 +97,13 @@
             <div id="pending-queue-list" class="strip-list"></div>
           </div>
 
-          <!-- Active Drivers -->
+          <!-- Today's Board (Time Grid) -->
           <div class="ro-section">
             <div class="ro-section__header">
-              <h2 class="ro-section__title">Active Drivers</h2>
+              <h2 class="ro-section__title">Today's Board</h2>
+              <input type="date" id="dispatch-date" class="ro-input" style="width:auto;">
             </div>
-            <div id="driver-dashboard" class="strip-list"></div>
-          </div>
-
-          <!-- Driver detail (shown when driver selected) -->
-          <div class="ro-section" id="driver-detail" style="display:none;">
-            <div class="ro-section__header">
-              <h2 class="ro-section__title" id="driver-detail-title">Driver: &mdash;</h2>
-              <button class="ro-btn ro-btn--outline" id="admin-clock-toggle">Clock In</button>
-            </div>
-            <div id="driver-ride-list"></div>
-          </div>
-
-          <!-- All Active Rides (collapsible) -->
-          <div class="ro-section">
-            <div class="ro-section__header" style="cursor:pointer;" onclick="toggleAllActiveRides(this)">
-              <h2 class="ro-section__title">All Active Rides <span id="active-rides-count" class="text-muted text-sm"></span></h2>
-              <i class="ti ti-chevron-right" id="active-rides-chevron" style="transition:transform 0.2s;"></i>
-            </div>
-            <div id="all-active-rides" style="display:none;">
-              <div id="all-active-rides-list"></div>
-            </div>
-          </div>
-
-          <!-- Campus Map -->
-          <div class="ro-section">
-            <div class="ro-section__header">
-              <h2 class="ro-section__title">USC Campus Map</h2>
-              <a class="ro-btn ro-btn--outline ro-btn--sm" href="https://maps.usc.edu/" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i> Full Map</a>
-            </div>
-            <div style="border:1px solid var(--color-border); border-radius:var(--radius-md); overflow:hidden;">
-              <iframe src="https://maps.usc.edu/" title="USC Campus Map" style="width:100%; height:350px; border:none;"></iframe>
-            </div>
+            <div class="time-grid" id="dispatch-grid"></div>
           </div>
         </section>
 
@@ -146,24 +116,30 @@
           </div>
 
           <div class="sub-panel active" id="rides-active-view">
-            <div class="filter-bar">
-              <input type="text" id="ride-filter-input" class="ro-input" placeholder="Search rides by name, location, or status..." style="max-width:400px;">
+            <div class="filter-bar" id="rides-filter-bar">
+              <button class="filter-pill active" data-ride-status="all">All</button>
+              <button class="filter-pill" data-ride-status="pending">Pending</button>
+              <button class="filter-pill" data-ride-status="approved">Approved</button>
+              <button class="filter-pill" data-ride-status="scheduled">Scheduled</button>
+              <button class="filter-pill" data-ride-status="in_progress">In Progress</button>
+              <button class="filter-pill" data-ride-status="completed">Completed</button>
+              <button class="filter-pill" data-ride-status="no_show">No-Show</button>
+              <input type="date" id="rides-date-filter" class="ro-input" style="width:auto;">
+              <input type="text" id="ride-filter-input" class="ro-input" placeholder="Search..." style="max-width:200px;">
               <span class="text-sm text-muted" id="ride-filter-count"></span>
             </div>
             <div class="ro-section" id="sample-rides-card" data-dev-only hidden aria-hidden="true">
               <button id="load-sample-rides" class="ro-btn ro-btn--outline">Load Sample Rides (Dev)</button>
             </div>
-            <div class="ro-section" id="unassigned-list">
-              <div class="ro-section__header"><h3 class="ro-section__title">Unassigned Rides (Today)</h3></div>
-              <div id="unassigned-items"></div>
-            </div>
-            <div class="ro-section" id="pending-list">
-              <div class="ro-section__header"><h3 class="ro-section__title">Pending Requests</h3></div>
-              <div id="pending-items"></div>
-            </div>
-            <div class="ro-section" id="approved-list">
-              <div class="ro-section__header"><h3 class="ro-section__title">Approved / Scheduled</h3></div>
-              <div id="approved-items"></div>
+            <div class="ro-section">
+              <div class="ro-table-wrap">
+                <table class="ro-table" id="rides-table">
+                  <thead><tr>
+                    <th>Requested</th><th>Rider</th><th>Route</th><th>Status</th><th>Driver</th><th></th>
+                  </tr></thead>
+                  <tbody id="rides-tbody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -201,29 +177,7 @@
               <div id="employee-bar" class="employee-bar"></div>
             </div>
             <div class="ro-section">
-              <div class="flex items-center justify-between mb-16">
-                <h3 class="ro-section__title">Schedule View</h3>
-                <div class="flex gap-8">
-                  <button class="ro-btn ro-btn--outline ro-btn--sm active" data-schedule-mode="weekly" onclick="setScheduleMode('weekly')">Weekly</button>
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" data-schedule-mode="daily" onclick="setScheduleMode('daily')">Daily</button>
-                </div>
-              </div>
-              <div class="flex items-center justify-between mb-16">
-                <div class="flex gap-8">
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleWeek(-1)"><i class="ti ti-chevrons-left"></i> Prev Week</button>
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleDay(-1)"><i class="ti ti-chevron-left"></i> Prev Day</button>
-                </div>
-                <input type="date" id="schedule-date" class="ro-input" style="width:auto;" onchange="onScheduleDateChange()">
-                <div class="flex gap-8">
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleDay(1)">Next Day <i class="ti ti-chevron-right"></i></button>
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="changeScheduleWeek(1)">Next Week <i class="ti ti-chevrons-right"></i></button>
-                </div>
-              </div>
-              <div id="day-schedule" class="day-schedule"></div>
-              <div class="schedule-legend" style="margin-top:12px;">
-                <span class="legend-item"><span class="legend-color shift"></span> Driver on shift</span>
-                <span class="legend-item"><span class="legend-color ride"></span> Scheduled ride</span>
-              </div>
+              <div id="shift-calendar" style="padding:0;"></div>
             </div>
           </div>
 
