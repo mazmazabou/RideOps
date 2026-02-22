@@ -1,7 +1,7 @@
 // tests/uat.spec.js
 const { test, expect } = require("@playwright/test");
 
-const PASSWORD = process.env.TEST_PASSWORD || "dart123";
+const PASSWORD = process.env.TEST_PASSWORD || "demo123";
 
 // Seed users found in your server.js defaults (from your zip)
 const USERS = {
@@ -46,7 +46,7 @@ async function logout(page) {
   }
 }
 
-test.describe("DART UAT (Office / Rider / Driver)", () => {
+test.describe("RideOps UAT (Office / Rider / Driver)", () => {
   test("Office login loads core console", async ({ page }) => {
     await login(page, USERS.office);
 

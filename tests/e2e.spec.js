@@ -1,9 +1,9 @@
-// tests/e2e.spec.js — Comprehensive E2E test suite for DART Ops
+// tests/e2e.spec.js — Comprehensive E2E test suite for RideOps
 const { test, expect } = require('@playwright/test');
 
 // ─── Constants & Config ─────────────────────────────────────────────────────
 const BASE = process.env.BASE_URL || 'http://localhost:3000';
-const PASSWORD = process.env.TEST_PASSWORD || 'dart123';
+const PASSWORD = process.env.TEST_PASSWORD || 'demo123';
 
 const USERS = {
   office:  { username: 'office',  id: 'office', role: 'office' },
@@ -79,8 +79,8 @@ async function createRide(ctx, overrides) {
     riderName: 'Test Rider',
     riderEmail: USERS.rider1.email,
     riderPhone: '213-555-0199',
-    pickupLocation: 'Leavey Library',
-    dropoffLocation: 'Doheny Library',
+    pickupLocation: 'Main Library',
+    dropoffLocation: 'Student Union',
     requestedTime: nextServiceDateTime(),
     notes: 'E2E test ride',
     ...overrides,
@@ -161,7 +161,7 @@ test.describe('API: Auth', () => {
         email: `${unique}@test-e2e.com`,
         phone: '213-555-9999',
         password: 'testpass123',
-        uscId: '9999999901',
+        uscId: 'E2E9999901',
       },
     });
     // Signup may be disabled — skip cleanup if so
@@ -273,8 +273,8 @@ test.describe.serial('API: Admin User Management', () => {
     expect(users.length).toBeGreaterThanOrEqual(7);
   });
 
-  test('GET /api/admin/users/search finds mazen by USC ID', async () => {
-    const res = await officeCtx.get('/api/admin/users/search?usc_id=1000000001');
+  test('GET /api/admin/users/search finds mazen by member ID', async () => {
+    const res = await officeCtx.get('/api/admin/users/search?member_id=1000000001');
     expect(res.ok()).toBeTruthy();
     const user = await res.json();
     expect(user.username).toBe('mazen');
@@ -287,7 +287,7 @@ test.describe.serial('API: Admin User Management', () => {
         name: 'E2E Test Driver',
         email: `${unique}@test-e2e.com`,
         phone: '213-555-7777',
-        uscId: '8888888801',
+        uscId: 'E2E8888801',
         role: 'driver',
         password: 'testpass123',
       },
@@ -617,8 +617,8 @@ test.describe.serial('API: Recurring Rides', () => {
     const endDate = futureDateStr(14);
     const res = await riderCtx.post('/api/recurring-rides', {
       data: {
-        pickupLocation: 'Leavey Library',
-        dropoffLocation: 'Doheny Library',
+        pickupLocation: 'Main Library',
+        dropoffLocation: 'Student Union',
         timeOfDay: '10:00',
         startDate,
         endDate,
@@ -922,7 +922,7 @@ test.describe.serial('UI: Office Console', () => {
     await page.locator('button[data-subtarget="admin-create-view"]').click();
     await expect(page.locator('#admin-new-name')).toBeVisible();
     await expect(page.locator('#admin-new-email')).toBeVisible();
-    await expect(page.locator('#admin-new-uscid')).toBeVisible();
+    await expect(page.locator('#admin-new-memberid')).toBeVisible();
     await expect(page.locator('#admin-new-role')).toBeVisible();
     await expect(page.locator('#admin-create-btn')).toBeVisible();
   });
@@ -1134,8 +1134,8 @@ test.describe('API: Authorization & Validation', () => {
     d.setHours(10, 0, 0, 0);
     const res = await ctx.post('/api/rides', {
       data: {
-        pickupLocation: 'Leavey Library',
-        dropoffLocation: 'Doheny Library',
+        pickupLocation: 'Main Library',
+        dropoffLocation: 'Student Union',
         requestedTime: d.toISOString(),
       },
     });
@@ -1153,8 +1153,8 @@ test.describe('API: Authorization & Validation', () => {
     d.setHours(19, 30, 0, 0); // 7:30 PM — past 19:00
     const res = await ctx.post('/api/rides', {
       data: {
-        pickupLocation: 'Leavey Library',
-        dropoffLocation: 'Doheny Library',
+        pickupLocation: 'Main Library',
+        dropoffLocation: 'Student Union',
         requestedTime: d.toISOString(),
       },
     });

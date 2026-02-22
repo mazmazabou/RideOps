@@ -1,6 +1,7 @@
 // Demo data seeding script for DEMO_MODE
 // Exports seedDemoData(pool) — truncates transactional tables and seeds realistic sample data.
 // Users table is NOT touched — default users are seeded by server.js initDb().
+// Location names match default-locations.js (generic campus locations).
 
 async function seedDemoData(pool) {
   const q = (text, params) => pool.query(text, params);
@@ -51,10 +52,10 @@ async function seedDemoData(pool) {
   }
 
   const locations = [
-    'Leavey Library', 'Tutor Hall', 'Doheny Memorial Library', 'Galen Center',
-    'USC Village', 'Fertitta Hall', 'Tommy Trojan', 'Lyon Center',
-    'Viterbi School of Engineering', 'Annenberg School', 'Bovard Auditorium',
-    'Mudd Hall of Philosophy', 'Taper Hall', 'Kaprielian Hall'
+    'Main Library', 'Student Union', 'Engineering Hall', 'Science Building',
+    'Recreation Center', 'Business School', 'Administration Building', 'Health Center',
+    'Performing Arts Center', 'Dining Hall (North)', 'Gymnasium',
+    'Campus Bookstore', 'Parking Structure A', 'Transportation Hub'
   ];
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -178,13 +179,13 @@ async function seedDemoData(pool) {
   await q(
     `INSERT INTO recurring_rides (id, rider_id, pickup_location, dropoff_location, time_of_day, days_of_week, start_date, end_date, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [generateId('rec'), 'rider1', 'Leavey Library', 'Fertitta Hall', '09:00', [1,3,5], nextMonday.toISOString().slice(0,10), endDate.toISOString().slice(0,10), 'active']
+    [generateId('rec'), 'rider1', 'Main Library', 'Business School', '09:00', [1,3,5], nextMonday.toISOString().slice(0,10), endDate.toISOString().slice(0,10), 'active']
   );
 
   await q(
     `INSERT INTO recurring_rides (id, rider_id, pickup_location, dropoff_location, time_of_day, days_of_week, start_date, end_date, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-    [generateId('rec'), 'rider1', 'Tutor Hall', 'Galen Center', '14:00', [2,4], nextMonday.toISOString().slice(0,10), endDate.toISOString().slice(0,10), 'active']
+    [generateId('rec'), 'rider1', 'Student Union', 'Recreation Center', '14:00', [2,4], nextMonday.toISOString().slice(0,10), endDate.toISOString().slice(0,10), 'active']
   );
 
   // Set Tom's miss count to 1 for demo visibility
