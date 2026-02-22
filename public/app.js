@@ -819,10 +819,20 @@ function initShiftCalendar() {
     eventDrop: onShiftEventDrop,
     eventResize: onShiftEventResize,
     eventDidMount: onShiftEventMount,
-    eventColor: 'var(--color-primary)',
   });
   shiftCalendar.render();
 }
+
+const DRIVER_COLORS = [
+  '#4682B4', // SteelBlue
+  '#2E8B57', // SeaGreen
+  '#8B4513', // SaddleBrown
+  '#6A5ACD', // SlateBlue
+  '#CD853F', // Peru
+  '#20B2AA', // LightSeaTeal
+  '#B8860B', // DarkGoldenrod
+  '#9932CC', // DarkOrchid
+];
 
 function getShiftCalendarEvents() {
   const events = [];
@@ -836,6 +846,8 @@ function getShiftCalendarEvents() {
   shifts.forEach(s => {
     const emp = employees.find(e => e.id === s.employeeId);
     const name = emp?.name || 'Unknown';
+    const employeeIndex = employees.findIndex(e => e.id === s.employeeId);
+    const color = employeeIndex >= 0 ? DRIVER_COLORS[employeeIndex % DRIVER_COLORS.length] : '#94A3B8';
     // Map dayOfWeek (0=Mon) to date
     const eventDate = new Date(monday);
     eventDate.setDate(monday.getDate() + s.dayOfWeek);
@@ -845,7 +857,8 @@ function getShiftCalendarEvents() {
       title: name,
       start: `${dateStr}T${s.startTime}`,
       end: `${dateStr}T${s.endTime}`,
-      color: emp?.active ? '#4682B4' : '#94A3B8',
+      backgroundColor: color,
+      borderColor: color,
       extendedProps: { shiftId: s.id, employeeId: s.employeeId, notes: s.notes || '' }
     });
   });
@@ -2728,10 +2741,10 @@ function renderVehicleCards(vehicles) {
       actionButtons = `<button class="btn secondary small" onclick="reactivateVehicle('${v.id}', '${escapedName}')">Reactivate</button>`;
     } else if (v.rideCount > 0) {
       actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
-        <button class="btn secondary small" onclick="retireVehicle('${v.id}', '${escapedName}')">Retire</button>`;
+        <button class="btn secondary small" title="Mark this vehicle as no longer in service. History is preserved." onclick="retireVehicle('${v.id}', '${escapedName}')">Retire</button>`;
     } else {
       actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
-        <button class="btn danger small" onclick="deleteVehicle('${v.id}', '${escapedName}')">Delete</button>`;
+        <button class="btn danger small" title="Permanently remove this vehicle from the system. Use only if the vehicle was entered in error." onclick="deleteVehicle('${v.id}', '${escapedName}')">Delete</button>`;
     }
     return `<div class="vehicle-card${overdueClass}${retiredClass}">
       <div class="vehicle-name">${v.name}${retiredBadge}</div>
@@ -2954,27 +2967,44 @@ async function loadAllAnalytics() {
   ]);
 }
 
-async function logVehicleMaintenance(vehicleId) {
-  const confirmed = await showConfirmModal({
+function logVehicleMaintenance(vehicleId) {
+  const formHtml =
+    '<div style="margin-bottom:12px;">' +
+    '<label class="ro-label">What was serviced? <span style="color:var(--status-no-show)">*</span></label>' +
+    '<textarea class="ro-input" id="maintenance-notes" rows="3" placeholder="e.g. Oil change, brake inspection, tire rotation..."></textarea>' +
+    '</div>' +
+    '<div>' +
+    '<label class="ro-label">Mileage at service (optional)</label>' +
+    '<input type="number" class="ro-input" id="maintenance-mileage" placeholder="e.g. 12450">' +
+    '</div>';
+  showModalNew({
     title: 'Log Maintenance',
-    message: 'Mark this vehicle as maintained today?',
+    body: formHtml,
     confirmLabel: 'Log Maintenance',
-    cancelLabel: 'Cancel',
-    type: 'warning'
+    confirmClass: 'ro-btn--primary',
+    onConfirm: async function() {
+      const notes = document.getElementById('maintenance-notes')?.value?.trim();
+      const mileage = document.getElementById('maintenance-mileage')?.value?.trim();
+      if (!notes) {
+        showToast('Please describe what was serviced', 'error');
+        return;
+      }
+      const payload = { notes };
+      if (mileage) payload.mileage = Number(mileage);
+      const res = await fetch(`/api/vehicles/${vehicleId}/maintenance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        showToast(err.error || 'Failed to log maintenance', 'error');
+      } else {
+        showToast('Maintenance logged', 'success');
+        loadFleetVehicles();
+      }
+    }
   });
-  if (!confirmed) return;
-  const res = await fetch(`/api/vehicles/${vehicleId}/maintenance`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({})
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    showToast(err.error || 'Failed to log maintenance', 'error');
-  } else {
-    showToast('Maintenance logged', 'success');
-    loadFleetVehicles();
-  }
 }
 
 async function deleteVehicle(vehicleId, vehicleName) {
@@ -3013,6 +3043,20 @@ async function retireVehicle(vehicleId, vehicleName) {
     showToast('Vehicle retired', 'success');
     loadFleetVehicles();
   }
+}
+
+function showFleetStatusInfo() {
+  showModalNew({
+    title: 'Vehicle Statuses',
+    body: '<div style="font-size:13px; line-height:1.7;">' +
+      '<strong>Active</strong> — in service and available for assignment.<br>' +
+      '<strong>Retired</strong> — removed from service, ride history preserved.<br>' +
+      '<strong>Maintenance</strong> — temporarily unavailable for assignment.<br><br>' +
+      'Use <strong>Delete</strong> only to remove incorrectly entered vehicles.' +
+      '</div>',
+    confirmLabel: 'Got it',
+    confirmClass: 'ro-btn--primary',
+  });
 }
 
 async function reactivateVehicle(vehicleId, vehicleName) {

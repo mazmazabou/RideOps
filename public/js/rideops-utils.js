@@ -61,7 +61,7 @@ function showModalNew(opts) {
     '</div></div>';
   document.body.appendChild(overlay);
   overlay.querySelector('[data-action="cancel"]').onclick = function() { overlay.remove(); };
-  overlay.querySelector('[data-action="confirm"]').onclick = function() { overlay.remove(); if (onConfirm) onConfirm(); };
+  overlay.querySelector('[data-action="confirm"]').onclick = function() { if (onConfirm) onConfirm(); overlay.remove(); };
   overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
 }
 

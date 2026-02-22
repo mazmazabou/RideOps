@@ -1439,14 +1439,15 @@ app.post('/api/vehicles/:id/retire', requireOffice, async (req, res) => {
 });
 
 app.post('/api/vehicles/:id/maintenance', requireOffice, async (req, res) => {
-  const { notes } = req.body;
+  const { notes, mileage } = req.body;
   const result = await query(
     `UPDATE vehicles SET
        last_maintenance_date = CURRENT_DATE,
-       notes = COALESCE($1, notes)
-     WHERE id = $2
+       notes = COALESCE($1, notes),
+       total_miles = COALESCE($2, total_miles)
+     WHERE id = $3
      RETURNING *`,
-    [notes || null, req.params.id]
+    [notes || null, mileage != null ? mileage : null, req.params.id]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'Vehicle not found' });
   res.json(result.rows[0]);

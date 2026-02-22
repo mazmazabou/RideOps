@@ -97,7 +97,7 @@
           <label class="ro-label">To</label>
           <select id="dropoff-location" class="ro-select"><option value="">Select dropoff</option></select>
         </div>
-        <button class="ro-btn ro-btn--primary ro-btn--full" id="step1-next" disabled>NEXT <i class="ti ti-arrow-right"></i></button>
+        <button class="ro-btn ro-btn--primary ro-btn--full" id="step1-next">NEXT <i class="ti ti-arrow-right"></i></button>
       </div>
 
       <!-- Step 2: When -->
@@ -239,13 +239,24 @@
       var step2Next = document.getElementById('step2-next');
       var rideTime = document.getElementById('ride-time');
 
-      function checkStep1() {
-        step1Next.disabled = !(pickupSel.value && dropoffSel.value);
-      }
-      pickupSel.onchange = checkStep1;
-      dropoffSel.onchange = checkStep1;
+      pickupSel.onchange = function() { pickupSel.style.borderColor = ''; };
+      dropoffSel.onchange = function() { dropoffSel.style.borderColor = ''; };
 
-      step1Next.onclick = function() { goToStep(2); };
+      step1Next.onclick = function() {
+        if (!pickupSel.value) {
+          pickupSel.style.borderColor = 'var(--status-no-show)';
+          showToastNew('Please select a pickup location', 'error');
+          return;
+        }
+        if (!dropoffSel.value) {
+          dropoffSel.style.borderColor = 'var(--status-no-show)';
+          showToastNew('Please select a dropoff location', 'error');
+          return;
+        }
+        pickupSel.style.borderColor = '';
+        dropoffSel.style.borderColor = '';
+        goToStep(2);
+      };
       document.getElementById('step2-back').onclick = function() { goToStep(1); };
       document.getElementById('step3-back').onclick = function() { goToStep(2); };
 
@@ -380,7 +391,6 @@
         document.getElementById('notes').value = '';
         selectedDate = null;
         document.querySelectorAll('#date-chips .filter-pill').forEach(function(p) { p.classList.remove('active'); });
-        document.getElementById('step1-next').disabled = true;
         goToStep(1);
         // Switch to My Rides
         switchToTab('myrides-panel');
@@ -416,8 +426,12 @@
     }
 
     function autoSwitchToActiveRide() {
-      var active = allRides.filter(function(r) { return isActiveStatus(r.status); });
-      if (active.length > 0) switchToTab('myrides-panel');
+      var hasActiveRide = allRides.some(function(r) { return isActiveStatus(r.status); });
+      if (hasActiveRide) {
+        switchToTab('myrides-panel');
+      } else {
+        switchToTab('book-panel');
+      }
     }
 
     function switchToTab(targetId) {

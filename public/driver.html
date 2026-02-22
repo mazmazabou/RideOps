@@ -254,7 +254,7 @@
         <span class="fw-700" style="font-size:14px;">You're Online</span>
       </div>
       ${renderVehicleSelector()}
-      <button class="ro-btn ro-btn--outline ro-btn--action ro-btn--full" onclick="toggleClock()" style="margin-bottom:24px;"><i class="ti ti-plug-off"></i> CLOCK OUT</button>
+      <button class="ro-btn ro-btn--action ro-btn--full" onclick="toggleClock()" style="background:transparent; color:var(--status-no-show); border:2px solid var(--status-no-show); margin-bottom:24px;"><i class="ti ti-plug-off"></i> CLOCK OUT</button>
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
         <span class="fw-700" style="font-size:15px;">Available Rides</span>
         <span class="text-xs text-muted">${availableRides.length} ${pluralize(availableRides.length, 'ride')}</span>
