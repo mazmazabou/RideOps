@@ -1164,3 +1164,192 @@ test.describe('API: Authorization & Validation', () => {
     await ctx.dispose();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// API: Clock Events & Tardiness (serial)
+// ═══════════════════════════════════════════════════════════════════════════
+test.describe.serial('API: Clock Events & Tardiness', () => {
+  let ctx;
+  let shiftId;
+
+  test.beforeAll(async ({ playwright }) => {
+    ctx = await apiContext(playwright, 'office');
+    // Ensure driver1 is clocked out for a clean slate
+    await ctx.post('/api/employees/clock-out', { data: { employeeId: USERS.driver1.id } }).catch(() => {});
+    // Create a shift for today with startTime 08:00 so tardiness > 0 when clocking in later
+    const todayDow = (new Date().getDay() + 6) % 7; // 0=Mon … 4=Fri
+    const res = await ctx.post('/api/shifts', {
+      data: { employeeId: USERS.driver1.id, dayOfWeek: todayDow, startTime: '08:00', endTime: '17:00' },
+    });
+    expect(res.ok()).toBeTruthy();
+    const shift = await res.json();
+    shiftId = shift.id;
+  });
+
+  test.afterAll(async () => {
+    await ctx.post('/api/employees/clock-out', { data: { employeeId: USERS.driver1.id } }).catch(() => {});
+    if (shiftId) await ctx.delete(`/api/shifts/${shiftId}`).catch(() => {});
+    await ctx.dispose();
+  });
+
+  test('clock-in creates clock event', async () => {
+    const res = await ctx.post('/api/employees/clock-in', {
+      data: { employeeId: USERS.driver1.id },
+    });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.clockEvent).toBeTruthy();
+    expect(body.clockEvent).toHaveProperty('id');
+    expect(body.clockEvent).toHaveProperty('employee_id', USERS.driver1.id);
+    expect(body.clockEvent).toHaveProperty('event_date');
+    expect(body.clockEvent).toHaveProperty('clock_in_at');
+    expect(body.clockEvent.tardiness_minutes).toBeGreaterThanOrEqual(0);
+    expect(body.clockEvent.clock_out_at).toBeNull();
+  });
+
+  test('clock-in is backward compatible', async () => {
+    // Clock out and in again to get a fresh response
+    await ctx.post('/api/employees/clock-out', { data: { employeeId: USERS.driver1.id } });
+    const res = await ctx.post('/api/employees/clock-in', {
+      data: { employeeId: USERS.driver1.id },
+    });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.active).toBeTruthy();
+    expect(body).toHaveProperty('id');
+    expect(body).toHaveProperty('username');
+    expect(body).toHaveProperty('name');
+    expect(body).toHaveProperty('email');
+    expect(body.role).toBe('driver');
+  });
+
+  test('today-status shows clock events for driver', async () => {
+    const res = await ctx.get('/api/employees/today-status');
+    expect(res.ok()).toBeTruthy();
+    const drivers = await res.json();
+    expect(Array.isArray(drivers)).toBeTruthy();
+    const d1 = drivers.find(d => d.id === USERS.driver1.id);
+    expect(d1).toBeTruthy();
+    expect(d1.todayClockEvents.length).toBeGreaterThanOrEqual(1);
+    expect(d1.todayClockEvents[0].employee_id).toBe(USERS.driver1.id);
+  });
+
+  test('today-status includes shifts', async () => {
+    const res = await ctx.get('/api/employees/today-status');
+    expect(res.ok()).toBeTruthy();
+    const drivers = await res.json();
+    const d1 = drivers.find(d => d.id === USERS.driver1.id);
+    expect(d1).toBeTruthy();
+    expect(Array.isArray(d1.todayShifts)).toBeTruthy();
+  });
+
+  test('individual tardiness returns correct shape', async () => {
+    const res = await ctx.get(`/api/employees/${USERS.driver1.id}/tardiness`);
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body).toHaveProperty('driver');
+    expect(body).toHaveProperty('summary');
+    expect(body).toHaveProperty('events');
+    expect(Array.isArray(body.events)).toBeTruthy();
+    // Summary has all 6 fields
+    const s = body.summary;
+    expect(s).toHaveProperty('totalClockIns');
+    expect(s).toHaveProperty('tardyCount');
+    expect(s).toHaveProperty('onTimeCount');
+    expect(s).toHaveProperty('tardyRate');
+    expect(s).toHaveProperty('avgTardinessMinutes');
+    expect(s).toHaveProperty('maxTardinessMinutes');
+    expect(s.totalClockIns).toBeGreaterThanOrEqual(1);
+  });
+
+  test('tardiness with date filter returns events', async () => {
+    const res = await ctx.get(`/api/employees/${USERS.driver1.id}/tardiness?from=2020-01-01&to=2099-12-31`);
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.events.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('analytics tardiness returns correct shape', async () => {
+    const res = await ctx.get('/api/analytics/tardiness');
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body).toHaveProperty('summary');
+    expect(body).toHaveProperty('byDriver');
+    expect(body).toHaveProperty('byDayOfWeek');
+    expect(body).toHaveProperty('dailyTrend');
+    expect(Array.isArray(body.byDriver)).toBeTruthy();
+    expect(Array.isArray(body.byDayOfWeek)).toBeTruthy();
+    expect(Array.isArray(body.dailyTrend)).toBeTruthy();
+  });
+
+  test('analytics tardiness summary has correct fields', async () => {
+    const res = await ctx.get('/api/analytics/tardiness');
+    expect(res.ok()).toBeTruthy();
+    const { summary } = await res.json();
+    expect(summary).toHaveProperty('totalClockIns');
+    expect(summary).toHaveProperty('tardyCount');
+    expect(summary).toHaveProperty('onTimeCount');
+    expect(summary).toHaveProperty('tardyRate');
+    expect(summary).toHaveProperty('avgTardinessMinutes');
+    expect(summary).toHaveProperty('maxTardinessMinutes');
+    expect(summary.totalClockIns).toBeGreaterThanOrEqual(1);
+  });
+
+  test('clock-out closes clock event', async () => {
+    const res = await ctx.post('/api/employees/clock-out', {
+      data: { employeeId: USERS.driver1.id },
+    });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.clockEvent).toBeTruthy();
+    expect(body.clockEvent.clock_out_at).not.toBeNull();
+  });
+
+  test('clock-out is backward compatible', async () => {
+    // Clock in then out to get a fresh clock-out response
+    await ctx.post('/api/employees/clock-in', { data: { employeeId: USERS.driver1.id } });
+    const res = await ctx.post('/api/employees/clock-out', {
+      data: { employeeId: USERS.driver1.id },
+    });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.active).toBeFalsy();
+    expect(body).toHaveProperty('id');
+    expect(body).toHaveProperty('username');
+    expect(body).toHaveProperty('name');
+    expect(body).toHaveProperty('email');
+    expect(body.role).toBe('driver');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// API: Clock Events & Tardiness Auth Guards
+// ═══════════════════════════════════════════════════════════════════════════
+test.describe('API: Clock Events & Tardiness Auth Guards', () => {
+  test('today-status requires auth', async ({ playwright }) => {
+    const ctx = await playwright.request.newContext({ baseURL: BASE });
+    const res = await ctx.get('/api/employees/today-status', {
+      headers: { Accept: 'application/json' },
+    });
+    expect(res.status()).toBe(403);
+    await ctx.dispose();
+  });
+
+  test('individual tardiness requires office role', async ({ playwright }) => {
+    const ctx = await apiContext(playwright, USERS.driver1.username);
+    const res = await ctx.get(`/api/employees/${USERS.driver1.id}/tardiness`, {
+      headers: { Accept: 'application/json' },
+    });
+    expect(res.status()).toBe(403);
+    await ctx.dispose();
+  });
+
+  test('analytics tardiness requires office role', async ({ playwright }) => {
+    const ctx = await apiContext(playwright, USERS.driver1.username);
+    const res = await ctx.get('/api/analytics/tardiness', {
+      headers: { Accept: 'application/json' },
+    });
+    expect(res.status()).toBe(403);
+    await ctx.dispose();
+  });
+});
