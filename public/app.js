@@ -2099,7 +2099,7 @@ function renderDispatchSummary() {
   const today = getTodayLocalDate();
   const activeDrivers = employees.filter(e => e.active).length;
   const activeRides = rides.filter(r => ['scheduled','driver_on_the_way','driver_arrived_grace'].includes(r.status) && r.requestedTime?.startsWith(today)).length;
-  const pendingRides = rides.filter(r => r.status === 'approved' && !r.assignedDriverId && r.requestedTime?.startsWith(today)).length;
+  const pendingRides = rides.filter(r => r.status === 'pending').length;
   const completedToday = rides.filter(r => r.status === 'completed' && r.requestedTime?.startsWith(today)).length;
   const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
   el('dispatch-active-drivers', activeDrivers);
