@@ -2227,22 +2227,33 @@ function renderDispatchGrid() {
 }
 
 function buildDriverGridRow(driver, driverRides, cols, startHour, gridColStyle, isActive) {
-  const dotClass = isActive ? 'time-grid__driver-dot--online' : 'time-grid__driver-dot--offline';
-  let html = `<div class="time-grid__row" style="${gridColStyle}${!isActive ? ';opacity:0.5;' : ''}">`;
-  html += `<div class="time-grid__driver"><span class="time-grid__driver-dot ${dotClass}"></span><span class="clickable-name" data-user="${driver.id}">${driver.name}</span></div>`;
-
-  // Find driver's shifts for the selected day
+  // Find driver's shifts for the selected day (computed before row div so we can detect tardiness)
   const dateInput = document.getElementById('dispatch-date');
   const selectedDate = dateInput?.value ? parseDateInputLocal(dateInput.value) : new Date();
   const dayOfWeek = selectedDate ? ((selectedDate.getDay() + 6) % 7) : ((new Date().getDay() + 6) % 7); // Mon=0
   const currentWeekStart = formatDateInputLocal(getMondayOfWeek(selectedDate));
 
-  // Shift bars (absolutely positioned overlays)
   const driverShifts = shifts.filter(s =>
     s.employeeId === driver.id &&
     s.dayOfWeek === dayOfWeek &&
     (!s.weekStart || s.weekStart.slice(0, 10) === currentWeekStart)
   );
+
+  // Tardiness detection: not clocked in + viewing today + currently within a shift window
+  const isToday = formatDateInputLocal(selectedDate) === getTodayLocalDate();
+  const isTardy = !isActive && isToday && driverShifts.some(s => {
+    const [sh, sm] = s.startTime.split(':').map(Number);
+    const [eh, em] = s.endTime.split(':').map(Number);
+    const now = toLADate(new Date());
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    return nowMins >= (sh * 60 + sm) && nowMins < (eh * 60 + em);
+  });
+
+  const dotClass = isActive ? 'time-grid__driver-dot--online' : 'time-grid__driver-dot--offline';
+  const tardyClass = isTardy ? ' time-grid__row--tardy' : '';
+  const rowOpacity = (!isActive && !isTardy) ? ';opacity:0.5;' : '';
+  let html = `<div class="time-grid__row${tardyClass}" style="${gridColStyle}${rowOpacity}">`;
+  html += `<div class="time-grid__driver"><span class="time-grid__driver-dot ${dotClass}"></span><span class="clickable-name" data-user="${driver.id}">${driver.name}</span></div>`;
 
   driverShifts.forEach(s => {
     const [sh, sm] = s.startTime.split(':').map(Number);
