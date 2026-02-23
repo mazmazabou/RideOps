@@ -383,8 +383,10 @@
         initBottomTabs();
         await loadProfile();
         await loadData();
-        setInterval(loadData, 3000);
-        setInterval(updateGraceTimers, 1000);
+        window._pollIntervals = [
+          setInterval(loadData, 3000),
+          setInterval(updateGraceTimers, 1000)
+        ];
       } catch {
         window.location.href = '/login';
       }
@@ -403,6 +405,7 @@
         render();
       } catch (e) {
         console.warn('Failed to load data:', e);
+        showToastNew('Unable to refresh data — check your connection', 'error');
       }
     }
 
@@ -415,7 +418,9 @@
         document.getElementById('profile-username').value = me.username || '';
         document.getElementById('profile-name').value = me.name || '';
         document.getElementById('profile-phone').value = me.phone || '';
-      } catch {}
+      } catch (e) {
+        console.warn('Failed to load profile:', e);
+      }
     }
 
     async function saveProfile() {
@@ -644,6 +649,10 @@
     }
 
     async function logout() {
+      if (window._pollIntervals) {
+        window._pollIntervals.forEach(id => clearInterval(id));
+        window._pollIntervals = [];
+      }
       await fetch('/api/auth/logout', { method: 'POST' });
       window.location.href = '/login';
     }
