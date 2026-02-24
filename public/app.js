@@ -140,7 +140,7 @@ async function loadRides() {
     if (res.ok) rides = await res.json();
   } catch (e) { console.error('Failed to load rides', e); }
   renderRideLists();
-  renderRideScheduleGrid();
+  await renderRideScheduleGrid();
   renderDriverConsole();
 }
 
@@ -805,13 +805,13 @@ async function clockEmployee(id, isIn) {
 }
 
 // ----- Schedule Grid -----
-function generateTimeSlots() {
+function generateTimeSlots(startHour = 8, endHour = 19) {
   const slots = [];
-  for (let hour = 8; hour < 19; hour++) {
+  for (let hour = startHour; hour < endHour; hour++) {
     slots.push(`${String(hour).padStart(2, '0')}:00`);
     slots.push(`${String(hour).padStart(2, '0')}:30`);
   }
-  slots.push('19:00');
+  slots.push(`${String(endHour).padStart(2, '0')}:00`);
   return slots;
 }
 
@@ -1315,17 +1315,28 @@ function pickEmployeeForShift() {
   });
 }
 
-function renderRideScheduleGrid() {
+async function renderRideScheduleGrid() {
   const grid = document.getElementById('ride-schedule-grid');
   if (!grid) return;
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-  const timeSlots = generateTimeSlots();
+
+  const cfg = await getOpsConfig();
+  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number).sort((a, b) => a - b);
+  const startHour = parseInt(String(cfg.service_hours_start || '08:00').split(':')[0], 10);
+  const endHour = parseInt(String(cfg.service_hours_end || '19:00').split(':')[0], 10);
+
+  const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const weekDates = getWeekDates(rideScheduleAnchor); // returns Mon–Sun (7 dates)
+
+  const days = opDays.map(i => ALL_DAYS[i]);
+  const activeDates = opDays.map(i => weekDates[i]);
+
+  const timeSlots = generateTimeSlots(startHour, endHour);
   const slotMap = {};
-  const weekDates = getWeekDates(rideScheduleAnchor);
-  const weekStart = new Date(weekDates[0]);
-  weekStart.setHours(0,0,0,0);
-  const weekEnd = new Date(weekDates[4]);
-  weekEnd.setHours(23,59,59,999);
+
+  const weekStart = new Date(activeDates[0]);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(activeDates[activeDates.length - 1]);
+  weekEnd.setHours(23, 59, 59, 999);
 
   rides.forEach((ride) => {
     if (!ride.requestedTime) return;
@@ -1333,14 +1344,17 @@ function renderRideScheduleGrid() {
     if (isNaN(date.getTime())) return;
     if (date < weekStart || date > weekEnd) return;
     const la = toLADate(date);
-    const dayIdx = la.getDay() - 1; // Monday = 0
-    if (dayIdx < 0 || dayIdx > 4) return;
+    // Convert JS day (0=Sun) to our day index (0=Mon...6=Sun)
+    const jsDay = la.getDay();
+    const ourDay = (jsDay + 6) % 7;
+    const colIdx = opDays.indexOf(ourDay);
+    if (colIdx < 0) return; // ride falls on a non-operating day
 
     const hour = la.getHours();
     const minute = la.getMinutes();
-    if (hour < 8 || hour > 19 || (hour === 19 && minute > 0)) return;
+    if (hour < startHour || hour > endHour || (hour === endHour && minute > 0)) return;
     const { slot, offset } = getSlotInfo(date);
-    const key = `${slot}-${dayIdx}`;
+    const key = `${slot}-${colIdx}`;
     if (!slotMap[key]) slotMap[key] = [];
     slotMap[key].push({ ...ride, offset });
   });
@@ -1354,15 +1368,15 @@ function renderRideScheduleGrid() {
 
   let html = '<table class="grid-table ride-schedule-table"><thead><tr><th>Time</th>';
   days.forEach((day, idx) => {
-    const label = `${day} (${formatShortDate(weekDates[idx])})`;
+    const label = `${day} (${formatShortDate(activeDates[idx])})`;
     html += `<th>${label}</th>`;
   });
   html += '</tr></thead><tbody>';
 
   timeSlots.forEach((slot) => {
     html += `<tr><td>${slot}</td>`;
-    days.forEach((_, dayIdx) => {
-      const ridesForCell = slotMap[`${slot}-${dayIdx}`] || [];
+    days.forEach((_, colIdx) => {
+      const ridesForCell = slotMap[`${slot}-${colIdx}`] || [];
       const content = ridesForCell.length
         ? ridesForCell
             .map((ride) => {
@@ -2633,7 +2647,7 @@ function getWeekDates(selectedDate) {
   const diffToMonday = (jsDay + 6) % 7;
   const monday = new Date(date);
   monday.setDate(date.getDate() - diffToMonday);
-  return Array.from({ length: 5 }, (_, idx) => {
+  return Array.from({ length: 7 }, (_, idx) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + idx);
     return d;
@@ -2687,10 +2701,10 @@ function updateRideWeekLabel() {
   label.textContent = `Week of ${formatShortDate(start)} - ${formatShortDate(end)}`;
 }
 
-function changeRideWeek(delta) {
+async function changeRideWeek(delta) {
   rideScheduleAnchor.setDate(rideScheduleAnchor.getDate() + delta * 7);
   updateRideWeekLabel();
-  renderRideScheduleGrid();
+  await renderRideScheduleGrid();
 }
 
 function isRenderableRideStatus(status) {
