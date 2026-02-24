@@ -2,6 +2,16 @@
 // UTILITY FUNCTIONS
 // ============================================================================
 
+// Handle 401 session expiry on API responses — returns true if session expired
+function handleSessionExpiry(res) {
+  if (res.status === 401) {
+    showToast('Your session has expired. Please log in again.', 'error');
+    setTimeout(() => { window.location.href = '/login'; }, 2000);
+    return true;
+  }
+  return false;
+}
+
 // Loading state management
 function showLoader(containerId, message = 'Loading...') {
   const el = document.getElementById(containerId);
@@ -884,6 +894,30 @@ async function initShiftCalendar() {
     eventDidMount: onShiftEventMount,
   });
   shiftCalendar.render();
+}
+
+async function refreshCalendarSettings() {
+  if (!shiftCalendar) return;
+  try {
+    invalidateOpsConfig();
+    const cfg = await getOpsConfig();
+    const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+    const hiddenDays = [];
+    for (let d = 0; d < 7; d++) {
+      if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
+    }
+    const [startH] = String(cfg.service_hours_start || '08:00').split(':').map(Number);
+    const [endH] = String(cfg.service_hours_end || '19:00').split(':').map(Number);
+    const slotMin = String(Math.max(0, startH - 1)).padStart(2, '0') + ':00:00';
+    const slotMax = String(Math.min(24, endH + 1)).padStart(2, '0') + ':00:00';
+
+    shiftCalendar.setOption('slotMinTime', slotMin);
+    shiftCalendar.setOption('slotMaxTime', slotMax);
+    shiftCalendar.setOption('hiddenDays', hiddenDays);
+    shiftCalendar.refetchEvents();
+  } catch (e) {
+    console.warn('Failed to refresh calendar settings:', e);
+  }
 }
 
 const DRIVER_COLORS = [
@@ -3525,6 +3559,14 @@ async function loadBusinessRules() {
     // Day pill toggle behavior
     container.querySelectorAll('.day-pill-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        const isActive = btn.classList.contains('ro-btn--primary');
+        if (isActive) {
+          const activeCount = container.querySelectorAll('.day-pill-btn.ro-btn--primary').length;
+          if (activeCount <= 1) {
+            showToast('At least one operating day must be selected', 'error');
+            return;
+          }
+        }
         btn.classList.toggle('ro-btn--primary');
         btn.classList.toggle('ro-btn--outline');
       });
@@ -3545,6 +3587,32 @@ async function saveBusinessRules() {
   document.querySelectorAll('.day-pill-btn.ro-btn--primary').forEach(btn => {
     activeDays.push(Number(btn.dataset.day));
   });
+
+  // Client-side validation
+  if (activeDays.length === 0) {
+    showToast('At least one operating day must be selected', 'error');
+    return;
+  }
+
+  const startInput = document.querySelector('[data-key="service_hours_start"]');
+  const endInput = document.querySelector('[data-key="service_hours_end"]');
+  if (startInput && endInput && startInput.value >= endInput.value) {
+    showToast('Service hours start must be earlier than end time', 'error');
+    return;
+  }
+
+  const graceInput = document.querySelector('[data-key="grace_period_minutes"]');
+  if (graceInput && (isNaN(parseInt(graceInput.value)) || parseInt(graceInput.value) < 1)) {
+    showToast('Grace period must be at least 1 minute', 'error');
+    return;
+  }
+
+  const strikesInput = document.querySelector('[data-key="max_no_show_strikes"]');
+  if (strikesInput && (isNaN(parseInt(strikesInput.value)) || parseInt(strikesInput.value) < 1)) {
+    showToast('Max no-show strikes must be at least 1', 'error');
+    return;
+  }
+
   updates.push({ key: 'operating_days', value: activeDays.sort().join(',') });
 
   // Collect all other settings
@@ -3566,16 +3634,17 @@ async function saveBusinessRules() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
     });
-    if (!res.ok) throw new Error('Save failed');
+    if (handleSessionExpiry(res)) return;
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || 'Failed to save business rules', 'error');
+      return;
+    }
     showToast('Business rules saved', 'success');
     // Invalidate cached ops config
     if (typeof invalidateOpsConfig === 'function') invalidateOpsConfig();
-    // Refresh calendar if it's visible
-    if (shiftCalendar) {
-      shiftCalendar.destroy();
-      shiftCalendar = null;
-      initShiftCalendar();
-    }
+    // Refresh calendar settings dynamically
+    refreshCalendarSettings();
   } catch (err) {
     showToast('Failed to save business rules', 'error');
     console.error('saveBusinessRules error:', err);
@@ -3710,7 +3779,12 @@ async function saveNotificationPreferences() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preferences })
     });
-    if (!res.ok) throw new Error('Save failed');
+    if (handleSessionExpiry(res)) return;
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showToastNew(data.error || 'Failed to save preferences', 'error');
+      return;
+    }
     showToastNew('Notification preferences saved', 'success');
   } catch (e) {
     showToastNew('Failed to save preferences', 'error');
@@ -3885,7 +3959,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Fix FullCalendar day header overlap when Staff panel first becomes visible
   document.querySelector('.ro-nav-item[data-target="staff-panel"]')?.addEventListener('click', () => {
-    if (shiftCalendar) requestAnimationFrame(() => shiftCalendar.updateSize());
+    if (shiftCalendar) {
+      requestAnimationFrame(() => shiftCalendar.updateSize());
+      refreshCalendarSettings();
+    }
   });
 
   window._pollIntervals = [

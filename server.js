@@ -583,8 +583,8 @@ function generateRecurringDates(startDate, endDate, days) {
 // ----- Auth middleware -----
 async function requireAuth(req, res, next) {
   if (!req.session.userId) {
-    if (req.xhr || req.headers.accept?.includes('application/json')) {
-      return res.status(401).json({ error: 'Not authenticated' });
+    if (req.path.startsWith('/api/') || req.xhr || req.headers.accept?.includes('application/json')) {
+      return res.status(401).json({ error: 'Not authenticated', code: 'SESSION_EXPIRED' });
     }
     return res.redirect('/login');
   }
@@ -592,8 +592,8 @@ async function requireAuth(req, res, next) {
   const userCheck = await query('SELECT id FROM users WHERE id = $1', [req.session.userId]);
   if (!userCheck.rowCount) {
     req.session.destroy(() => {});
-    if (req.xhr || req.headers.accept?.includes('application/json')) {
-      return res.status(401).json({ error: 'User account no longer exists' });
+    if (req.path.startsWith('/api/') || req.xhr || req.headers.accept?.includes('application/json')) {
+      return res.status(401).json({ error: 'User account no longer exists', code: 'SESSION_EXPIRED' });
     }
     return res.redirect('/login');
   }
@@ -602,7 +602,7 @@ async function requireAuth(req, res, next) {
 
 function requireOffice(req, res, next) {
   if (!req.session.userId || req.session.role !== 'office') {
-    if (req.xhr || req.headers.accept?.includes('application/json')) {
+    if (req.path.startsWith('/api/') || req.xhr || req.headers.accept?.includes('application/json')) {
       return res.status(403).json({ error: 'Office access required' });
     }
     return res.redirect('/login');
@@ -612,7 +612,7 @@ function requireOffice(req, res, next) {
 
 function requireStaff(req, res, next) {
   if (!req.session.userId || (req.session.role !== 'office' && req.session.role !== 'driver')) {
-    if (req.xhr || req.headers.accept?.includes('application/json')) {
+    if (req.path.startsWith('/api/') || req.xhr || req.headers.accept?.includes('application/json')) {
       return res.status(403).json({ error: 'Staff access required' });
     }
     return res.redirect('/login');
@@ -622,7 +622,7 @@ function requireStaff(req, res, next) {
 
 function requireRider(req, res, next) {
   if (!req.session.userId || req.session.role !== 'rider') {
-    if (req.xhr || req.headers.accept?.includes('application/json')) {
+    if (req.path.startsWith('/api/') || req.xhr || req.headers.accept?.includes('application/json')) {
       return res.status(403).json({ error: 'Rider access required' });
     }
     return res.redirect('/login');
@@ -711,6 +711,49 @@ app.put('/api/settings', requireOffice, async (req, res) => {
   try {
     const updates = req.body;
     if (!Array.isArray(updates)) return res.status(400).json({ error: 'Expected array of { key, value }' });
+
+    // Build lookup of incoming values for cross-field validation
+    const incoming = {};
+    for (const { key, value } of updates) { if (key) incoming[key] = value; }
+
+    const errors = [];
+
+    // operating_days: non-empty, valid day numbers
+    if ('operating_days' in incoming) {
+      const val = incoming.operating_days;
+      if (!val || String(val).trim() === '') {
+        errors.push('At least one operating day must be selected');
+      } else {
+        const days = String(val).split(',').map(d => d.trim());
+        if (!days.every(d => /^[0-6]$/.test(d))) {
+          errors.push('Operating days must be integers 0-6');
+        }
+      }
+    }
+
+    // service hours: start must be before end
+    const startVal = incoming.service_hours_start;
+    const endVal = incoming.service_hours_end;
+    if (startVal || endVal) {
+      let s = startVal, e = endVal;
+      if (!s) { const r = await query("SELECT setting_value FROM tenant_settings WHERE setting_key='service_hours_start'"); s = r.rows[0]?.setting_value || '08:00'; }
+      if (!e) { const r = await query("SELECT setting_value FROM tenant_settings WHERE setting_key='service_hours_end'"); e = r.rows[0]?.setting_value || '19:00'; }
+      const timeRe = /^\d{2}:\d{2}$/;
+      if (s && !timeRe.test(s)) errors.push('Service hours start must be HH:MM');
+      if (e && !timeRe.test(e)) errors.push('Service hours end must be HH:MM');
+      if (timeRe.test(s) && timeRe.test(e) && s >= e) errors.push('Service hours start must be earlier than end');
+    }
+
+    // Numeric minimums
+    for (const [key, label] of [['grace_period_minutes','Grace period'],['max_no_show_strikes','Max no-show strikes'],['tardy_threshold_minutes','Tardy threshold']]) {
+      if (key in incoming) {
+        const val = parseInt(incoming[key], 10);
+        if (isNaN(val) || val < 1) errors.push(`${label} must be at least 1`);
+      }
+    }
+
+    if (errors.length) return res.status(400).json({ error: errors.join('; '), errors });
+
     for (const { key, value } of updates) {
       if (!key || value === undefined) continue;
       await query(

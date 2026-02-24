@@ -384,8 +384,8 @@
       var d = new Date(today);
       var count = 0;
       var opDays = opsConfig ? String(opsConfig.operating_days || '0,1,2,3,4').split(',').map(Number) : [0,1,2,3,4];
-      // Generate next 5 operating days
-      for (var i = 0; i < 21 && count < 5; i++) {
+      // Generate next 7 operating days
+      for (var i = 0; i < 30 && count < 7; i++) {
         var test = new Date(d);
         test.setDate(test.getDate() + i);
         var dow = test.getDay();
