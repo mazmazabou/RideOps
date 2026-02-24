@@ -86,7 +86,7 @@ Default login credentials (password: `demo123`):
 - `tenants/usc-buildings.js` — 304 USC campus locations
 - `tenants/default-locations.js` — 32 generic campus locations (default when no tenant)
 - `email.js` — Email sending (nodemailer) with tenant-aware brand colors
-- `notification-service.js` — Notification dispatch engine: checks preferences, renders templates, sends emails via Nodemailer (fire-and-forget)
+- `notification-service.js` — Notification dispatch engine: `dispatchNotification()` sends to office staff via preferences, `sendRiderEmail()` sends directly to riders (controlled by tenant_settings toggles)
 - `demo-seed.js` — Seeds demo data for the demo mode flow
 - `public/favicon.svg` — RideOps favicon (blue circle with RO)
 - `db/schema.sql` — PostgreSQL schema reference

@@ -20,7 +20,7 @@ if (DEMO_MODE) {
   emailModule = require('./email');
 }
 const { isConfigured: emailConfigured, sendWelcomeEmail, sendPasswordResetEmail } = emailModule;
-const { initTransporter, dispatchNotification } = require('./notification-service');
+const { initTransporter, dispatchNotification, sendRiderEmail } = require('./notification-service');
 initTransporter();
 
 // ----- Tenant configuration -----
@@ -1932,6 +1932,31 @@ app.post('/api/rides/:id/no-show', requireAuth, async (req, res) => {
           maxStrikes,
           missesRemaining: maxStrikes - newCount
         }, query);
+      }
+
+      // Rider-facing notifications
+      const riderData = {
+        riderName: ride.rider_name,
+        riderEmail: ride.rider_email,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location,
+        requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }),
+        consecutiveMisses: newCount,
+        maxStrikes: maxStrikes,
+        missesRemaining: maxStrikes - newCount
+      };
+
+      const notifyNoShow = (await getSetting('notify_rider_no_show', 'true')) !== 'false';
+      if (notifyNoShow) {
+        sendRiderEmail('rider_no_show_notice', riderData);
+      }
+
+      const notifyStrikeWarn = (await getSetting('notify_rider_strike_warning', 'true')) !== 'false';
+      if (strikesEnabled && newCount >= maxStrikes) {
+        // Always send termination notice
+        sendRiderEmail('rider_terminated_notice', riderData);
+      } else if (strikesEnabled && notifyStrikeWarn && newCount >= maxStrikes - 2) {
+        sendRiderEmail('rider_strike_warning', riderData);
       }
     } catch (err) {
       console.error('[Notifications] no-show dispatch error:', err.message);

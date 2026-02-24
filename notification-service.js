@@ -163,6 +163,61 @@ const TEMPLATES = {
         <div><strong>When:</strong> ${data.requestedTime}</div>
       </div>
     `)
+  }),
+
+  // ── Rider-facing templates ──
+
+  rider_no_show_notice: (data) => ({
+    subject: `Missed ride - action may be required`,
+    html: wrapTemplate(`
+      <h2 style="font-size: 16px; color: #111827; margin: 0 0 8px;">Missed Ride Notice</h2>
+      <p style="color: #6B7280; font-size: 13px; margin: 0 0 16px;">
+        Hi ${data.riderName}, your scheduled ride was marked as a no-show because you were not at the pickup location when the driver arrived.
+      </p>
+      <div style="background: #FFF7ED; border-radius: 8px; padding: 12px 16px; font-size: 13px;">
+        <div><strong>Pickup:</strong> ${data.pickup}</div>
+        <div><strong>Drop-off:</strong> ${data.dropoff}</div>
+        <div><strong>Scheduled:</strong> ${data.requestedTime}</div>
+      </div>
+      <p style="color: #6B7280; font-size: 12px; margin-top: 12px;">
+        If you believe this was an error, please contact dispatch. Repeated no-shows may result in service restrictions.
+      </p>
+    `)
+  }),
+
+  rider_strike_warning: (data) => ({
+    subject: `Important: ${data.missesRemaining} missed ride(s) remaining before service suspension`,
+    html: wrapTemplate(`
+      <h2 style="font-size: 16px; color: #EF4444; margin: 0 0 8px;">Service Warning</h2>
+      <p style="color: #6B7280; font-size: 13px; margin: 0 0 16px;">
+        Hi ${data.riderName}, you have <strong>${data.consecutiveMisses} consecutive missed rides</strong>.
+        You have <strong>${data.missesRemaining}</strong> remaining before your service is automatically suspended.
+      </p>
+      <div style="background: #FEF2F2; border-radius: 8px; padding: 12px 16px; font-size: 13px;">
+        <div><strong>Consecutive no-shows:</strong> ${data.consecutiveMisses} / ${data.maxStrikes}</div>
+        <div><strong>Remaining:</strong> ${data.missesRemaining}</div>
+      </div>
+      <p style="color: #6B7280; font-size: 12px; margin-top: 12px;">
+        Please ensure you are at the pickup location when your driver arrives. If you need to cancel a ride, please do so in advance through the app.
+      </p>
+    `)
+  }),
+
+  rider_terminated_notice: (data) => ({
+    subject: `Your ride service has been suspended`,
+    html: wrapTemplate(`
+      <h2 style="font-size: 16px; color: #EF4444; margin: 0 0 8px;">Service Suspended</h2>
+      <p style="color: #6B7280; font-size: 13px; margin: 0 0 16px;">
+        Hi ${data.riderName}, due to <strong>${data.maxStrikes} consecutive missed rides</strong>, your ride service has been automatically suspended.
+      </p>
+      <div style="background: #FEF2F2; border-radius: 8px; padding: 12px 16px; font-size: 13px;">
+        <div><strong>Consecutive no-shows:</strong> ${data.consecutiveMisses}</div>
+        <div><strong>Action:</strong> Service suspended</div>
+      </div>
+      <p style="color: #6B7280; font-size: 12px; margin-top: 12px;">
+        If you believe this is an error or would like to request reinstatement, please contact the office directly.
+      </p>
+    `)
   })
 };
 
@@ -198,4 +253,24 @@ async function dispatchNotification(eventType, data, queryFn) {
   }
 }
 
-module.exports = { initTransporter, sendEmail, dispatchNotification, TEMPLATES };
+// ── Direct rider email sender ──
+
+async function sendRiderEmail(eventType, data) {
+  if (!data.riderEmail) {
+    console.warn('[Notifications] No rider email for', eventType);
+    return;
+  }
+  const template = TEMPLATES[eventType];
+  if (!template) {
+    console.warn('[Notifications] No template for rider event:', eventType);
+    return;
+  }
+  try {
+    const { subject, html } = template(data);
+    await sendEmail(data.riderEmail, subject, html);
+  } catch (err) {
+    console.error('[Notifications] Rider email error for', eventType, ':', err.message);
+  }
+}
+
+module.exports = { initTransporter, sendEmail, dispatchNotification, sendRiderEmail, TEMPLATES };
