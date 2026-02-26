@@ -1250,7 +1250,8 @@ app.post('/api/employees/clock-in', requireStaff, async (req, res) => {
 
   // Fire-and-forget: notify if tardy
   if (clockEvent && clockEvent.tardiness_minutes > 0) {
-    dispatchNotification('driver_tardy', {
+    const notifyTardy = (await getSetting('notify_office_tardy', 'true')) !== 'false';
+    if (notifyTardy) dispatchNotification('driver_tardy', {
       driverName: result.rows[0].name,
       tardyMinutes: clockEvent.tardiness_minutes,
       scheduledStart: clockEvent.scheduled_start || 'N/A',

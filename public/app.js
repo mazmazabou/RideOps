@@ -3507,9 +3507,9 @@ async function loadBusinessRules() {
     const grouped = await res.json();
 
     const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const CATEGORY_LABELS = { operations: 'Operations', rides: 'Rides', staff: 'Staff', notifications: 'Notifications' };
-    const CATEGORY_ICONS = { operations: 'ti-clock', rides: 'ti-car', staff: 'ti-users', notifications: 'ti-bell' };
-    const categoryOrder = ['operations', 'rides', 'staff', 'notifications'];
+    const CATEGORY_LABELS = { operations: 'Operations', rides: 'Rides', staff: 'Staff' };
+    const CATEGORY_ICONS = { operations: 'ti-clock', rides: 'ti-car', staff: 'ti-users' };
+    const categoryOrder = ['operations', 'rides', 'staff'];
 
     // Sort settings within each category: put time fields in logical order (start before end)
     const SORT_ORDER = {
@@ -3687,10 +3687,17 @@ async function loadNotificationPreferences() {
   container.innerHTML = '<div class="text-muted">Loading notification preferences...</div>';
 
   try {
-    const res = await fetch('/api/notification-preferences');
-    if (!res.ok) throw new Error('Failed to load');
-    const data = await res.json();
+    const [prefsRes, settingsRes] = await Promise.all([
+      fetch('/api/notification-preferences'),
+      fetch('/api/settings')
+    ]);
+    if (!prefsRes.ok) throw new Error('Failed to load');
+    const data = await prefsRes.json();
     const prefs = data.preferences;
+
+    // Extract system-level notification toggles from settings
+    const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+    const systemNotifSettings = (settingsData.notifications || []);
 
     const categoryLabels = { staff: 'Staff Alerts', rides: 'Ride Alerts', reports: 'Reports' };
     const byCategory = {};
@@ -3706,6 +3713,31 @@ async function loadNotificationPreferences() {
     html += '<div class="ro-section__subtitle">Choose which events notify you and how</div></div>';
     html += '<button class="ro-btn ro-btn--primary" id="save-notif-prefs-btn"><i class="ti ti-device-floppy"></i> Save Preferences</button>';
     html += '</div>';
+
+    // System Notifications section
+    if (systemNotifSettings.length > 0) {
+      html += '<div class="ro-table-wrap" style="margin-bottom:16px;">';
+      html += '<table class="ro-table" style="table-layout:fixed;">';
+      html += '<thead><tr>';
+      html += '<th style="width:auto;">System Notifications</th>';
+      html += '<th style="width:80px; text-align:center;">Enabled</th>';
+      html += '</tr></thead>';
+      html += '<tbody>';
+      for (const setting of systemNotifSettings) {
+        const checked = setting.value === 'true' ? 'checked' : '';
+        html += '<tr style="cursor:default;">';
+        html += '<td style="vertical-align:middle;">';
+        html += '<div class="fw-600" style="font-size:13px; color:var(--color-text);">' + setting.label + '</div>';
+        html += '<div class="text-muted text-xs">' + (setting.description || '') + '</div>';
+        html += '</td>';
+        html += '<td style="text-align:center; vertical-align:middle;">';
+        html += '<input type="checkbox" data-system-setting="' + setting.key + '" ' + checked + ' style="width:16px;height:16px;accent-color:var(--color-primary);cursor:pointer">';
+        html += '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      html += '</div>';
+    }
 
     const categoryOrder = ['reports', 'staff', 'rides'];
     const orderedCategories = categoryOrder.filter(c => byCategory[c]).map(c => [c, byCategory[c]]);
@@ -3782,25 +3814,48 @@ async function loadNotificationPreferences() {
 }
 
 async function saveNotificationPreferences() {
-  const preferences = [];
-  const checkboxes = document.querySelectorAll('#notif-prefs-container input[data-event][data-channel]');
-  checkboxes.forEach(function(el) {
-    const eventType = el.dataset.event;
-    const channel = el.dataset.channel;
-    const thresholdEl = document.querySelector('#notif-prefs-container input[data-event="' + eventType + '"][data-field="threshold"]');
-    preferences.push({
-      eventType,
-      channel,
-      enabled: el.checked,
-      thresholdValue: thresholdEl ? (parseInt(thresholdEl.value) || null) : null
-    });
-  });
-
   const btn = document.getElementById('save-notif-prefs-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader"></i> Saving...';
 
   try {
+    // Save system-level notification toggles first
+    const systemCheckboxes = document.querySelectorAll('#notif-prefs-container input[data-system-setting]');
+    if (systemCheckboxes.length > 0) {
+      const settings = [];
+      systemCheckboxes.forEach(function(el) {
+        settings.push({ key: el.dataset.systemSetting, value: el.checked ? 'true' : 'false' });
+      });
+      const sysRes = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings })
+      });
+      if (handleSessionExpiry(sysRes)) return;
+      if (!sysRes.ok) {
+        const data = await sysRes.json().catch(() => ({}));
+        showToastNew(data.error || 'Failed to save system settings', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Preferences';
+        return;
+      }
+    }
+
+    // Save per-user notification preferences
+    const preferences = [];
+    const checkboxes = document.querySelectorAll('#notif-prefs-container input[data-event][data-channel]');
+    checkboxes.forEach(function(el) {
+      const eventType = el.dataset.event;
+      const channel = el.dataset.channel;
+      const thresholdEl = document.querySelector('#notif-prefs-container input[data-event="' + eventType + '"][data-field="threshold"]');
+      preferences.push({
+        eventType,
+        channel,
+        enabled: el.checked,
+        thresholdValue: thresholdEl ? (parseInt(thresholdEl.value) || null) : null
+      });
+    });
+
     const res = await fetch('/api/notification-preferences', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
