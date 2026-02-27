@@ -399,7 +399,7 @@ async function findTodayShift(employeeId) {
   if (!result.rowCount) return null;
 
   // Pick the shift whose start_time is closest to now (handles split shifts)
-  const nowMinutes = la.getHours() * 60 + la.getMinutes();
+  const nowMinutes = local.getHours() * 60 + local.getMinutes();
   let best = result.rows[0], bestDist = Infinity;
   for (const row of result.rows) {
     const [h, m] = row.start_time.split(':').map(Number);
