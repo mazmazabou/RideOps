@@ -312,7 +312,8 @@ body {
 
 /* ── Section 26: Vehicle cards ── */
 .vehicles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.vehicle-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; }
+.vehicle-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; cursor: pointer; transition: border-color 0.15s; }
+.vehicle-card:hover { border-color: var(--color-primary); }
 .vehicle-card.maintenance-overdue { border-color: var(--status-on-the-way); }
 .vehicle-card.vehicle-retired { opacity: 0.6; }
 .vehicle-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
@@ -322,6 +323,12 @@ body {
 .vehicle-section-divider { display: flex; align-items: center; gap: 12px; grid-column: 1 / -1; padding: 4px 0; }
 .vehicle-section-divider::before, .vehicle-section-divider::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
 .vehicle-section-divider span { font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.maint-timeline { list-style: none; padding: 0; margin: 0; }
+.maint-timeline__item { padding: 12px 0; border-bottom: 1px solid var(--color-border-light); }
+.maint-timeline__item:last-child { border-bottom: none; }
+.maint-timeline__date { font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+.maint-timeline__notes { font-size: 13px; margin-top: 4px; }
+.maint-timeline__meta { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
 
 /* ── Section 27: Bar chart ── */
 .bar-chart { display: flex; flex-direction: column; gap: 6px; }
@@ -1086,6 +1093,9 @@ body {
 .analytics-card__header {
   padding: 10px 16px;
   border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .analytics-card__title {
   font-size: 13px;
@@ -1094,6 +1104,8 @@ body {
   margin: 0;
 }
 .analytics-card__title i { margin-right: 4px; color: var(--color-text-muted); }
+.csv-export-icon { background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 4px; border-radius: var(--radius-sm); font-size: 15px; line-height: 1; transition: color 0.15s, background 0.15s; }
+.csv-export-icon:hover { color: var(--color-primary); background: rgba(70,130,180,0.08); }
 .analytics-card__body { padding: 12px 16px 16px; }
 @media (max-width: 768px) {
   .analytics-card-grid { grid-template-columns: 1fr; }
@@ -1272,3 +1284,16 @@ body {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
+
+/* ── Table Toolbar (bottom bar with filter/export/add) ── */
+.table-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-top: 1px solid var(--color-border-light); }
+.table-toolbar__count { font-size: 12px; color: var(--color-text-muted); }
+.table-toolbar__actions { display: flex; align-items: center; gap: 4px; }
+.table-toolbar__btn { background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 4px 6px; border-radius: var(--radius-sm); font-size: 16px; transition: color 0.15s, background 0.15s; }
+.table-toolbar__btn:hover { color: var(--color-primary); background: rgba(70,130,180,0.08); }
+.table-toolbar__btn--add { color: var(--color-primary); }
+.table-toolbar__btn--active { color: var(--color-primary); background: rgba(70,130,180,0.1); }
+.role-filter-dropdown { position: absolute; bottom: 100%; right: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 4px 0; min-width: 120px; z-index: 50; }
+.role-filter-dropdown button { display: block; width: 100%; text-align: left; padding: 6px 14px; background: none; border: none; font-size: 13px; color: var(--color-text); cursor: pointer; font-family: inherit; }
+.role-filter-dropdown button:hover { background: var(--color-bg-hover); }
+.role-filter-dropdown button.selected { color: var(--color-primary); font-weight: 600; }

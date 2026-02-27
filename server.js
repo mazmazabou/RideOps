@@ -268,7 +268,16 @@ async function runMigrations() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );`,
     `CREATE INDEX IF NOT EXISTS idx_notifications_user_read
-      ON notifications(user_id, read, created_at DESC);`
+      ON notifications(user_id, read, created_at DESC);`,
+    `CREATE TABLE IF NOT EXISTS maintenance_logs (
+      id TEXT PRIMARY KEY,
+      vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+      service_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      notes TEXT,
+      mileage_at_service NUMERIC,
+      performed_by TEXT REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );`
   ];
   for (const stmt of statements) {
     await query(stmt);
@@ -2263,7 +2272,25 @@ app.post('/api/vehicles/:id/maintenance', requireOffice, async (req, res) => {
     [notes || null, mileage != null ? mileage : null, req.params.id]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'Vehicle not found' });
+  const logId = generateId('mlog');
+  await query(
+    `INSERT INTO maintenance_logs (id, vehicle_id, service_date, notes, mileage_at_service, performed_by)
+     VALUES ($1, $2, CURRENT_DATE, $3, $4, $5)`,
+    [logId, req.params.id, notes || null, mileage != null ? mileage : null, req.session.userId]
+  );
   res.json(result.rows[0]);
+});
+
+app.get('/api/vehicles/:id/maintenance', requireStaff, async (req, res) => {
+  const result = await query(
+    `SELECT ml.*, u.name AS performed_by_name
+     FROM maintenance_logs ml
+     LEFT JOIN users u ON u.id = ml.performed_by
+     WHERE ml.vehicle_id = $1
+     ORDER BY ml.service_date DESC, ml.created_at DESC`,
+    [req.params.id]
+  );
+  res.json(result.rows);
 });
 
 // ----- Analytics endpoints -----

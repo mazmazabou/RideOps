@@ -310,7 +310,7 @@
               <div class="analytics-card analytics-card--wide">
                 <div class="analytics-card__header" style="display:flex;align-items:center;justify-content:space-between;">
                   <h4 class="analytics-card__title">Semester Report</h4>
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" id="export-csv-btn" type="button"><i class="ti ti-download"></i> Export CSV</button>
+                  <button class="csv-export-icon" id="export-csv-btn" type="button" title="Export CSV"><i class="ti ti-download"></i></button>
                 </div>
                 <div class="analytics-card__body" id="semester-report-content"></div>
               </div>
@@ -330,7 +330,6 @@
         <section class="tab-panel" id="settings-panel">
           <div class="ro-tabs">
             <button class="ro-tab active" data-subtarget="admin-users-view">Users</button>
-            <button class="ro-tab" data-subtarget="admin-create-view">Create User</button>
             <button class="ro-tab" data-subtarget="admin-rules-view">Business Rules</button>
             <button class="ro-tab" data-subtarget="notif-settings">Notifications</button>
           </div>
@@ -338,7 +337,6 @@
           <div class="sub-panel active" id="admin-users-view">
             <div class="filter-bar">
               <input type="text" id="admin-user-filter" class="ro-input" placeholder="Search by name, email, phone, member ID, or role..." style="max-width:400px;">
-              <span class="text-sm text-muted" id="admin-user-filter-count"></span>
             </div>
             <div class="ro-section">
               <div class="text-sm text-muted mb-16">Manage riders, drivers, and office accounts. You cannot delete your own office account.</div>
@@ -347,6 +345,7 @@
                   <thead>
                     <tr>
                       <th>Name</th>
+                      <th>Email</th>
                       <th>Username</th>
                       <th>Role</th>
                       <th>Member ID</th>
@@ -357,53 +356,17 @@
                   </thead>
                   <tbody></tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="sub-panel" id="admin-create-view">
-            <div class="ro-section">
-              <h3 class="ro-section__title mb-8">Create User</h3>
-              <div id="admin-email-status" class="text-sm mb-8"></div>
-              <div class="form-grid">
-                <div class="field-group">
-                  <label class="ro-label">Name</label>
-                  <input type="text" id="admin-new-name" class="ro-input" required>
-                </div>
-                <div class="field-group">
-                  <label class="ro-label">Username <span style="color:var(--status-no-show)">*</span></label>
-                  <input type="text" class="ro-input" id="admin-new-username"
-                         placeholder="e.g. jsmith" autocomplete="off"
-                         pattern="[a-zA-Z0-9_]+" title="Letters, numbers, and underscores only" required>
-                  <div class="text-xs text-muted" style="margin-top:4px;">Used to log in. Letters, numbers, and underscores only.</div>
-                </div>
-                <div class="field-group">
-                  <label class="ro-label">Email</label>
-                  <input type="email" id="admin-new-email" class="ro-input" required>
-                </div>
-                <div class="field-group">
-                  <label class="ro-label">Phone</label>
-                  <input type="tel" id="admin-new-phone" class="ro-input">
-                </div>
-                <div class="field-group">
-                  <label class="ro-label" id="admin-new-memberid-label">Member ID</label>
-                  <input type="text" id="admin-new-memberid" class="ro-input" required>
-                </div>
-                <div class="field-group">
-                  <label class="ro-label">Role</label>
-                  <select id="admin-new-role" class="ro-select">
-                    <option value="rider">rider</option>
-                    <option value="driver">driver</option>
-                    <option value="office">office</option>
-                  </select>
-                </div>
-                <div class="field-group">
-                  <label class="ro-label">Temp Password</label>
-                  <input type="password" id="admin-new-password" class="ro-input" required>
+                <div class="table-toolbar">
+                  <span class="table-toolbar__count" id="admin-user-filter-count"></span>
+                  <div class="table-toolbar__actions">
+                    <div style="position:relative;">
+                      <button class="table-toolbar__btn" id="admin-role-filter-btn" title="Filter by role"><i class="ti ti-filter"></i></button>
+                    </div>
+                    <button class="table-toolbar__btn" id="admin-export-csv-btn" title="Export CSV"><i class="ti ti-download"></i></button>
+                    <button class="table-toolbar__btn table-toolbar__btn--add" id="admin-add-user-btn" title="Add user"><i class="ti ti-plus"></i></button>
+                  </div>
                 </div>
               </div>
-              <button class="ro-btn ro-btn--primary" id="admin-create-btn" type="button" style="margin-top:12px;"><i class="ti ti-user-plus"></i> Create User</button>
-              <div id="admin-create-message" class="text-sm" style="margin-top:8px;"></div>
             </div>
           </div>
 
@@ -435,6 +398,16 @@
       <button class="ro-btn ro-btn--outline ro-btn--sm" id="admin-drawer-close"><i class="ti ti-x"></i></button>
     </div>
     <div id="admin-drawer-body"></div>
+  </aside>
+
+  <!-- Vehicle Drawer (used by Fleet panel) -->
+  <div id="vehicle-drawer-backdrop" class="ro-drawer-overlay"></div>
+  <aside id="vehicle-drawer" class="ro-drawer">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 id="vehicle-drawer-title" style="font-size:16px; font-weight:700; margin:0;">Vehicle Details</h3>
+      <button class="ro-btn ro-btn--outline ro-btn--sm" id="vehicle-drawer-close"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="vehicle-drawer-body"></div>
   </aside>
 
   <script src="/utils.js"></script>

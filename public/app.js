@@ -61,8 +61,10 @@ let rides = [];
 let vehicles = [];
 let adminUsers = [];
 let filteredAdminUsers = [];
+let adminRoleFilter = 'all';
 let selectedAdminUser = null;
 let drawerUserId = null;
+let fleetVehicles = [];
 let rideScheduleAnchor = new Date();
 let emailConfigured = false;
 let tenantConfig = null;
@@ -186,12 +188,17 @@ function filterAdminUsers() {
   const input = document.getElementById('admin-user-filter');
   const countEl = document.getElementById('admin-user-filter-count');
   const q = (input?.value || '').trim().toLowerCase();
-  filteredAdminUsers = q
-    ? adminUsers.filter(u => [u.name, u.username, u.email, u.phone, u.member_id, u.role]
-        .some(f => (f || '').toLowerCase().includes(q)))
-    : adminUsers;
+  filteredAdminUsers = adminUsers;
+  if (q) {
+    filteredAdminUsers = filteredAdminUsers.filter(u => [u.name, u.username, u.email, u.phone, u.member_id, u.role]
+        .some(f => (f || '').toLowerCase().includes(q)));
+  }
+  if (adminRoleFilter !== 'all') {
+    filteredAdminUsers = filteredAdminUsers.filter(u => u.role === adminRoleFilter);
+  }
   renderAdminUsers(filteredAdminUsers);
-  if (countEl) countEl.textContent = q ? `${filteredAdminUsers.length} of ${adminUsers.length} users` : `${adminUsers.length} users`;
+  const isFiltered = q || adminRoleFilter !== 'all';
+  if (countEl) countEl.textContent = isFiltered ? `${filteredAdminUsers.length} of ${adminUsers.length} users` : `${adminUsers.length} users`;
 }
 
 function renderAdminUsers(users) {
@@ -201,10 +208,8 @@ function renderAdminUsers(users) {
   users.forEach((u) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>
-        <div class="admin-name-primary">${u.name || ''}</div>
-        <div class="admin-name-secondary">${u.email || ''}</div>
-      </td>
+      <td>${u.name || ''}</td>
+      <td><span class="admin-name-secondary">${u.email || ''}</span></td>
       <td>${u.username || ''}</td>
       <td><span class="role-badge role-${u.role}">${u.role}</span></td>
       <td>${u.member_id || ''}</td>
@@ -212,8 +217,8 @@ function renderAdminUsers(users) {
       <td></td>
       <td><i class="ti ti-chevron-right admin-chevron"></i></td>
     `;
-    // Insert kebab menu into the 6th cell
-    const kebabCell = tr.querySelectorAll('td')[5];
+    // Insert kebab menu into the 7th cell
+    const kebabCell = tr.querySelectorAll('td')[6];
     kebabCell.appendChild(buildAdminKebabMenu(u));
     // Row click opens drawer (skip if kebab clicked)
     tr.onclick = (e) => { if (!e.target.closest('.kebab-menu-wrapper')) openAdminDrawer(u.id); };
@@ -680,62 +685,101 @@ async function deleteUser(id) {
 }
 
 
-async function createAdminUser() {
-  const name = document.getElementById('admin-new-name')?.value.trim();
-  const username = document.getElementById('admin-new-username')?.value.trim();
-  const email = document.getElementById('admin-new-email')?.value.trim();
-  const phone = document.getElementById('admin-new-phone')?.value.trim();
-  const uscId = document.getElementById('admin-new-memberid')?.value.trim();
-  const role = document.getElementById('admin-new-role')?.value;
-  const password = document.getElementById('admin-new-password')?.value;
-  const msg = document.getElementById('admin-create-message');
-  if (msg) msg.textContent = '';
-  if (!name || !username || !email || !uscId || !role || !password) {
-    if (msg) msg.textContent = 'All required fields must be filled.';
-    return;
-  }
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    if (msg) msg.textContent = 'Username may only contain letters, numbers, and underscores.';
-    return;
-  }
-  if (!uscId) {
-    if (msg) msg.textContent = `${tenantConfig?.idFieldLabel || 'Member ID'} is required.`;
-    return;
-  }
-  try {
-    const res = await fetch('/api/admin/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username, email, phone, uscId, role, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      if (msg) msg.textContent = data.error || 'Could not create user';
+function showCreateUserModal() {
+  const idLabel = tenantConfig?.idFieldLabel || 'Member ID';
+  const overlay = document.createElement('div');
+  overlay.className = 'ro-modal-overlay open';
+  overlay.innerHTML = `
+    <div class="ro-modal">
+      <div class="ro-modal__title">Create User</div>
+      <div class="ro-modal__body">
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="ro-label">Name</label>
+            <input type="text" id="modal-new-name" class="ro-input" required>
+          </div>
+          <div class="field-group">
+            <label class="ro-label">Username <span style="color:var(--status-no-show)">*</span></label>
+            <input type="text" class="ro-input" id="modal-new-username"
+                   placeholder="e.g. jsmith" autocomplete="off"
+                   pattern="[a-zA-Z0-9_]+" title="Letters, numbers, and underscores only" required>
+            <div class="text-xs text-muted" style="margin-top:4px;">Used to log in. Letters, numbers, and underscores only.</div>
+          </div>
+          <div class="field-group">
+            <label class="ro-label">Email</label>
+            <input type="email" id="modal-new-email" class="ro-input" required>
+          </div>
+          <div class="field-group">
+            <label class="ro-label">Phone</label>
+            <input type="tel" id="modal-new-phone" class="ro-input">
+          </div>
+          <div class="field-group">
+            <label class="ro-label">${idLabel}</label>
+            <input type="text" id="modal-new-memberid" class="ro-input" required>
+          </div>
+          <div class="field-group">
+            <label class="ro-label">Role</label>
+            <select id="modal-new-role" class="ro-select">
+              <option value="rider">rider</option>
+              <option value="driver">driver</option>
+              <option value="office">office</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="ro-label">Temp Password</label>
+            <input type="password" id="modal-new-password" class="ro-input" required>
+          </div>
+        </div>
+      </div>
+      <div class="ro-modal__actions">
+        <button class="ro-btn ro-btn--outline" data-action="cancel">Cancel</button>
+        <button class="ro-btn ro-btn--primary" data-action="confirm">Create User</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('[data-action="cancel"]').onclick = () => overlay.remove();
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.querySelector('[data-action="confirm"]').onclick = async () => {
+    const name = document.getElementById('modal-new-name')?.value.trim();
+    const username = document.getElementById('modal-new-username')?.value.trim();
+    const email = document.getElementById('modal-new-email')?.value.trim();
+    const phone = document.getElementById('modal-new-phone')?.value.trim();
+    const uscId = document.getElementById('modal-new-memberid')?.value.trim();
+    const role = document.getElementById('modal-new-role')?.value;
+    const password = document.getElementById('modal-new-password')?.value;
+    if (!name || !username || !email || !uscId || !role || !password) {
+      showToast('All required fields must be filled', 'error');
       return;
     }
-    ['admin-new-name','admin-new-username','admin-new-email','admin-new-phone','admin-new-memberid','admin-new-password'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    if (msg) {
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      showToast('Username may only contain letters, numbers, and underscores', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username, email, phone, uscId, role, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Could not create user', 'error');
+        return;
+      }
+      overlay.remove();
       if (data.emailSent) {
-        msg.innerHTML = '<span style="color:#228b22;">User created. Welcome email sent.</span>';
+        showToast('User created. Welcome email sent.', 'success');
       } else {
         const safeUser = data.username || email.split('@')[0];
-        const safePw = password.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const clipText = `Username: ${safeUser}\\nPassword: ${password}`;
-        msg.innerHTML = `<span style="color:#228b22;">User created.</span> Share these credentials:<br>
-          <div style="background:#f5f5f5; padding:8px 12px; border-radius:6px; margin-top:6px; font-family:monospace; font-size:0.9rem;">
-            <strong>Username:</strong> ${safeUser}<br>
-            <strong>Password:</strong> ${safePw}
-          </div>
-          <button class="btn secondary small" style="margin-top:6px;" onclick="navigator.clipboard.writeText('${clipText}').then(()=>showToast('Credentials copied','success'))">Copy Credentials</button>`;
+        const clipText = `Username: ${safeUser}\nPassword: ${password}`;
+        showToast(`User created — Username: ${safeUser}`, 'success');
+        navigator.clipboard.writeText(clipText).catch(() => {});
       }
+      await loadAdminUsers();
+    } catch {
+      showToast('Network error', 'error');
     }
-    await loadAdminUsers();
-  } catch {
-    if (msg) msg.textContent = 'Network error';
-  }
+  };
 }
 
 // ----- Employee UI -----
@@ -3288,13 +3332,13 @@ function renderVehicleCards(vehicles) {
       actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
         <button class="btn danger small" title="Permanently remove this vehicle from the system. Use only if the vehicle was entered in error." onclick="deleteVehicle('${v.id}', '${escapedName}')">Delete</button>`;
     }
-    return `${divider}<div class="vehicle-card${overdueClass}${retiredClass}">
+    return `${divider}<div class="vehicle-card${overdueClass}${retiredClass}" onclick="openVehicleDrawer('${v.id}')">
       <div class="vehicle-name">${v.name}${retiredBadge}</div>
       <div class="vehicle-meta">Type: ${v.type} &middot; Status: ${v.status}</div>
       <div class="vehicle-meta">Completed rides: ${v.rideCount} &middot; Last used: ${lastUsed}</div>
       <div class="vehicle-meta">Last maintenance: ${lastMaint}</div>
       ${alert}
-      <div class="ride-actions-compact" style="margin-top:8px;">
+      <div class="ride-actions-compact" style="margin-top:8px;" onclick="event.stopPropagation()">
         ${actionButtons}
       </div>
     </div>`;
@@ -3489,7 +3533,8 @@ async function loadFleetVehicles() {
   try {
     const res = await fetch('/api/analytics/vehicles' + getAnalyticsDateParams());
     if (!res.ok) return;
-    renderVehicleCards(await res.json());
+    fleetVehicles = await res.json();
+    renderVehicleCards(fleetVehicles);
   } catch (e) { console.error('Analytics vehicles error:', e); }
 }
 
@@ -3606,7 +3651,7 @@ async function renderTardinessSection(container, data) {
   html += '<div class="analytics-card analytics-card--wide"><div class="analytics-card__header"><h4 class="analytics-card__title">Daily Tardiness Trend</h4></div><div class="analytics-card__body"><div id="tardiness-area-chart" class="area-chart-wrap"></div></div></div>';
 
   // ── 4. Punctuality by Driver Table ──
-  html += '<div class="analytics-card analytics-card--wide"><div class="analytics-card__header"><h4 class="analytics-card__title">Punctuality by Driver</h4></div><div class="analytics-card__body">';
+  html += '<div class="analytics-card analytics-card--wide"><div class="analytics-card__header"><h4 class="analytics-card__title">Punctuality by Driver</h4><button class="csv-export-icon" onclick="exportTableCSV(this.closest(\'.analytics-card\').querySelector(\'table\'),\'punctuality-by-driver.csv\')" title="Export CSV"><i class="ti ti-download"></i></button></div><div class="analytics-card__body">';
   if (byDriver && byDriver.length) {
     html += '<div class="ro-table-wrap"><table class="ro-table"><thead><tr><th>Driver</th><th>Clock-Ins</th><th>Tardy</th><th>On-Time %</th><th>Avg Late</th><th>Max Late</th><th>Missed Shifts</th></tr></thead><tbody>';
     byDriver.forEach(d => {
@@ -3749,7 +3794,10 @@ function logVehicleMaintenance(vehicleId) {
         showToast(err.error || 'Failed to log maintenance', 'error');
       } else {
         showToast('Maintenance logged', 'success');
-        loadFleetVehicles();
+        await loadFleetVehicles();
+        if (document.getElementById('vehicle-drawer')?.classList.contains('open')) {
+          openVehicleDrawer(vehicleId);
+        }
       }
     }
   });
@@ -3830,6 +3878,105 @@ async function reactivateVehicle(vehicleId, vehicleName) {
   }
 }
 
+async function openVehicleDrawer(vehicleId) {
+  const drawer = document.getElementById('vehicle-drawer');
+  const backdrop = document.getElementById('vehicle-drawer-backdrop');
+  const body = document.getElementById('vehicle-drawer-body');
+  const title = document.getElementById('vehicle-drawer-title');
+  if (!drawer || !body) return;
+
+  drawer.classList.add('open');
+  backdrop.classList.add('open');
+  body.innerHTML = '<div style="text-align:center; padding:32px; color:var(--color-text-muted);"><i class="ti ti-loader" style="font-size:24px;"></i></div>';
+
+  const v = fleetVehicles.find(veh => veh.id === vehicleId);
+  if (!v) {
+    body.innerHTML = '<div class="ro-empty"><i class="ti ti-bus-off"></i><div class="ro-empty__title">Vehicle not found</div></div>';
+    return;
+  }
+
+  title.textContent = v.name || 'Vehicle Details';
+
+  let logs = [];
+  try {
+    const res = await fetch(`/api/vehicles/${vehicleId}/maintenance`);
+    if (res.ok) logs = await res.json();
+  } catch (e) { console.error('Failed to load maintenance logs', e); }
+
+  const lastMaint = v.last_maintenance_date ? new Date(v.last_maintenance_date).toLocaleDateString() : 'Never';
+  const lastUsed = v.lastUsed ? new Date(v.lastUsed).toLocaleDateString() : 'Never';
+  const statusColor = v.status === 'retired' ? 'var(--color-text-muted)' : 'var(--status-completed)';
+  const escapedName = (v.name || '').replace(/'/g, "\\'");
+
+  let actionButtons = '';
+  if (v.status === 'retired') {
+    actionButtons = `<button class="ro-btn ro-btn--outline ro-btn--sm" onclick="reactivateVehicle('${v.id}', '${escapedName}'); closeVehicleDrawer();">Reactivate</button>`;
+  } else if (v.rideCount > 0) {
+    actionButtons = `<button class="ro-btn ro-btn--primary ro-btn--sm" onclick="closeVehicleDrawer(); logVehicleMaintenance('${v.id}');">Log Maintenance</button>
+      <button class="ro-btn ro-btn--outline ro-btn--sm" onclick="retireVehicle('${v.id}', '${escapedName}'); closeVehicleDrawer();">Retire</button>`;
+  } else {
+    actionButtons = `<button class="ro-btn ro-btn--primary ro-btn--sm" onclick="closeVehicleDrawer(); logVehicleMaintenance('${v.id}');">Log Maintenance</button>
+      <button class="ro-btn ro-btn--danger ro-btn--sm" onclick="deleteVehicle('${v.id}', '${escapedName}'); closeVehicleDrawer();">Delete</button>`;
+  }
+
+  let overdueAlert = '';
+  if (v.maintenanceOverdue) {
+    overdueAlert = `<div class="maintenance-alert" style="margin-bottom:12px;">Maintenance overdue (${v.daysSinceMaintenance} days since last service)</div>`;
+  }
+
+  let timelineHtml = '';
+  if (logs.length === 0) {
+    timelineHtml = '<div style="text-align:center; padding:16px; color:var(--color-text-muted); font-size:13px;">No maintenance history yet.</div>';
+  } else {
+    timelineHtml = '<ul class="maint-timeline">' + logs.map(log => {
+      const date = new Date(log.service_date).toLocaleDateString();
+      const mileage = log.mileage_at_service != null ? `${Number(log.mileage_at_service).toLocaleString()} mi` : '';
+      const by = log.performed_by_name ? `by ${log.performed_by_name}` : '';
+      const metaParts = [mileage, by].filter(Boolean).join(' &middot; ');
+      return `<li class="maint-timeline__item">
+        <div class="maint-timeline__date">${date}</div>
+        ${log.notes ? `<div class="maint-timeline__notes">${log.notes}</div>` : ''}
+        ${metaParts ? `<div class="maint-timeline__meta">${metaParts}</div>` : ''}
+      </li>`;
+    }).join('') + '</ul>';
+  }
+
+  body.innerHTML = `
+    <div style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${statusColor};"></span>
+        <span style="font-size:13px; font-weight:600; text-transform:capitalize;">${v.status}</span>
+        <span style="font-size:12px; color:var(--color-text-muted); margin-left:auto;">${v.type}</span>
+      </div>
+      ${overdueAlert}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px;">
+        <div><span style="color:var(--color-text-muted);">Completed rides</span><div style="font-weight:600;">${v.rideCount}</div></div>
+        <div><span style="color:var(--color-text-muted);">Last used</span><div style="font-weight:600;">${lastUsed}</div></div>
+        <div><span style="color:var(--color-text-muted);">Total miles</span><div style="font-weight:600;">${v.total_miles != null ? Number(v.total_miles).toLocaleString() : 'N/A'}</div></div>
+        <div><span style="color:var(--color-text-muted);">Last maintenance</span><div style="font-weight:600;">${lastMaint}</div></div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:20px;">
+      ${actionButtons}
+    </div>
+    <div style="border-top:1px solid var(--color-border-light); padding-top:12px;">
+      <h4 style="font-size:13px; font-weight:700; margin:0 0 8px; color:var(--color-text-secondary);"><i class="ti ti-tool" style="margin-right:4px;"></i>Maintenance History</h4>
+      ${timelineHtml}
+    </div>
+  `;
+}
+
+function closeVehicleDrawer() {
+  const drawer = document.getElementById('vehicle-drawer');
+  const backdrop = document.getElementById('vehicle-drawer-backdrop');
+  drawer.classList.remove('open');
+  backdrop.classList.remove('open');
+  setTimeout(() => {
+    const body = document.getElementById('vehicle-drawer-body');
+    if (body && !drawer.classList.contains('open')) body.innerHTML = '';
+  }, 300);
+}
+
 async function addVehicle() {
   const result = await new Promise(resolve => {
     const overlay = document.createElement('div');
@@ -3874,6 +4021,16 @@ async function addVehicle() {
     showToast('Vehicle added', 'success');
     loadFleetVehicles();
   }
+}
+
+function exportTableCSV(tableEl, filename) {
+  if (!tableEl) return;
+  const headers = Array.from(tableEl.querySelectorAll('thead th')).map(th => th.textContent.trim());
+  const rows = Array.from(tableEl.querySelectorAll('tbody tr')).map(tr =>
+    Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+  );
+  downloadCSV(headers, rows, filename);
+  showToast('CSV downloaded', 'success');
 }
 
 function downloadCSV(headers, rows, filename) {
@@ -4375,10 +4532,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const drawerBackdrop = document.getElementById('admin-drawer-backdrop');
   if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeAdminDrawer);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('admin-drawer')?.classList.contains('open')) {
-      closeAdminDrawer();
+    if (e.key === 'Escape') {
+      if (document.getElementById('vehicle-drawer')?.classList.contains('open')) {
+        closeVehicleDrawer();
+      } else if (document.getElementById('admin-drawer')?.classList.contains('open')) {
+        closeAdminDrawer();
+      }
     }
   });
+
+  // Vehicle drawer close events
+  const vehDrawerCloseBtn = document.getElementById('vehicle-drawer-close');
+  if (vehDrawerCloseBtn) vehDrawerCloseBtn.addEventListener('click', closeVehicleDrawer);
+  const vehDrawerBackdrop = document.getElementById('vehicle-drawer-backdrop');
+  if (vehDrawerBackdrop) vehDrawerBackdrop.addEventListener('click', closeVehicleDrawer);
 
   await loadEmployees();
   await loadShifts();
@@ -4506,12 +4673,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const createBtn = document.getElementById('admin-create-btn');
-  if (createBtn) createBtn.addEventListener('click', createAdminUser);
+  // Table toolbar: Add User button
+  const addUserBtn = document.getElementById('admin-add-user-btn');
+  if (addUserBtn) addUserBtn.addEventListener('click', showCreateUserModal);
+
+  // Table toolbar: CSV export
+  const exportCsvUsersBtn = document.getElementById('admin-export-csv-btn');
+  if (exportCsvUsersBtn) exportCsvUsersBtn.addEventListener('click', () => {
+    exportTableCSV(document.getElementById('admin-users-table'), 'users.csv');
+  });
+
+  // Table toolbar: Role filter
+  const roleFilterBtn = document.getElementById('admin-role-filter-btn');
+  if (roleFilterBtn) {
+    roleFilterBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close existing dropdown if any
+      const existing = document.querySelector('.role-filter-dropdown');
+      if (existing) { existing.remove(); return; }
+      const dd = document.createElement('div');
+      dd.className = 'role-filter-dropdown';
+      ['all', 'driver', 'rider', 'office'].forEach(role => {
+        const btn = document.createElement('button');
+        btn.textContent = role === 'all' ? 'All roles' : role.charAt(0).toUpperCase() + role.slice(1);
+        if (adminRoleFilter === role) btn.classList.add('selected');
+        btn.onclick = () => {
+          adminRoleFilter = role;
+          filterAdminUsers();
+          roleFilterBtn.classList.toggle('table-toolbar__btn--active', role !== 'all');
+          dd.remove();
+        };
+        dd.appendChild(btn);
+      });
+      roleFilterBtn.parentElement.appendChild(dd);
+      // Close on outside click
+      const closeDD = (ev) => {
+        if (!dd.contains(ev.target) && ev.target !== roleFilterBtn) {
+          dd.remove();
+          document.removeEventListener('click', closeDD);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeDD), 0);
+    });
+  }
+
   const ridePrev = document.getElementById('ride-week-prev');
   const rideNext = document.getElementById('ride-week-next');
   if (ridePrev) ridePrev.addEventListener('click', () => changeRideWeek(-1));
   if (rideNext) rideNext.addEventListener('click', () => changeRideWeek(1));
+
+  // Analytics: default date filter to today
+  const now = new Date();
+  const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  const analyticsFrom = document.getElementById('analytics-from');
+  const analyticsTo = document.getElementById('analytics-to');
+  if (analyticsFrom) analyticsFrom.value = today;
+  if (analyticsTo) analyticsTo.value = today;
 
   // Analytics: lazy load on first tab click
   const analyticsRefreshBtn = document.getElementById('analytics-refresh-btn');
