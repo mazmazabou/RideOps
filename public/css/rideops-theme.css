@@ -109,11 +109,15 @@ body {
 .ro-nav-item i { font-size: 18px; flex-shrink: 0; width: 20px; text-align: center; }
 .ro-shell.collapsed .ro-nav-label { display: none; }
 .ro-shell.collapsed .ro-nav-item { justify-content: center; padding: 8px; margin: 2px 4px; }
-.ro-sidebar-footer { padding: 8px; border-top: 1px solid var(--color-sidebar-border); }
-.ro-sidebar-footer-actions { display: flex; gap: 4px; padding: 4px 8px; }
-.ro-sidebar-footer-actions button { background: none; border: none; color: var(--color-sidebar-text); cursor: pointer; padding: 6px; border-radius: var(--radius-sm); }
+.ro-sidebar-footer { padding: 4px 0; border-top: 1px solid var(--color-sidebar-border); }
+.ro-sidebar-footer-row { display: flex; align-items: center; justify-content: space-between; }
+.ro-sidebar-footer-row .ro-nav-item { flex: 1; min-width: 0; margin: 2px 8px; }
+.ro-sidebar-footer-actions { display: flex; gap: 2px; padding: 0 8px 0 0; flex-shrink: 0; }
+.ro-sidebar-footer-actions button { background: none; border: none; color: var(--color-sidebar-text); cursor: pointer; padding: 6px; border-radius: var(--radius-sm); font-size: 16px; }
 .ro-sidebar-footer-actions button:hover { background: var(--color-sidebar-hover); color: #E2E8F0; }
-.ro-shell.collapsed .ro-sidebar-footer-actions { flex-direction: column; align-items: center; padding: 4px 0; }
+.ro-shell.collapsed .ro-sidebar-footer-row { flex-direction: column; align-items: center; }
+.ro-shell.collapsed .ro-sidebar-footer-row .ro-nav-item { margin: 2px 4px; width: auto; flex: none; }
+.ro-shell.collapsed .ro-sidebar-footer-actions { flex-direction: column; align-items: center; padding: 0; }
 
 /* ── Section 7: Content area ── */
 .ro-main { grid-column: 2; min-height: 100vh; display: flex; flex-direction: column; }
@@ -315,6 +319,9 @@ body {
 .vehicle-meta { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
 .maintenance-alert { font-size: 11px; color: var(--status-on-the-way); font-weight: 600; margin-top: 6px; padding: 4px 8px; background: rgba(245,158,11,0.08); border-radius: var(--radius-sm); }
 .retired-badge { font-size: 10px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--color-text-muted); color: #fff; font-weight: 600; }
+.vehicle-section-divider { display: flex; align-items: center; gap: 12px; grid-column: 1 / -1; padding: 4px 0; }
+.vehicle-section-divider::before, .vehicle-section-divider::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
+.vehicle-section-divider span { font-size: 11px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
 
 /* ── Section 27: Bar chart ── */
 .bar-chart { display: flex; flex-direction: column; gap: 6px; }

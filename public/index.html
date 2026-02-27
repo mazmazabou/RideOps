@@ -80,12 +80,14 @@
         </button>
       </nav>
       <div class="ro-sidebar-footer">
-        <button class="ro-nav-item" data-target="profile-panel" title="Profile" style="margin:0 8px 4px;">
-          <i class="ti ti-user-circle"></i><span class="ro-nav-label" id="sidebar-user-name">Profile</span>
-        </button>
-        <div class="ro-sidebar-footer-actions">
-          <button onclick="showRulesModal()" title="Program Rules"><i class="ti ti-book"></i></button>
-          <button onclick="logout()" title="Logout"><i class="ti ti-logout"></i></button>
+        <div class="ro-sidebar-footer-row">
+          <button class="ro-nav-item" data-target="profile-panel" title="Profile">
+            <i class="ti ti-user-circle"></i><span class="ro-nav-label" id="sidebar-user-name">Office</span>
+          </button>
+          <div class="ro-sidebar-footer-actions">
+            <button onclick="showRulesModal()" title="Program Rules"><i class="ti ti-book"></i></button>
+            <button onclick="logout()" title="Logout"><i class="ti ti-logout"></i></button>
+          </div>
         </div>
       </div>
     </aside>
@@ -235,7 +237,7 @@
             <button class="ro-tab" data-subtarget="analytics-hotspots-view">Hotspots</button>
             <button class="ro-tab" data-subtarget="analytics-milestones-view">Milestones</button>
             <button class="ro-tab" data-subtarget="analytics-reports-view">Reports</button>
-            <button class="ro-tab" data-subtarget="analytics-tardiness-view">Tardiness</button>
+            <button class="ro-tab" data-subtarget="analytics-tardiness-view">Attendance</button>
           </div>
 
           <!-- Date filter: visible across all sub-tabs -->

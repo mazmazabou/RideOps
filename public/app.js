@@ -3260,7 +3260,15 @@ function renderVehicleCards(vehicles) {
     grid.innerHTML = '<div class="ro-empty"><i class="ti ti-bus-off"></i><div class="ro-empty__title">No vehicles</div><div class="ro-empty__message">Add vehicles to track fleet usage.</div></div>';
     return;
   }
-  grid.innerHTML = vehicles.map(v => {
+  const sorted = [...vehicles].sort((a, b) => {
+    if ((a.status === 'retired') !== (b.status === 'retired')) return a.status === 'retired' ? 1 : -1;
+    return 0;
+  });
+  const hasActive = sorted.some(v => v.status !== 'retired');
+  const hasRetired = sorted.some(v => v.status === 'retired');
+  grid.innerHTML = sorted.map((v, i) => {
+    const divider = (hasActive && hasRetired && i > 0 && v.status === 'retired' && sorted[i - 1].status !== 'retired')
+      ? '<div class="vehicle-section-divider"><span>Archived</span></div>' : '';
     const overdueClass = v.maintenanceOverdue ? ' maintenance-overdue' : '';
     const alert = v.maintenanceOverdue
       ? `<div class="maintenance-alert">Maintenance overdue (${v.daysSinceMaintenance} days since last service)</div>` : '';
@@ -3280,7 +3288,7 @@ function renderVehicleCards(vehicles) {
       actionButtons = `<button class="btn secondary small" onclick="logVehicleMaintenance('${v.id}')">Log Maintenance</button>
         <button class="btn danger small" title="Permanently remove this vehicle from the system. Use only if the vehicle was entered in error." onclick="deleteVehicle('${v.id}', '${escapedName}')">Delete</button>`;
     }
-    return `<div class="vehicle-card${overdueClass}${retiredClass}">
+    return `${divider}<div class="vehicle-card${overdueClass}${retiredClass}">
       <div class="vehicle-name">${v.name}${retiredBadge}</div>
       <div class="vehicle-meta">Type: ${v.type} &middot; Status: ${v.status}</div>
       <div class="vehicle-meta">Completed rides: ${v.rideCount} &middot; Last used: ${lastUsed}</div>
