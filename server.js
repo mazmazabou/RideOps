@@ -2240,15 +2240,17 @@ app.get('/api/analytics/summary', requireOffice, async (req, res) => {
 app.get('/api/analytics/hotspots', requireOffice, async (req, res) => {
   const { clause, params } = buildDateFilter(req.query);
   const statusFilter = `AND status NOT IN ('denied','cancelled')`;
-  const [pickupRes, dropoffRes, routeRes] = await Promise.all([
+  const [pickupRes, dropoffRes, routeRes, matrixRes] = await Promise.all([
     query(`SELECT pickup_location AS location, COUNT(*) AS count FROM rides WHERE 1=1 ${clause} ${statusFilter} GROUP BY pickup_location ORDER BY count DESC LIMIT 10`, params),
     query(`SELECT dropoff_location AS location, COUNT(*) AS count FROM rides WHERE 1=1 ${clause} ${statusFilter} GROUP BY dropoff_location ORDER BY count DESC LIMIT 10`, params),
-    query(`SELECT pickup_location || ' → ' || dropoff_location AS route, COUNT(*) AS count FROM rides WHERE 1=1 ${clause} ${statusFilter} GROUP BY pickup_location, dropoff_location ORDER BY count DESC LIMIT 10`, params)
+    query(`SELECT pickup_location || ' → ' || dropoff_location AS route, COUNT(*) AS count FROM rides WHERE 1=1 ${clause} ${statusFilter} GROUP BY pickup_location, dropoff_location ORDER BY count DESC LIMIT 10`, params),
+    query(`SELECT pickup_location, dropoff_location, COUNT(*) AS count FROM rides WHERE 1=1 ${clause} ${statusFilter} GROUP BY pickup_location, dropoff_location ORDER BY count DESC LIMIT 50`, params)
   ]);
   res.json({
     topPickups: pickupRes.rows,
     topDropoffs: dropoffRes.rows,
-    topRoutes: routeRes.rows
+    topRoutes: routeRes.rows,
+    matrix: matrixRes.rows
   });
 });
 
@@ -2428,7 +2430,7 @@ app.get('/api/analytics/tardiness', requireOffice, async (req, res) => {
     if (from) { params.push(from); dateFilter += ` AND event_date >= $${params.length}`; }
     if (to) { params.push(to); dateFilter += ` AND event_date <= $${params.length}`; }
 
-    const [summaryRes, byDriverRes, byDowRes, trendRes] = await Promise.all([
+    const [summaryRes, byDriverRes, byDowRes, trendRes, distRes] = await Promise.all([
       query(
         `SELECT COUNT(*) AS total_clock_ins,
                 COUNT(*) FILTER (WHERE tardiness_minutes > 0) AS tardy_count,
@@ -2462,6 +2464,15 @@ app.get('/api/analytics/tardiness', requireOffice, async (req, res) => {
                 COALESCE(ROUND(AVG(tardiness_minutes) FILTER (WHERE tardiness_minutes > 0)), 0) AS avg_tardiness
          FROM clock_events WHERE 1=1${dateFilter}
          GROUP BY event_date ORDER BY event_date`, params
+      ),
+      query(
+        `SELECT
+                COUNT(*) FILTER (WHERE tardiness_minutes = 0 OR tardiness_minutes IS NULL) AS on_time,
+                COUNT(*) FILTER (WHERE tardiness_minutes BETWEEN 1 AND 5) AS late_1_5,
+                COUNT(*) FILTER (WHERE tardiness_minutes BETWEEN 6 AND 15) AS late_6_15,
+                COUNT(*) FILTER (WHERE tardiness_minutes BETWEEN 16 AND 30) AS late_16_30,
+                COUNT(*) FILTER (WHERE tardiness_minutes > 30) AS late_31_plus
+         FROM clock_events WHERE 1=1${dateFilter}`, params
       )
     ]);
 
@@ -2497,7 +2508,17 @@ app.get('/api/analytics/tardiness', requireOffice, async (req, res) => {
         totalClockIns: parseInt(r.total_clock_ins),
         tardyCount: parseInt(r.tardy_count),
         avgTardinessMinutes: parseInt(r.avg_tardiness)
-      }))
+      })),
+      distribution: (() => {
+        const d = distRes.rows[0] || {};
+        return [
+          { bucket: 'On Time', count: parseInt(d.on_time) || 0 },
+          { bucket: '1–5 min', count: parseInt(d.late_1_5) || 0 },
+          { bucket: '6–15 min', count: parseInt(d.late_6_15) || 0 },
+          { bucket: '16–30 min', count: parseInt(d.late_16_30) || 0 },
+          { bucket: '31+ min', count: parseInt(d.late_31_plus) || 0 }
+        ];
+      })()
     });
   } catch (err) {
     console.error('analytics tardiness error:', err);

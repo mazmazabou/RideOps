@@ -122,8 +122,8 @@ body {
 .ro-content { flex: 1; overflow-y: auto; }
 
 /* ── Section 8: KPI cards ── */
-.kpi-bar { display: flex; gap: 16px; padding: 16px 24px; flex-wrap: wrap; }
-.kpi-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px 20px; min-width: 120px; text-align: center; flex: 1; }
+.kpi-bar { display: flex; gap: 12px; padding: 0; flex-wrap: wrap; }
+.kpi-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 12px 16px; min-width: 100px; text-align: center; flex: 1; }
 .kpi-card--primary { border-top: 3px solid var(--color-primary); }
 .kpi-card--pending { border-top: 3px solid var(--status-pending); }
 .kpi-card--progress { border-top: 3px solid var(--status-on-the-way); }
@@ -360,8 +360,8 @@ body {
 .milestone-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; }
 .milestone-name { font-size: 14px; font-weight: 700; }
 .milestone-count { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
-.milestone-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
-.milestone-badge { font-size: 11px; padding: 2px 6px; border-radius: var(--radius-pill); background: var(--color-border-light); color: var(--color-text-muted); }
+.milestone-badges { display: flex; gap: 3px; flex-wrap: nowrap; margin-top: 6px; overflow-x: auto; }
+.milestone-badge { font-size: 10px; padding: 1px 5px; border-radius: var(--radius-pill); background: var(--color-border-light); color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0; }
 .milestone-badge.earned { background: var(--color-accent); color: var(--color-text); }
 .progress-bar-track { height: 6px; background: var(--color-border-light); border-radius: 3px; margin-top: 8px; overflow: hidden; }
 .progress-bar-fill { height: 100%; background: var(--color-primary); border-radius: 3px; transition: width 0.6s ease-out; }
@@ -614,7 +614,7 @@ body {
 .kpi-card--warning { border-top: 3px solid var(--status-on-the-way); }
 .kpi-card--danger { border-top: 3px solid var(--status-no-show); }
 .kpi-card--neutral { border-top: 3px solid var(--color-border); }
-.kpi-value { font-size: 28px; font-weight: 800; }
+.kpi-value { font-size: 22px; font-weight: 800; }
 .kpi-label { font-size: 11px; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 
 /* ── Section 42: Drawer internal sections ── */
@@ -1009,8 +1009,9 @@ body {
 
 /* ── Stacked Bar ── */
 .stacked-bar__track { display: flex; height: 28px; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-border-light); }
-.stacked-bar__seg { transition: opacity 0.15s; cursor: default; min-width: 2px; }
-.stacked-bar__seg:hover { opacity: 0.75; }
+.stacked-bar__seg { transition: opacity 0.15s, filter 0.15s; cursor: default; min-width: 2px; }
+.stacked-bar__seg:hover { filter: brightness(1.1); }
+.stacked-bar__track:hover .stacked-bar__seg:not(:hover) { opacity: 0.5; }
 .stacked-bar__legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
 .stacked-bar__legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: default; padding: 3px 6px; border-radius: var(--radius-sm); transition: background 0.15s; }
 .stacked-bar__legend-item:hover { background: var(--color-surface-hover); }
@@ -1040,6 +1041,62 @@ body {
 
 /* ── Milestone icon ── */
 .milestone-badge i { font-size: 13px; vertical-align: -1px; }
+
+/* ── Analytics Date Bar ── */
+.analytics-date-bar {
+  padding: 8px 24px;
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+}
+
+/* ── Analytics Card Grid ── */
+.analytics-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px 24px 24px;
+}
+.analytics-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.analytics-card--wide { grid-column: 1 / -1; }
+.analytics-card--kpi {
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.analytics-card__header {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.analytics-card__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+.analytics-card__title i { margin-right: 4px; color: var(--color-text-muted); }
+.analytics-card__body { padding: 12px 16px 16px; }
+@media (max-width: 768px) {
+  .analytics-card-grid { grid-template-columns: 1fr; }
+  .analytics-card--wide { grid-column: 1; }
+  .analytics-date-bar { padding: 8px 12px; }
+}
+
+/* ── OD Matrix ── */
+.od-matrix { width: 100%; border-collapse: separate; border-spacing: 2px; font-size: 11px; }
+.od-matrix th { padding: 4px 6px; font-weight: 600; color: var(--color-text-secondary); font-size: 10px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.od-matrix .od-row-header { text-align: right; padding-right: 8px; font-weight: 600; color: var(--color-text-secondary); font-size: 10px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.od-matrix .od-cell { text-align: center; padding: 6px 4px; border-radius: 3px; font-weight: 600; cursor: default; transition: outline 0.15s, transform 0.15s; min-width: 32px; }
+.od-matrix .od-cell:hover { outline: 2px solid var(--color-primary); transform: scale(1.05); z-index: 1; position: relative; }
+.od-matrix .od-cell--empty { color: var(--color-text-muted); font-weight: 400; }
+.od-matrix-note { font-size: 10px; color: var(--color-text-muted); margin-top: 8px; text-align: right; }
 
 /* ── Enhanced Driver Table ── */
 .ontime-bar-cell {

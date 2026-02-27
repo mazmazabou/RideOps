@@ -238,48 +238,88 @@
             <button class="ro-tab" data-subtarget="analytics-tardiness-view">Tardiness</button>
           </div>
 
+          <!-- Date filter: visible across all sub-tabs -->
+          <div class="analytics-date-bar">
+            <div class="flex gap-8 items-center">
+              <label class="ro-label" style="margin:0;">From</label>
+              <input type="date" id="analytics-from" class="ro-input" style="width:auto;">
+              <label class="ro-label" style="margin:0;">To</label>
+              <input type="date" id="analytics-to" class="ro-input" style="width:auto;">
+              <button class="ro-btn ro-btn--outline ro-btn--sm" id="analytics-refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button>
+            </div>
+          </div>
+
           <div class="sub-panel active" id="analytics-dashboard-view">
-            <div class="ro-section">
-              <div class="flex items-center justify-between mb-16">
-                <h3 class="ro-section__title">Overview</h3>
-                <div class="flex gap-8 items-center">
-                  <label class="ro-label" style="margin:0;">From</label>
-                  <input type="date" id="analytics-from" class="ro-input" style="width:auto;">
-                  <label class="ro-label" style="margin:0;">To</label>
-                  <input type="date" id="analytics-to" class="ro-input" style="width:auto;">
-                  <button class="ro-btn ro-btn--outline ro-btn--sm" id="analytics-refresh-btn" type="button">Refresh</button>
-                </div>
+            <div class="analytics-card analytics-card--wide analytics-card--kpi" style="margin:16px 24px 0;">
+              <div class="kpi-bar" id="analytics-kpi-grid"></div>
+            </div>
+            <div class="analytics-card-grid">
+              <div class="analytics-card">
+                <div class="analytics-card__header"><h4 class="analytics-card__title">Rides by Day of Week</h4></div>
+                <div class="analytics-card__body" id="chart-dow"></div>
+              </div>
+              <div class="analytics-card">
+                <div class="analytics-card__header"><h4 class="analytics-card__title">Rides by Hour</h4></div>
+                <div class="analytics-card__body" id="chart-hour"></div>
+              </div>
+              <div class="analytics-card analytics-card--wide">
+                <div class="analytics-card__header"><h4 class="analytics-card__title">Daily Volume (Recent)</h4></div>
+                <div class="analytics-card__body" id="chart-daily"></div>
+              </div>
+              <div class="analytics-card">
+                <div class="analytics-card__header"><h4 class="analytics-card__title">Status Breakdown</h4></div>
+                <div class="analytics-card__body" id="chart-status"></div>
               </div>
             </div>
-            <div class="kpi-bar" id="analytics-kpi-grid"></div>
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Rides by Day of Week</h3><div id="chart-dow"></div></div>
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Rides by Hour</h3><div id="chart-hour"></div></div>
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Daily Volume (Recent)</h3><div id="chart-daily"></div></div>
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Status Breakdown</h3><div id="chart-status"></div></div>
           </div>
 
           <div class="sub-panel" id="analytics-hotspots-view">
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Top Pickup Locations</h3><div id="hotspot-pickups"></div></div>
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Top Dropoff Locations</h3><div id="hotspot-dropoffs"></div></div>
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Most Popular Routes</h3><div id="hotspot-routes"></div></div>
+            <div class="analytics-card-grid" style="padding-top:16px;">
+              <div class="analytics-card">
+                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-map-pin"></i> Top Pickup Locations</h4></div>
+                <div class="analytics-card__body" id="hotspot-pickups"></div>
+              </div>
+              <div class="analytics-card">
+                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-map-pin-filled"></i> Top Dropoff Locations</h4></div>
+                <div class="analytics-card__body" id="hotspot-dropoffs"></div>
+              </div>
+              <div class="analytics-card analytics-card--wide">
+                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-route"></i> Route Demand Matrix</h4></div>
+                <div class="analytics-card__body" id="hotspot-matrix"></div>
+              </div>
+              <div class="analytics-card analytics-card--wide">
+                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-trending-up"></i> Most Popular Routes</h4></div>
+                <div class="analytics-card__body" id="hotspot-routes"></div>
+              </div>
+            </div>
           </div>
 
           <div class="sub-panel" id="analytics-milestones-view">
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Driver Milestones</h3><div id="driver-milestones"></div></div>
-            <div class="ro-section"><h3 class="ro-section__title mb-8">Rider Milestones</h3><div id="rider-milestones"></div></div>
+            <div class="analytics-card-grid" style="padding-top:16px;">
+              <div class="analytics-card">
+                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-steering-wheel"></i> Driver Milestones</h4></div>
+                <div class="analytics-card__body" id="driver-milestones"></div>
+              </div>
+              <div class="analytics-card">
+                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-walk"></i> Rider Milestones</h4></div>
+                <div class="analytics-card__body" id="rider-milestones"></div>
+              </div>
+            </div>
           </div>
 
           <div class="sub-panel" id="analytics-reports-view">
-            <div class="ro-section">
-              <div class="flex items-center justify-between mb-16">
-                <h3 class="ro-section__title">Semester Report</h3>
-                <button class="ro-btn ro-btn--outline ro-btn--sm" id="export-csv-btn" type="button"><i class="ti ti-download"></i> Export CSV</button>
+            <div class="analytics-card-grid" style="padding-top:16px;">
+              <div class="analytics-card analytics-card--wide">
+                <div class="analytics-card__header" style="display:flex;align-items:center;justify-content:space-between;">
+                  <h4 class="analytics-card__title">Semester Report</h4>
+                  <button class="ro-btn ro-btn--outline ro-btn--sm" id="export-csv-btn" type="button"><i class="ti ti-download"></i> Export CSV</button>
+                </div>
+                <div class="analytics-card__body" id="semester-report-content"></div>
               </div>
-              <div id="semester-report-content"></div>
-            </div>
-            <div class="ro-section">
-              <h3 class="ro-section__title mb-8" id="ro-wrapped-title">RideOps Wrapped</h3>
-              <div id="ro-wrapped-content"></div>
+              <div class="analytics-card analytics-card--wide">
+                <div class="analytics-card__header"><h4 class="analytics-card__title" id="ro-wrapped-title">RideOps Wrapped</h4></div>
+                <div class="analytics-card__body" id="ro-wrapped-content"></div>
+              </div>
             </div>
           </div>
 

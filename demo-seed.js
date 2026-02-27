@@ -26,6 +26,7 @@ async function seedDemoData(pool) {
   // ── Truncate transactional tables ──
   await q('DELETE FROM ride_events');
   await q('DELETE FROM rides');
+  await q('DELETE FROM clock_events');
   await q('DELETE FROM shifts');
   await q('DELETE FROM recurring_rides');
   await q('DELETE FROM rider_miss_counts');
@@ -413,6 +414,88 @@ async function seedDemoData(pool) {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // PART C: Clock Events (realistic tardiness data for analytics)
+  // ═══════════════════════════════════════════════════════════
+  const clockEvents = [];
+  const driverIds = ['emp1', 'emp2', 'emp3', 'emp4'];
+
+  // Build a map of shifts by employee + weekStart + day for shift_id lookups
+  const shiftMap = {};
+  for (const s of shifts) {
+    const key = `${s.employeeId}_${s.weekStart}_${s.day}`;
+    shiftMap[key] = s;
+  }
+
+  // Go back 30 days from today, generate clock events for each driver's scheduled shifts
+  for (let dayOffset = -30; dayOffset <= 0; dayOffset++) {
+    const eventDate = new Date(today);
+    eventDate.setDate(eventDate.getDate() + dayOffset);
+    if (!isWeekday(eventDate)) continue;
+
+    // Find the Monday of this date's week
+    const dow = eventDate.getDay(); // 0=Sun
+    const monOff = dow === 0 ? -6 : 1 - dow;
+    const weekMonday = new Date(eventDate);
+    weekMonday.setDate(eventDate.getDate() + monOff);
+    const weekMondayStr = `${weekMonday.getFullYear()}-${String(weekMonday.getMonth() + 1).padStart(2, '0')}-${String(weekMonday.getDate()).padStart(2, '0')}`;
+    const dayOfWeek = dow === 0 ? 6 : dow - 1; // Convert to Mon=0..Fri=4
+    const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+
+    for (const empId of driverIds) {
+      const shiftKey = `${empId}_${weekMondayStr}_${dayOfWeek}`;
+      const shift = shiftMap[shiftKey];
+      if (!shift) continue; // No shift scheduled for this driver on this day
+
+      // 75% on-time, 25% tardy (1-20 min late)
+      const isTardy = seededRandom() < 0.25;
+      const tardyMinutes = isTardy ? Math.floor(seededRandom() * 20) + 1 : 0;
+
+      // Parse scheduled start time
+      const [startH, startM] = shift.start.split(':').map(Number);
+      const clockInDate = new Date(eventDate);
+      clockInDate.setHours(startH, startM + tardyMinutes, Math.floor(seededRandom() * 59), 0);
+
+      // Clock out: parse shift end time
+      const [endH, endM] = shift.end.split(':').map(Number);
+      const clockOutDate = new Date(eventDate);
+      // Small variance on clock-out: -5 to +10 min
+      const outVariance = Math.floor(seededRandom() * 16) - 5;
+      clockOutDate.setHours(endH, endM + outVariance, Math.floor(seededRandom() * 59), 0);
+
+      // Skip today's events if the shift hasn't ended yet
+      if (dayOffset === 0 && clockOutDate > now) continue;
+
+      clockEvents.push({
+        id: generateId('clk'),
+        employeeId: empId,
+        shiftId: shift.id,
+        eventDate: dateStr,
+        scheduledStart: shift.start,
+        clockInAt: clockInDate.toISOString(),
+        clockOutAt: clockOutDate.toISOString(),
+        tardyMinutes
+      });
+    }
+  }
+
+  // Batch insert clock events
+  for (let i = 0; i < clockEvents.length; i += BATCH_SIZE) {
+    const batch = clockEvents.slice(i, i + BATCH_SIZE);
+    const values = [];
+    const params = [];
+    batch.forEach((ce, idx) => {
+      const offset = idx * 8;
+      values.push(`($${offset+1}, $${offset+2}, $${offset+3}, $${offset+4}, $${offset+5}, $${offset+6}, $${offset+7}, $${offset+8})`);
+      params.push(ce.id, ce.employeeId, ce.shiftId, ce.eventDate, ce.scheduledStart, ce.clockInAt, ce.clockOutAt, ce.tardyMinutes);
+    });
+    await q(
+      `INSERT INTO clock_events (id, employee_id, shift_id, event_date, scheduled_start, clock_in_at, clock_out_at, tardiness_minutes)
+       VALUES ${values.join(', ')}`,
+      params
+    );
+  }
+
   // ── Recurring rides (for casey) ──
   const nextMonday = new Date(today);
   nextMonday.setDate(nextMonday.getDate() + ((8 - nextMonday.getDay()) % 7 || 7));
@@ -437,7 +520,7 @@ async function seedDemoData(pool) {
     ['hello+riley@ride-ops.com', 1]
   );
 
-  console.log(`  Demo seed: ${rides.length} rides, ${events.length} events inserted`);
+  console.log(`  Demo seed: ${rides.length} rides, ${events.length} events, ${clockEvents.length} clock events inserted`);
 }
 
 module.exports = { seedDemoData };
