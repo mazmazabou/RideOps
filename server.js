@@ -20,8 +20,7 @@ if (DEMO_MODE) {
   emailModule = require('./email');
 }
 const { isConfigured: emailConfigured, sendWelcomeEmail, sendPasswordResetEmail } = emailModule;
-const { initTransporter, dispatchNotification, sendRiderEmail, createRiderNotification } = require('./notification-service');
-initTransporter();
+const { dispatchNotification, sendRiderEmail, createRiderNotification } = require('./notification-service');
 
 // ----- Tenant configuration -----
 const DEFAULT_TENANT = {

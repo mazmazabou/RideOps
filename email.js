@@ -115,4 +115,4 @@ async function sendPasswordResetEmail(email, name, tempPassword, orgName, brandC
 // Auto-initialize on require
 initEmail();
 
-module.exports = { isConfigured, sendWelcomeEmail, sendPasswordResetEmail };
+module.exports = { isConfigured, sendEmail, sendWelcomeEmail, sendPasswordResetEmail };

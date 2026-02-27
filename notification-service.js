@@ -1,59 +1,5 @@
 // notification-service.js — RideOps Notification Dispatch Service
-const nodemailer = require('nodemailer');
-
-// ── Configuration ──
-
-let transporter = null;
-
-function initTransporter() {
-  if (process.env.SMTP_HOST) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: parseInt(process.env.SMTP_PORT) === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
-    console.log('[Notifications] SMTP configured:', process.env.SMTP_HOST);
-  } else {
-    console.log('[Notifications] No SMTP configured — emails will be logged to console');
-    transporter = null;
-  }
-}
-
-const FROM_ADDRESS = process.env.NOTIFICATION_FROM || 'noreply@ride-ops.com';
-const FROM_NAME = process.env.NOTIFICATION_FROM_NAME || 'RideOps';
-
-// ── Core send function ──
-
-async function sendEmail(to, subject, htmlBody, textBody) {
-  const msg = {
-    from: `"${FROM_NAME}" <${FROM_ADDRESS}>`,
-    to,
-    subject,
-    html: htmlBody,
-    text: textBody || htmlBody.replace(/<[^>]*>/g, '')
-  };
-
-  if (!transporter) {
-    console.log('[Notifications] EMAIL (console mode):');
-    console.log('  To:', to);
-    console.log('  Subject:', subject);
-    console.log('  Body:', (textBody || htmlBody.replace(/<[^>]*>/g, '')).substring(0, 200));
-    return { logged: true };
-  }
-
-  try {
-    const info = await transporter.sendMail(msg);
-    console.log('[Notifications] Email sent:', info.messageId, 'to:', to);
-    return { sent: true, messageId: info.messageId };
-  } catch (err) {
-    console.error('[Notifications] Email failed:', err.message);
-    return { sent: false, error: err.message };
-  }
-}
+const { sendEmail } = require('./email');
 
 // ── Email templates ──
 
@@ -389,4 +335,4 @@ async function createRiderNotification(eventType, data, queryFn) {
   }
 }
 
-module.exports = { initTransporter, sendEmail, dispatchNotification, sendRiderEmail, createRiderNotification, TEMPLATES };
+module.exports = { dispatchNotification, sendRiderEmail, createRiderNotification, TEMPLATES };
