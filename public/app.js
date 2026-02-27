@@ -3474,7 +3474,6 @@ async function loadAnalyticsHotspots() {
     renderHotspotList('hotspot-pickups', data.topPickups, '', 'pickups');
     renderHotspotList('hotspot-dropoffs', data.topDropoffs, 'darkgold', 'dropoffs');
     renderODMatrix('hotspot-matrix', data.matrix);
-    renderHotspotList('hotspot-routes', data.topRoutes, 'gold', 'trips');
   } catch (e) { console.error('Analytics hotspots error:', e); }
 }
 
