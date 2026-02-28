@@ -197,12 +197,19 @@ async function initDb() {
       category VARCHAR(50) DEFAULT 'general',
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS program_content (
+      id TEXT PRIMARY KEY,
+      rules_html TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `;
   await query(schemaSql);
   await runMigrations();
   await seedDefaultUsers();
   await seedDefaultVehicles();
   await seedDefaultSettings();
+  await seedDefaultContent();
 }
 
 async function runMigrations() {
@@ -359,6 +366,22 @@ async function seedDefaultSettings() {
       [generateId('setting'), s.key, s.value, s.type, s.label, s.description, s.category]
     );
   }
+}
+
+async function seedDefaultContent() {
+  const existing = await query("SELECT id FROM program_content WHERE id = 'default'");
+  if (existing.rowCount > 0) return;
+  const defaultHtml = '<h3>Program Rules &amp; Guidelines</h3><ul>' +
+    '<li>This is a free accessible transportation service available during operating hours, Monday&ndash;Friday.</li>' +
+    '<li>Vehicles (golf carts) are not street-legal and cannot leave campus grounds.</li>' +
+    '<li>Riders must be present at the designated pickup location at the requested time.</li>' +
+    '<li>Drivers will wait up to 5 minutes (grace period). After that, the ride may be marked as a no-show.</li>' +
+    '<li><strong>5 consecutive no-shows result in automatic service termination.</strong> Completed rides reset the counter.</li>' +
+    '</ul>';
+  await query(
+    "INSERT INTO program_content (id, rules_html, updated_at) VALUES ('default', $1, NOW())",
+    [defaultHtml]
+  );
 }
 
 async function seedNotificationPreferences(userId) {
@@ -729,6 +752,35 @@ app.get('/api/client-config', (req, res) => {
 });
 
 app.get('/api/tenant-config', (req, res) => res.json(TENANT));
+
+app.get('/api/program-rules', async (req, res) => {
+  try {
+    const result = await query("SELECT rules_html FROM program_content WHERE id = 'default'");
+    if (!result.rowCount) return res.json({ rulesHtml: '' });
+    res.json({ rulesHtml: result.rows[0].rules_html });
+  } catch (err) {
+    console.error('GET /api/program-rules error:', err);
+    res.status(500).json({ error: 'Failed to fetch rules' });
+  }
+});
+
+app.put('/api/program-rules', requireOffice, async (req, res) => {
+  const { rulesHtml } = req.body;
+  if (typeof rulesHtml !== 'string') return res.status(400).json({ error: 'rulesHtml must be a string' });
+  if (/<script/i.test(rulesHtml)) return res.status(400).json({ error: 'Script tags not allowed' });
+  try {
+    const existing = await query("SELECT id FROM program_content WHERE id = 'default'");
+    if (existing.rowCount > 0) {
+      await query("UPDATE program_content SET rules_html = $1, updated_at = NOW() WHERE id = 'default'", [rulesHtml]);
+    } else {
+      await query("INSERT INTO program_content (id, rules_html, updated_at) VALUES ('default', $1, NOW())", [rulesHtml]);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('PUT /api/program-rules error:', err);
+    res.status(500).json({ error: 'Failed to save rules' });
+  }
+});
 
 // ----- Settings endpoints -----
 app.get('/api/settings', requireOffice, async (req, res) => {
