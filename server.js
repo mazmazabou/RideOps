@@ -360,7 +360,9 @@ async function seedDefaultSettings() {
     { key: 'auto_deny_outside_hours', value: 'true', type: 'boolean', label: 'Auto-Deny Outside Hours', description: 'Automatically reject ride requests outside service hours', category: 'operations' },
     { key: 'notify_office_tardy', value: 'true', type: 'boolean', label: 'Notify Office of Tardiness', description: 'Alert office when a driver clocks in late', category: 'notifications' },
     { key: 'notify_rider_no_show', value: 'true', type: 'boolean', label: 'Notify Rider of No-Show', description: 'Send notification to rider when marked no-show', category: 'notifications' },
-    { key: 'notify_rider_strike_warning', value: 'true', type: 'boolean', label: 'Notify Rider of Strike Warning', description: 'Warn rider when approaching strike limit', category: 'notifications' }
+    { key: 'notify_rider_strike_warning', value: 'true', type: 'boolean', label: 'Notify Rider of Strike Warning', description: 'Warn rider when approaching strike limit', category: 'notifications' },
+    { key: 'ride_retention_value', value: '0', type: 'number', label: 'Ride Data Retention — Value', description: 'Number of time units to retain closed rides. 0 = keep forever.', category: 'data' },
+    { key: 'ride_retention_unit', value: 'months', type: 'select', label: 'Ride Data Retention — Unit', description: 'Time unit for ride retention period.', category: 'data' }
   ];
   for (const s of defaults) {
     await query(
@@ -2944,6 +2946,37 @@ app.delete('/api/notifications/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('DELETE /api/notifications/:id error:', err);
     res.status(500).json({ error: 'Failed to delete notification' });
+  }
+});
+
+// Purge old closed rides based on retention settings
+app.post('/api/rides/purge-old', requireOffice, async (req, res) => {
+  try {
+    const retentionValue = parseInt(await getSetting('ride_retention_value', '0'));
+    const retentionUnit = await getSetting('ride_retention_unit', 'months');
+    if (!retentionValue || retentionValue <= 0) {
+      return res.status(400).json({ error: 'Retention is set to keep forever (0). Nothing to purge.' });
+    }
+    const cutoff = new Date();
+    if (retentionUnit === 'weeks') cutoff.setDate(cutoff.getDate() - (retentionValue * 7));
+    else if (retentionUnit === 'months') cutoff.setMonth(cutoff.getMonth() - retentionValue);
+    else if (retentionUnit === 'years') cutoff.setFullYear(cutoff.getFullYear() - retentionValue);
+    else return res.status(400).json({ error: 'Invalid retention unit' });
+
+    await query(
+      `DELETE FROM ride_events WHERE ride_id IN (
+        SELECT id FROM rides WHERE status IN ('completed', 'no_show', 'denied', 'cancelled')
+        AND requested_time < $1
+      )`, [cutoff.toISOString()]
+    );
+    const ridesResult = await query(
+      `DELETE FROM rides WHERE status IN ('completed', 'no_show', 'denied', 'cancelled')
+       AND requested_time < $1`, [cutoff.toISOString()]
+    );
+    res.json({ purged: ridesResult.rowCount, cutoffDate: cutoff.toISOString() });
+  } catch (err) {
+    console.error('POST /api/rides/purge-old error:', err);
+    res.status(500).json({ error: 'Failed to purge old rides' });
   }
 });
 

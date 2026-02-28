@@ -4603,6 +4603,101 @@ async function saveNotificationPreferences() {
   btn.innerHTML = '<i class="ti ti-device-floppy"></i> Save Preferences';
 }
 
+// ── Data Retention Settings ──
+
+function updateRetentionUI(val, unit) {
+  const statusEl = document.getElementById('retention-status');
+  const purgeBtn = document.getElementById('purge-now-btn');
+  const numVal = parseInt(val) || 0;
+  if (statusEl) {
+    statusEl.textContent = numVal > 0 ? 'Current: ' + numVal + ' ' + unit : 'Current: Keep forever';
+  }
+  if (purgeBtn) {
+    purgeBtn.disabled = numVal <= 0;
+    purgeBtn.title = numVal <= 0 ? 'Set a retention period first' : '';
+  }
+}
+
+async function loadRetentionSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const grouped = await res.json();
+    const dataSettings = grouped.data || [];
+    let retVal = '0', retUnit = 'months';
+    for (const s of dataSettings) {
+      if (s.key === 'ride_retention_value') retVal = s.value;
+      if (s.key === 'ride_retention_unit') retUnit = s.value;
+    }
+    const valInput = document.getElementById('retention-value');
+    const unitSelect = document.getElementById('retention-unit');
+    if (valInput) valInput.value = retVal;
+    if (unitSelect) unitSelect.value = retUnit;
+    updateRetentionUI(retVal, retUnit);
+  } catch {}
+
+  // Save button
+  const saveBtn = document.getElementById('save-retention-btn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const val = document.getElementById('retention-value')?.value || '0';
+      const unit = document.getElementById('retention-unit')?.value || 'months';
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify([
+            { key: 'ride_retention_value', value: val },
+            { key: 'ride_retention_unit', value: unit }
+          ])
+        });
+        if (res.ok) {
+          showToastNew('Retention settings saved', 'success');
+          updateRetentionUI(val, unit);
+        } else {
+          const err = await res.json();
+          showToastNew(err.error || 'Failed to save', 'error');
+        }
+      } catch {
+        showToastNew('Failed to save retention settings', 'error');
+      }
+    });
+  }
+
+  // Purge Now button
+  const purgeBtn = document.getElementById('purge-now-btn');
+  if (purgeBtn) {
+    purgeBtn.addEventListener('click', () => {
+      const val = document.getElementById('retention-value')?.value || '0';
+      const unit = document.getElementById('retention-unit')?.value || 'months';
+      if (parseInt(val) <= 0) return;
+      showModalNew({
+        title: 'Purge Old Rides',
+        body: 'This will permanently delete all closed rides older than ' + val + ' ' + unit + '. This cannot be undone.',
+        confirmLabel: 'Purge',
+        confirmClass: 'ro-btn--danger',
+        onConfirm: async function() {
+          const resultEl = document.getElementById('purge-result');
+          try {
+            const res = await fetch('/api/rides/purge-old', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+              showToastNew('Purged ' + data.purged + ' ride' + (data.purged !== 1 ? 's' : ''), 'success');
+              if (resultEl) resultEl.textContent = 'Purged ' + data.purged + ' rides';
+              await loadRides();
+            } else {
+              showToastNew(data.error || 'Purge failed', 'error');
+              if (resultEl) resultEl.textContent = data.error || 'Purge failed';
+            }
+          } catch {
+            showToastNew('Failed to purge rides', 'error');
+          }
+        }
+      });
+    });
+  }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTenantConfig();
   if (!await checkAuth()) return;
@@ -5077,6 +5172,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!notifPrefsLoaded) {
         notifPrefsLoaded = true;
         loadNotificationPreferences();
+      }
+    });
+  }
+
+  // Data Management: lazy load retention settings on first sub-tab click
+  let dataManagementLoaded = false;
+  const dataTab = document.querySelector('.ro-tab[data-subtarget="admin-data-view"]');
+  if (dataTab) {
+    dataTab.addEventListener('click', () => {
+      if (!dataManagementLoaded) {
+        dataManagementLoaded = true;
+        loadRetentionSettings();
       }
     });
   }

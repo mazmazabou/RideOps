@@ -351,6 +351,7 @@
             <button class="ro-tab" data-subtarget="admin-rules-view">Business Rules</button>
             <button class="ro-tab" data-subtarget="notif-settings">Notifications</button>
             <button class="ro-tab" data-subtarget="admin-guidelines-view">Program Guidelines</button>
+            <button class="ro-tab" data-subtarget="admin-data-view">Data Management</button>
           </div>
 
           <div class="sub-panel active" id="admin-users-view">
@@ -420,6 +421,35 @@
 
           <div class="sub-panel" id="notif-settings">
             <div id="notif-prefs-container" class="p-24"></div>
+          </div>
+
+          <div class="sub-panel" id="admin-data-view">
+            <div class="p-24">
+              <h3 class="ro-section__title">Ride Data Retention</h3>
+              <div class="text-xs text-muted mb-16">
+                Automatically purge closed rides (completed, no-show, denied, cancelled) older than the configured period. Active rides are never purged. Set value to 0 to keep rides forever.
+              </div>
+              <div class="flex items-center gap-8 mb-16" style="flex-wrap:wrap;">
+                <label class="ro-label" style="margin-bottom:0">Delete closed rides older than:</label>
+                <input type="number" id="retention-value" class="ro-input" style="width:80px" min="0" max="99" value="0">
+                <select id="retention-unit" class="ro-select" style="width:auto">
+                  <option value="weeks">weeks</option>
+                  <option value="months" selected>months</option>
+                  <option value="years">years</option>
+                </select>
+                <button class="ro-btn ro-btn--primary ro-btn--sm" id="save-retention-btn"><i class="ti ti-device-floppy"></i> Save</button>
+              </div>
+              <div class="text-xs text-muted mb-24" id="retention-status">Current: Keep forever</div>
+              <hr style="border:none;border-top:1px solid var(--color-border);margin:16px 0;">
+              <h4 class="ro-section__title" style="font-size:14px;">Manual Purge</h4>
+              <div class="text-xs text-muted mb-8">
+                Run the retention policy now. This will permanently delete qualifying closed rides.
+              </div>
+              <div class="flex items-center gap-8">
+                <button class="ro-btn ro-btn--danger ro-btn--sm" id="purge-now-btn" disabled title="Set a retention period first"><i class="ti ti-trash"></i> Purge Now</button>
+                <span class="text-sm text-muted" id="purge-result"></span>
+              </div>
+            </div>
           </div>
         </section>
 
