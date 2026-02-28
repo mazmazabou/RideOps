@@ -104,7 +104,7 @@ pool.on('connect', (client) => {
   client.query(`SET timezone = '${TENANT.timezone}'`);
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'rideops-secret-change-in-production',

@@ -4388,7 +4388,13 @@ async function saveProgramGuidelines() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rulesHtml: guidelinesQuill.root.innerHTML })
     });
-    const data = await res.json();
+    if (handleSessionExpiry(res)) return;
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.error || 'Failed to save guidelines', 'error');
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
     if (data.ok) { showToast('Program guidelines saved', 'success'); window._cachedRulesHtml = null; }
     else showToast(data.error || 'Save failed', 'error');
   } catch (err) {
