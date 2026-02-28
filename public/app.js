@@ -2498,6 +2498,7 @@ function buildDriverGridRow(driver, driverRides, cols, startHour, gridColStyle, 
   }
   html += `<div class="time-grid__driver"><span class="time-grid__driver-dot ${dotClass}"></span><span class="clickable-name" data-user="${driver.id}">${driver.name}</span>${tardyBadgeHtml}</div>`;
 
+  const bandColor = driver._paletteColor ? hexToRgb(driver._paletteColor) : 'var(--color-secondary-rgb, 210,180,140)';
   driverShifts.forEach(s => {
     const [sh, sm] = s.startTime.split(':').map(Number);
     const [eh, em] = s.endTime.split(':').map(Number);
@@ -2512,7 +2513,7 @@ function buildDriverGridRow(driver, driverRides, cols, startHour, gridColStyle, 
     const leftFrac = ((visStart - startHour) / cols).toFixed(6);
     const widthFrac = ((visEnd - visStart) / cols).toFixed(6);
 
-    html += `<div class="time-grid__shift-band" style="left:calc(100px + (100% - 100px) * ${leftFrac});width:calc((100% - 100px) * ${widthFrac});"></div>`;
+    html += `<div class="time-grid__shift-band" style="left:calc(100px + (100% - 100px) * ${leftFrac});width:calc((100% - 100px) * ${widthFrac});background:rgba(${bandColor},0.18);border-color:rgba(${bandColor},0.45);"></div>`;
   });
 
   for (let h = startHour; h < startHour + cols; h++) {
