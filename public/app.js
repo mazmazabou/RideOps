@@ -3740,14 +3740,14 @@ async function renderTardinessSection(container, data) {
       const avg = d.avgTardinessMinutes ? parseFloat(d.avgTardinessMinutes).toFixed(1) + 'm' : '—';
       const maxL = d.maxTardinessMinutes ? d.maxTardinessMinutes + 'm' : '—';
       const barColor = driverOnTime >= 90 ? 'var(--status-completed)' : driverOnTime >= 80 ? 'var(--status-on-the-way)' : 'var(--status-no-show)';
-      const missedShifts = d.missedShifts || 0;
+      const missedShifts = parseInt(d.missedShifts, 10) || 0;
       const missedBadge = missedShifts > 0
         ? `<span class="tardy-badge" style="background:var(--status-no-show)">${missedShifts}</span>`
-        : '<span style="color:var(--color-text-muted)">0</span>';
+        : '<span class="text-muted">—</span>';
       html += `<tr>
         <td><span class="punctuality-dot ${dotClass}"></span>${d.name}</td>
         <td>${d.totalClockIns}</td>
-        <td>${d.tardyCount > 0 ? '<span class="tardy-badge">' + d.tardyCount + '</span>' : '0'}</td>
+        <td>${d.tardyCount > 0 ? '<span class="tardy-badge">' + d.tardyCount + '</span>' : '<span class="text-muted">—</span>'}</td>
         <td><div class="ontime-bar-cell"><div class="ontime-bar-track"><div class="ontime-bar-fill" style="width:${driverOnTime}%; background:${barColor};"></div></div><span class="ontime-bar-label">${driverOnTime}%</span></div></td>
         <td>${avg}</td>
         <td>${maxL}</td>
