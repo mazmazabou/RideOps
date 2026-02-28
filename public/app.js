@@ -95,38 +95,49 @@ async function loadTenantConfig() {
   if (!tenantConfig) return;
 
   // SessionStorage campus override ONLY for demo.html legacy flow (not org-scoped URLs)
-  let campusKey = null;
   if (!orgSlug) {
+    let campusKey = null;
     try { campusKey = sessionStorage.getItem('ro-demo-campus'); } catch {}
-  }
-  if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
-    const ct = CAMPUS_THEMES[campusKey];
-    tenantConfig.orgName = ct.orgName;
-    tenantConfig.orgShortName = ct.orgShortName;
-    tenantConfig.orgTagline = ct.orgTagline;
-    tenantConfig.orgInitials = ct.orgInitials;
-    tenantConfig.primaryColor = ct.primaryColor;
-    tenantConfig.secondaryColor = ct.secondaryColor;
-    tenantConfig.mapUrl = ct.mapUrl;
-    // Apply CSS vars
-    const root = document.documentElement;
-    root.style.setProperty('--color-primary', ct.primaryColor);
-    root.style.setProperty('--color-primary-rgb', hexToRgb(ct.primaryColor));
-    if (ct.secondaryColor) {
-      root.style.setProperty('--color-accent', ct.secondaryColor);
-      root.style.setProperty('--color-secondary', ct.secondaryColor);
-      root.style.setProperty('--color-secondary-rgb', hexToRgb(ct.secondaryColor));
+    if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
+      const ct = CAMPUS_THEMES[campusKey];
+      tenantConfig.orgName = ct.orgName;
+      tenantConfig.orgShortName = ct.orgShortName;
+      tenantConfig.orgTagline = ct.orgTagline;
+      tenantConfig.orgInitials = ct.orgInitials;
+      tenantConfig.primaryColor = ct.primaryColor;
+      tenantConfig.secondaryColor = ct.secondaryColor;
+      tenantConfig.secondaryTextColor = ct.secondaryTextColor;
+      tenantConfig.mapUrl = ct.mapUrl;
+      tenantConfig.sidebarBg = ct.sidebarBg;
+      tenantConfig.sidebarText = ct.sidebarText;
+      tenantConfig.sidebarActiveBg = ct.sidebarActiveBg;
+      tenantConfig.sidebarHover = ct.sidebarHover;
+      tenantConfig.sidebarBorder = ct.sidebarBorder;
+      tenantConfig.headerBg = ct.headerBg;
     }
-    if (ct.secondaryTextColor) root.style.setProperty('--color-secondary-text', ct.secondaryTextColor);
-    if (ct.primaryLight) root.style.setProperty('--color-primary-light', ct.primaryLight);
-    if (ct.primaryDark) root.style.setProperty('--color-primary-dark', ct.primaryDark);
-    if (ct.sidebarBg) root.style.setProperty('--color-sidebar-bg', ct.sidebarBg);
-    if (ct.sidebarText) root.style.setProperty('--color-sidebar-text', ct.sidebarText);
-    if (ct.sidebarActiveBg) root.style.setProperty('--color-sidebar-active-bg', ct.sidebarActiveBg);
-    if (ct.sidebarHover) root.style.setProperty('--color-sidebar-hover', ct.sidebarHover);
-    if (ct.sidebarBorder) root.style.setProperty('--color-sidebar-border', ct.sidebarBorder);
-    root.style.setProperty('--color-sidebar-active', ct.primaryColor);
   }
+
+  // Apply CSS vars from tenantConfig (works for both server config and sessionStorage override)
+  const root = document.documentElement;
+  if (tenantConfig.primaryColor) {
+    root.style.setProperty('--color-primary', tenantConfig.primaryColor);
+    root.style.setProperty('--color-primary-rgb', hexToRgb(tenantConfig.primaryColor));
+    root.style.setProperty('--color-primary-dark', shadeHex(tenantConfig.primaryColor, -25));
+    root.style.setProperty('--color-primary-light', shadeHex(tenantConfig.primaryColor, 80));
+    root.style.setProperty('--color-sidebar-active', tenantConfig.primaryColor);
+  }
+  if (tenantConfig.secondaryColor) {
+    root.style.setProperty('--color-accent', tenantConfig.secondaryColor);
+    root.style.setProperty('--color-secondary', tenantConfig.secondaryColor);
+    root.style.setProperty('--color-secondary-rgb', hexToRgb(tenantConfig.secondaryColor));
+  }
+  if (tenantConfig.secondaryTextColor) root.style.setProperty('--color-secondary-text', tenantConfig.secondaryTextColor);
+  if (tenantConfig.headerBg) root.style.setProperty('--color-header-bg', tenantConfig.headerBg);
+  if (tenantConfig.sidebarBg) root.style.setProperty('--color-sidebar-bg', tenantConfig.sidebarBg);
+  if (tenantConfig.sidebarText) root.style.setProperty('--color-sidebar-text', tenantConfig.sidebarText);
+  if (tenantConfig.sidebarActiveBg) root.style.setProperty('--color-sidebar-active-bg', tenantConfig.sidebarActiveBg);
+  if (tenantConfig.sidebarHover) root.style.setProperty('--color-sidebar-hover', tenantConfig.sidebarHover);
+  if (tenantConfig.sidebarBorder) root.style.setProperty('--color-sidebar-border', tenantConfig.sidebarBorder);
 
   document.title = tenantConfig.orgName + ' Operations Console';
   const orgShort = document.getElementById('org-short-name');
