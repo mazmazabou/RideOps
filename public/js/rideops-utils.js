@@ -440,7 +440,7 @@ function openNotificationDrawer() {
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       if (!data) return;
-      renderNotificationDrawer(data.notifications, data.unreadCount);
+      renderNotificationDrawer(data.notifications, data.unreadCount, data.totalCount || data.notifications.length);
     })
     .catch(function() {});
 }
@@ -459,9 +459,10 @@ function _notifUpdateSelectionUI(dw) {
   if (selectAllCb) selectAllCb.checked = allItems.length > 0 && count === allItems.length;
 }
 
-function renderNotificationDrawer(notifications, unreadCount) {
+function renderNotificationDrawer(notifications, unreadCount, totalCount) {
   closeDrawer();
   _notifSelectedIds = new Set();
+  var _notifTotalCount = totalCount || notifications.length;
   var ov = document.createElement('div');
   ov.className = 'ro-drawer-overlay open';
   ov.id = 'ro-drawer-overlay';
@@ -482,12 +483,16 @@ function renderNotificationDrawer(notifications, unreadCount) {
   // Selection toolbar
   var toolbarHTML = '';
   if (notifications.length) {
+    var showingLabel = _notifTotalCount > notifications.length
+      ? '<span style="font-size:11px;color:var(--color-text-muted);">Showing ' + notifications.length + ' of ' + _notifTotalCount + '</span>'
+      : '';
     toolbarHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--color-border,#e5e7eb);">' +
       '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-muted);cursor:pointer;">' +
       '<input type="checkbox" id="notif-select-all" style="cursor:pointer;"> Select All</label>' +
       '<button class="ro-btn ro-btn--danger ro-btn--sm" id="notif-delete-selected" style="display:none;"><i class="ti ti-trash" style="font-size:14px;"></i> Delete (<span class="notif-sel-count">0</span>)</button>' +
       '<div style="flex:1"></div>' +
-      '<button class="ro-btn ro-btn--outline ro-btn--sm" id="notif-clear-all" style="font-size:12px;"><i class="ti ti-trash-x" style="font-size:14px;"></i> Clear All</button>' +
+      showingLabel +
+      '<button class="ro-btn ro-btn--outline ro-btn--sm" id="notif-clear-all" style="font-size:12px;"><i class="ti ti-trash-x" style="font-size:14px;"></i> Clear All (' + _notifTotalCount + ')</button>' +
       '</div>';
   }
 
@@ -547,26 +552,49 @@ function renderNotificationDrawer(notifications, unreadCount) {
     deleteSelBtn.addEventListener('click', function() {
       var ids = Array.from(_notifSelectedIds);
       if (!ids.length) return;
-      showModalNew({
-        title: 'Delete Notifications',
-        body: 'Delete ' + ids.length + ' selected notification' + (ids.length !== 1 ? 's' : '') + '?',
-        confirmLabel: 'Delete',
-        confirmClass: 'ro-btn--danger',
-        onConfirm: function() {
-          fetch('/api/notifications/bulk-delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: ids })
-          }).then(function(r) {
-            if (!r.ok) throw new Error('Failed');
-            showToastNew('Deleted ' + ids.length + ' notification' + (ids.length !== 1 ? 's' : ''), 'success');
-            openNotificationDrawer();
-            pollNotificationCount();
-          }).catch(function() {
-            showToastNew('Failed to delete notifications', 'error');
-          });
-        }
-      });
+      var allVisibleSelected = selectAllCb && selectAllCb.checked;
+      var hasMore = _notifTotalCount > notifications.length;
+      // If all visible are selected and there are more beyond the page, delete ALL
+      if (allVisibleSelected && hasMore) {
+        showModalNew({
+          title: 'Delete All Notifications',
+          body: 'Delete all ' + _notifTotalCount + ' notifications? This cannot be undone.',
+          confirmLabel: 'Delete All',
+          confirmClass: 'ro-btn--danger',
+          onConfirm: function() {
+            fetch('/api/notifications/all', { method: 'DELETE' })
+              .then(function(r) {
+                if (!r.ok) throw new Error('Failed');
+                showToastNew('Deleted all ' + _notifTotalCount + ' notifications', 'success');
+                openNotificationDrawer();
+                pollNotificationCount();
+              }).catch(function() {
+                showToastNew('Failed to delete notifications', 'error');
+              });
+          }
+        });
+      } else {
+        showModalNew({
+          title: 'Delete Notifications',
+          body: 'Delete ' + ids.length + ' selected notification' + (ids.length !== 1 ? 's' : '') + '?',
+          confirmLabel: 'Delete',
+          confirmClass: 'ro-btn--danger',
+          onConfirm: function() {
+            fetch('/api/notifications/bulk-delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids: ids })
+            }).then(function(r) {
+              if (!r.ok) throw new Error('Failed');
+              showToastNew('Deleted ' + ids.length + ' notification' + (ids.length !== 1 ? 's' : ''), 'success');
+              openNotificationDrawer();
+              pollNotificationCount();
+            }).catch(function() {
+              showToastNew('Failed to delete notifications', 'error');
+            });
+          }
+        });
+      }
     });
   }
 

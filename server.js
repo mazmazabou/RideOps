@@ -2859,10 +2859,11 @@ app.get('/api/notifications', requireAuth, async (req, res) => {
     const unreadOnly = req.query.unread_only === 'true';
 
     const countRes = await query(
-      'SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read = FALSE',
+      'SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE read = FALSE) AS unread FROM notifications WHERE user_id = $1',
       [req.session.userId]
     );
-    const unreadCount = parseInt(countRes.rows[0].count);
+    const unreadCount = parseInt(countRes.rows[0].unread);
+    const totalCount = parseInt(countRes.rows[0].total);
 
     const whereClause = unreadOnly ? 'AND read = FALSE' : '';
     const result = await query(
@@ -2874,7 +2875,7 @@ app.get('/api/notifications', requireAuth, async (req, res) => {
       [req.session.userId, limit, offset]
     );
 
-    res.json({ notifications: result.rows, unreadCount });
+    res.json({ notifications: result.rows, unreadCount, totalCount });
   } catch (err) {
     console.error('GET /api/notifications error:', err);
     res.status(500).json({ error: 'Failed to fetch notifications' });
