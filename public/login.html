@@ -38,7 +38,7 @@
   <div class="login-wrap">
     <div class="login-card">
       <div class="login-brand">
-        <img src="/logoWithBackground.png" alt="RideOps" class="ro-brand-icon" id="login-brand-icon" style="object-fit:cover;" />
+        <img src="/logoWithoutBackground.png" alt="RideOps" class="ro-brand-icon" id="login-brand-icon" style="object-fit:cover;" />
         <span class="login-brand-text" id="login-brand">RideOps</span>
       </div>
       <div id="login-tagline" style="text-align:center; font-size:13px; color:var(--color-text-secondary); margin-bottom:24px;">Dispatch + Driver Operations</div>
@@ -103,16 +103,33 @@
         document.title=c.orgName;
         const b=document.getElementById('login-brand');if(b)b.textContent=c.orgName;
         const t=document.getElementById('login-tagline');if(t)t.textContent=c.orgTagline;
-        const icon=document.getElementById('login-brand-icon');if(icon&&c.orgInitials)icon.textContent=c.orgInitials;
+        if(c.primaryColor){
+          document.documentElement.style.setProperty('--color-primary',c.primaryColor);
+        }
       }).catch(()=>{});
     })();
 
     let loginUserData = null;
 
-    function redirectByRole(role) {
-      if (role === 'office') window.location.href = '/office';
-      else if (role === 'driver') window.location.href = '/driver';
-      else window.location.href = '/rider';
+    function detectOrgSlug() {
+      var pathParts = window.location.pathname.split('/').filter(Boolean);
+      var knownSlugs = ['usc', 'stanford', 'ucla', 'uci'];
+      if (pathParts.length > 0 && knownSlugs.indexOf(pathParts[0]) !== -1) return pathParts[0];
+      return null;
+    }
+
+    function redirectByRole(role, campus) {
+      var org = campus || detectOrgSlug();
+      if (org) {
+        var base = '/' + org;
+        if (role === 'driver') window.location.href = base + '/driver';
+        else if (role === 'rider') window.location.href = base + '/rider';
+        else window.location.href = base;
+      } else {
+        if (role === 'office') window.location.href = '/office';
+        else if (role === 'driver') window.location.href = '/driver';
+        else window.location.href = '/rider';
+      }
     }
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -134,7 +151,7 @@
           document.getElementById('cp-current').value = document.getElementById('password').value;
           return;
         }
-        redirectByRole(user.role);
+        redirectByRole(user.role, user.campus);
       } catch { errorEl.textContent = 'Connection error'; errorEl.classList.add('show'); }
     });
 
@@ -174,7 +191,7 @@
         }
         msg.textContent = 'Password changed! Redirecting...';
         msg.style.color = 'var(--status-completed)';
-        setTimeout(() => redirectByRole(loginUserData?.role), 1000);
+        setTimeout(() => redirectByRole(loginUserData?.role, loginUserData?.campus), 1000);
       } catch {
         msg.textContent = 'Connection error';
         msg.style.color = 'var(--status-no-show)';

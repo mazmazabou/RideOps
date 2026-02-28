@@ -37,7 +37,7 @@
   <div class="signup-wrap">
     <div class="signup-card">
       <div class="signup-brand">
-        <img src="/logoWithBackground.png" alt="RideOps" class="ro-brand-icon" style="object-fit:cover;" />
+        <img src="/logoWithoutBackground.png" alt="RideOps" class="ro-brand-icon" style="object-fit:cover;" />
         <span class="signup-brand-text">Create Account</span>
       </div>
       <div class="signup-subtitle">Sign up as a rider to request accessible rides.</div>
@@ -79,6 +79,16 @@
     <div class="bottom-link"><a href="/login">Already have an account? Log in</a></div>
   </div>
   <script>
+    // Detect org slug from URL for login links
+    (function() {
+      var pathParts = window.location.pathname.split('/').filter(Boolean);
+      var knownSlugs = ['usc', 'stanford', 'ucla', 'uci'];
+      if (pathParts.length > 0 && knownSlugs.indexOf(pathParts[0]) !== -1) {
+        var base = '/' + pathParts[0];
+        document.querySelectorAll('a[href="/login"]').forEach(function(a) { a.href = base; });
+      }
+    })();
+
     // Tenant config for dynamic labels
     fetch('/api/tenant-config').then(r=>r.ok?r.json():null).then(c=>{
       if(!c)return;
@@ -87,6 +97,7 @@
       if(label && c.idFieldLabel) label.textContent = c.idFieldLabel;
       if(input && c.idFieldPlaceholder) input.placeholder = c.idFieldPlaceholder;
       if(input && c.idFieldMaxLength) input.maxLength = c.idFieldMaxLength;
+      if(c.primaryColor) document.documentElement.style.setProperty('--color-primary', c.primaryColor);
     }).catch(()=>{});
 
     const emailInput = document.getElementById('email');
@@ -155,7 +166,10 @@
         }
         successEl.textContent = 'Account created! Redirecting...';
         successEl.classList.add('show');
-        setTimeout(() => { window.location.href = '/rider'; }, 600);
+        var pathParts = window.location.pathname.split('/').filter(Boolean);
+        var knownSlugs = ['usc', 'stanford', 'ucla', 'uci'];
+        var orgSlug = (pathParts.length > 0 && knownSlugs.indexOf(pathParts[0]) !== -1) ? pathParts[0] : null;
+        setTimeout(() => { window.location.href = orgSlug ? '/' + orgSlug + '/rider' : '/rider'; }, 600);
       } catch {
         errorEl.textContent = 'Network error. Please try again.';
         errorEl.classList.add('show');

@@ -20,7 +20,8 @@ function hexToRgb(hex) {
   return ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255);
 }
 
-// Build locations API URL with optional campus param from sessionStorage
+// Build locations API URL — server session handles campus now.
+// Fallback: pass sessionStorage campus for demo.html legacy flow.
 function locationsUrl() {
   var campus = null;
   try { campus = sessionStorage.getItem('ro-demo-campus'); } catch(e) {}
@@ -28,33 +29,41 @@ function locationsUrl() {
   return '/api/locations';
 }
 
-// Tenant theme loader — merges campus override from sessionStorage in demo mode
+// Tenant theme loader — server returns campus-specific config via session.
+// SessionStorage override kept as fallback for demo.html pill flow.
 async function applyTenantTheme() {
   try {
     var config = await fetch('/api/tenant-config').then(function(r) { return r.json(); });
     var root = document.documentElement;
 
-    // Check for demo campus override
-    var campusKey = null;
-    try { campusKey = sessionStorage.getItem('ro-demo-campus'); } catch(e) {}
-    if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
-      var ct = CAMPUS_THEMES[campusKey];
-      // Merge campus theme over server config
-      config.orgName = ct.orgName;
-      config.orgShortName = ct.orgShortName;
-      config.orgTagline = ct.orgTagline;
-      config.orgInitials = ct.orgInitials;
-      config.primaryColor = ct.primaryColor;
-      config.secondaryColor = ct.secondaryColor;
-      config.mapUrl = ct.mapUrl;
+    // Fallback: if server didn't return campus-specific config, check sessionStorage
+    var campusKey = config.campusKey || null;
+    if (!campusKey) {
+      try { campusKey = sessionStorage.getItem('ro-demo-campus'); } catch(e) {}
+      if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
+        var ct = CAMPUS_THEMES[campusKey];
+        config.orgName = ct.orgName;
+        config.orgShortName = ct.orgShortName;
+        config.orgTagline = ct.orgTagline;
+        config.orgInitials = ct.orgInitials;
+        config.primaryColor = ct.primaryColor;
+        config.secondaryColor = ct.secondaryColor;
+        config.secondaryTextColor = ct.secondaryTextColor;
+        config.mapUrl = ct.mapUrl;
+        config.campusKey = campusKey;
+        config.sidebarBg = ct.sidebarBg;
+        config.sidebarText = ct.sidebarText;
+        config.sidebarActiveBg = ct.sidebarActiveBg;
+        config.sidebarHover = ct.sidebarHover;
+        config.sidebarBorder = ct.sidebarBorder;
+        config.headerBg = ct.headerBg;
+      }
     }
 
     // Apply primary/accent colors
     if (config.primaryColor) {
       root.style.setProperty('--color-primary', config.primaryColor);
       root.style.setProperty('--color-primary-rgb', hexToRgb(config.primaryColor));
-      // Compute derived shades so hover states, focus rings, and subtle backgrounds
-      // reflect the actual tenant color instead of staying as hardcoded steelblue.
       root.style.setProperty('--color-primary-dark',   shadeHex(config.primaryColor, -25));
       root.style.setProperty('--color-primary-light',  shadeHex(config.primaryColor, 80));
       root.style.setProperty('--color-primary-subtle', shadeHex(config.primaryColor, 120));
@@ -65,35 +74,29 @@ async function applyTenantTheme() {
       root.style.setProperty('--color-secondary', config.secondaryColor);
       root.style.setProperty('--color-secondary-rgb', hexToRgb(config.secondaryColor));
     }
+    if (config.secondaryTextColor) {
+      root.style.setProperty('--color-secondary-text', config.secondaryTextColor);
+    }
 
     // Header background
     var headerBg = config.headerBg || (typeof DEFAULT_HEADER_BG !== 'undefined' ? DEFAULT_HEADER_BG : '#EEF3F8');
     root.style.setProperty('--color-header-bg', headerBg);
-    // If API doesn't return headerBg, derive it from the campus key
-    if (!config.headerBg && config.campusKey) {
-      var ctH = typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[config.campusKey];
-      if (ctH && ctH.headerBg) root.style.setProperty('--color-header-bg', ctH.headerBg);
-    }
 
-    // Apply sidebar overrides if campus theme provides them
-    if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
-      var ct = CAMPUS_THEMES[campusKey];
-      if (ct.sidebarBg) root.style.setProperty('--color-sidebar-bg', ct.sidebarBg);
-      if (ct.sidebarText) root.style.setProperty('--color-sidebar-text', ct.sidebarText);
-      if (ct.sidebarActiveBg) root.style.setProperty('--color-sidebar-active-bg', ct.sidebarActiveBg);
-      if (ct.sidebarHover) root.style.setProperty('--color-sidebar-hover', ct.sidebarHover);
-      if (ct.sidebarBorder) root.style.setProperty('--color-sidebar-border', ct.sidebarBorder);
-      root.style.setProperty('--color-sidebar-active', ct.primaryColor);
-      if (ct.secondaryTextColor) root.style.setProperty('--color-secondary-text', ct.secondaryTextColor);
-      if (ct.primaryLight) root.style.setProperty('--color-primary-light', ct.primaryLight);
-      if (ct.primaryDark)  root.style.setProperty('--color-primary-dark',  ct.primaryDark);
-    }
+    // Sidebar overrides
+    if (config.sidebarBg) root.style.setProperty('--color-sidebar-bg', config.sidebarBg);
+    if (config.sidebarText) root.style.setProperty('--color-sidebar-text', config.sidebarText);
+    if (config.sidebarActiveBg) root.style.setProperty('--color-sidebar-active-bg', config.sidebarActiveBg);
+    if (config.sidebarHover) root.style.setProperty('--color-sidebar-hover', config.sidebarHover);
+    if (config.sidebarBorder) root.style.setProperty('--color-sidebar-border', config.sidebarBorder);
+    if (config.primaryColor) root.style.setProperty('--color-sidebar-active', config.primaryColor);
 
     // Apply org name/short name to DOM
     var orgEl = document.getElementById('org-name');
     if (orgEl && config.orgName) orgEl.textContent = config.orgName;
     var shortEl = document.getElementById('org-short-name');
     if (shortEl && config.orgShortName) shortEl.textContent = config.orgShortName;
+    var initEl = document.getElementById('org-initials');
+    if (initEl && config.orgInitials) initEl.textContent = config.orgInitials;
 
     return config;
   } catch (e) { console.warn('Tenant config not loaded:', e); return null; }
