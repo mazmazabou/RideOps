@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js"></script>
   <!-- Locations loaded dynamically from /api/locations -->
   <script src="/campus-themes.js"></script>
   <script src="/demo-config.js"></script>
@@ -346,6 +348,7 @@
           <div class="ro-tabs">
             <button class="ro-tab active" data-subtarget="admin-users-view">Users</button>
             <button class="ro-tab" data-subtarget="admin-rules-view">Business Rules</button>
+            <button class="ro-tab" data-subtarget="admin-guidelines-view">Program Guidelines</button>
             <button class="ro-tab" data-subtarget="notif-settings">Notifications</button>
           </div>
 
@@ -387,6 +390,29 @@
 
           <div class="sub-panel" id="admin-rules-view">
             <div id="business-rules-container" class="p-24"></div>
+          </div>
+
+          <div class="sub-panel" id="admin-guidelines-view">
+            <div class="p-24">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div>
+                  <h3 class="ro-section__title" style="margin:0;">Program Rules &amp; Guidelines</h3>
+                  <div class="text-xs text-muted" style="margin-top:4px;">
+                    Shown to riders and drivers in the "Program Rules" modal.
+                    Supports bold, italic, bullets, and highlights.
+                  </div>
+                </div>
+                <button class="ro-btn ro-btn--primary" id="save-program-guidelines-btn" type="button">
+                  <i class="ti ti-device-floppy"></i> Save
+                </button>
+              </div>
+              <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;margin-top:16px;">
+                <div id="program-guidelines-editor" style="min-height:320px;font-size:14px;"></div>
+              </div>
+              <div class="text-xs text-muted" style="margin-top:8px;">
+                Changes save to the database and are immediately visible to all users.
+              </div>
+            </div>
           </div>
 
           <div class="sub-panel" id="notif-settings">

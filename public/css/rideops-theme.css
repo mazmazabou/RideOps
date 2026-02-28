@@ -1365,3 +1365,25 @@ body {
 .fc .fc-timegrid-col {
   border-color: rgba(var(--color-secondary-rgb, 210,180,140), 0.2) !important;
 }
+
+/* ── Quill Rich Text Editor ── */
+.ql-toolbar.ql-snow {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface-hover);
+  font-family: inherit !important;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.ql-container.ql-snow {
+  border-color: var(--color-border) !important;
+  font-family: inherit !important;
+  font-size: 14px !important;
+}
+.ql-editor { min-height: 280px; line-height: 1.8; }
+.ql-editor p, .ql-editor li { line-height: 1.8; }
+.ql-editor h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.ql-toolbar .ql-stroke { stroke: var(--color-text-secondary) !important; }
+.ql-toolbar .ql-fill  { fill: var(--color-text-secondary) !important; }
+.ql-toolbar button:hover .ql-stroke { stroke: var(--color-primary) !important; }
+.ql-toolbar button.ql-active .ql-stroke { stroke: var(--color-primary) !important; }
+.ql-toolbar button.ql-active .ql-fill  { fill: var(--color-primary) !important; }
+.ql-snow .ql-picker-label { color: var(--color-text-secondary) !important; }
