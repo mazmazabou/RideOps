@@ -2892,6 +2892,33 @@ app.put('/api/notifications/:id/read', requireAuth, async (req, res) => {
   }
 });
 
+// Bulk delete notifications
+app.post('/api/notifications/bulk-delete', requireAuth, async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
+  try {
+    const result = await query(
+      'DELETE FROM notifications WHERE id = ANY($1::uuid[]) AND user_id = $2',
+      [ids, req.session.userId]
+    );
+    res.json({ deleted: result.rowCount });
+  } catch (err) {
+    console.error('POST /api/notifications/bulk-delete error:', err);
+    res.status(500).json({ error: 'Failed to delete notifications' });
+  }
+});
+
+// Delete all notifications
+app.delete('/api/notifications/all', requireAuth, async (req, res) => {
+  try {
+    const result = await query('DELETE FROM notifications WHERE user_id = $1', [req.session.userId]);
+    res.json({ deleted: result.rowCount });
+  } catch (err) {
+    console.error('DELETE /api/notifications/all error:', err);
+    res.status(500).json({ error: 'Failed to delete all notifications' });
+  }
+});
+
 app.delete('/api/notifications/:id', requireAuth, async (req, res) => {
   try {
     const result = await query(

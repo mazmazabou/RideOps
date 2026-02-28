@@ -445,8 +445,23 @@ function openNotificationDrawer() {
     .catch(function() {});
 }
 
+var _notifSelectedIds = new Set();
+
+function _notifUpdateSelectionUI(dw) {
+  var count = _notifSelectedIds.size;
+  var deleteBtn = dw.querySelector('#notif-delete-selected');
+  var selectAllCb = dw.querySelector('#notif-select-all');
+  var allItems = dw.querySelectorAll('.notif-item[data-notif-id]');
+  if (deleteBtn) {
+    deleteBtn.style.display = count > 0 ? 'inline-flex' : 'none';
+    deleteBtn.querySelector('.notif-sel-count').textContent = count;
+  }
+  if (selectAllCb) selectAllCb.checked = allItems.length > 0 && count === allItems.length;
+}
+
 function renderNotificationDrawer(notifications, unreadCount) {
   closeDrawer();
+  _notifSelectedIds = new Set();
   var ov = document.createElement('div');
   ov.className = 'ro-drawer-overlay open';
   ov.id = 'ro-drawer-overlay';
@@ -455,7 +470,7 @@ function renderNotificationDrawer(notifications, unreadCount) {
   dw.id = 'ro-drawer';
 
   var headerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
     '<span style="font-size:16px;font-weight:700">Notifications</span>' +
     '<div style="display:flex;gap:8px;align-items:center">';
   if (unreadCount > 0) {
@@ -463,6 +478,18 @@ function renderNotificationDrawer(notifications, unreadCount) {
   }
   headerHTML += '<button class="ro-btn ro-btn--outline ro-btn--sm" onclick="closeDrawer()">\u2715</button>';
   headerHTML += '</div></div>';
+
+  // Selection toolbar
+  var toolbarHTML = '';
+  if (notifications.length) {
+    toolbarHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--color-border,#e5e7eb);">' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-muted);cursor:pointer;">' +
+      '<input type="checkbox" id="notif-select-all" style="cursor:pointer;"> Select All</label>' +
+      '<button class="ro-btn ro-btn--danger ro-btn--sm" id="notif-delete-selected" style="display:none;"><i class="ti ti-trash" style="font-size:14px;"></i> Delete (<span class="notif-sel-count">0</span>)</button>' +
+      '<div style="flex:1"></div>' +
+      '<button class="ro-btn ro-btn--outline ro-btn--sm" id="notif-clear-all" style="font-size:12px;"><i class="ti ti-trash-x" style="font-size:14px;"></i> Clear All</button>' +
+      '</div>';
+  }
 
   var listHTML = '';
   if (!notifications.length) {
@@ -474,7 +501,8 @@ function renderNotificationDrawer(notifications, unreadCount) {
       var cls = n.read ? 'notif-item notif-item--read' : 'notif-item notif-item--unread';
       var icon = _notifIconMap[n.event_type] || 'ti-bell';
       listHTML +=
-        '<li class="' + cls + '" data-notif-id="' + escapeHtml(n.id) + '">' +
+        '<li class="' + cls + '" data-notif-id="' + escapeHtml(n.id) + '" style="display:flex;align-items:flex-start;gap:8px;">' +
+        '<input type="checkbox" class="notif-item-cb" data-id="' + escapeHtml(n.id) + '" style="margin-top:4px;cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation();">' +
         '<div class="notif-item__icon"><i class="ti ' + icon + '"></i></div>' +
         '<div class="notif-item__content">' +
         '<div class="notif-item__title">' + escapeHtml(n.title) + '</div>' +
@@ -485,10 +513,78 @@ function renderNotificationDrawer(notifications, unreadCount) {
     listHTML += '</ul>';
   }
 
-  dw.innerHTML = headerHTML + '<div id="ro-drawer-content">' + listHTML + '</div>';
+  dw.innerHTML = headerHTML + toolbarHTML + '<div id="ro-drawer-content">' + listHTML + '</div>';
   document.body.appendChild(ov);
   document.body.appendChild(dw);
   ov.onclick = closeDrawer;
+
+  // Checkbox change handlers
+  dw.querySelectorAll('.notif-item-cb').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      if (cb.checked) _notifSelectedIds.add(cb.dataset.id);
+      else _notifSelectedIds.delete(cb.dataset.id);
+      _notifUpdateSelectionUI(dw);
+    });
+  });
+
+  // Select all
+  var selectAllCb = dw.querySelector('#notif-select-all');
+  if (selectAllCb) {
+    selectAllCb.addEventListener('change', function() {
+      var checked = selectAllCb.checked;
+      dw.querySelectorAll('.notif-item-cb').forEach(function(cb) {
+        cb.checked = checked;
+        if (checked) _notifSelectedIds.add(cb.dataset.id);
+        else _notifSelectedIds.delete(cb.dataset.id);
+      });
+      _notifUpdateSelectionUI(dw);
+    });
+  }
+
+  // Delete selected
+  var deleteSelBtn = dw.querySelector('#notif-delete-selected');
+  if (deleteSelBtn) {
+    deleteSelBtn.addEventListener('click', function() {
+      var ids = Array.from(_notifSelectedIds);
+      if (!ids.length) return;
+      showModalNew({
+        title: 'Delete Notifications',
+        body: 'Delete ' + ids.length + ' selected notification' + (ids.length !== 1 ? 's' : '') + '?',
+        confirmLabel: 'Delete',
+        confirmClass: 'ro-btn--danger',
+        onConfirm: function() {
+          fetch('/api/notifications/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: ids })
+          }).then(function() {
+            openNotificationDrawer();
+            pollNotificationCount();
+          }).catch(function() {});
+        }
+      });
+    });
+  }
+
+  // Clear all
+  var clearAllBtn = dw.querySelector('#notif-clear-all');
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener('click', function() {
+      showModalNew({
+        title: 'Clear All Notifications',
+        body: 'This will permanently delete all your notifications. Continue?',
+        confirmLabel: 'Clear All',
+        confirmClass: 'ro-btn--danger',
+        onConfirm: function() {
+          fetch('/api/notifications/all', { method: 'DELETE' })
+            .then(function() {
+              openNotificationDrawer();
+              pollNotificationCount();
+            }).catch(function() {});
+        }
+      });
+    });
+  }
 
   // Mark all read button
   var markAllBtn = dw.querySelector('#notif-mark-all-read');
@@ -509,7 +605,8 @@ function renderNotificationDrawer(notifications, unreadCount) {
 
   // Click individual notification to mark as read
   dw.querySelectorAll('.notif-item--unread').forEach(function(el) {
-    el.addEventListener('click', function() {
+    el.addEventListener('click', function(e) {
+      if (e.target.classList.contains('notif-item-cb')) return;
       var id = el.dataset.notifId;
       fetch('/api/notifications/' + id + '/read', { method: 'PUT' })
         .then(function() {
