@@ -119,7 +119,7 @@
     }
 
     function redirectByRole(role, campus) {
-      var org = campus || detectOrgSlug();
+      var org = detectOrgSlug() || campus;
       if (org) {
         var base = '/' + org;
         if (role === 'driver') window.location.href = base + '/driver';
