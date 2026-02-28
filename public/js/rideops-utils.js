@@ -66,6 +66,15 @@ async function applyTenantTheme() {
       root.style.setProperty('--color-secondary-rgb', hexToRgb(config.secondaryColor));
     }
 
+    // Header background
+    var headerBg = config.headerBg || (typeof DEFAULT_HEADER_BG !== 'undefined' ? DEFAULT_HEADER_BG : '#EEF3F8');
+    root.style.setProperty('--color-header-bg', headerBg);
+    // If API doesn't return headerBg, derive it from the campus key
+    if (!config.headerBg && config.campusKey) {
+      var ctH = typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[config.campusKey];
+      if (ctH && ctH.headerBg) root.style.setProperty('--color-header-bg', ctH.headerBg);
+    }
+
     // Apply sidebar overrides if campus theme provides them
     if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
       var ct = CAMPUS_THEMES[campusKey];

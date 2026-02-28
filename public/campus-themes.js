@@ -2,6 +2,8 @@
    secondaryColor     = official accent/gold/grey
    secondaryTextColor = text color to place ON TOP of secondaryColor for contrast
 */
+var DEFAULT_HEADER_BG = '#EEF3F8'; // --color-primary-subtle (RideOps steelblue tint)
+
 var CAMPUS_THEMES = {
   usc: {
     orgName: 'USC DART', orgShortName: 'DART',
@@ -10,7 +12,8 @@ var CAMPUS_THEMES = {
     secondaryColor: '#FFCC00', secondaryTextColor: '#990000',
     sidebarBg: '#1A0000', sidebarText: '#C4A3A3',
     sidebarActiveBg: 'rgba(153,0,0,0.25)', sidebarHover: 'rgba(255,255,255,0.06)',
-    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://maps.usc.edu/', campusKey: 'usc'
+    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://maps.usc.edu/', campusKey: 'usc',
+    headerBg: '#FFF2BF'  // Gold 25% tint — cardinal text reads clean on it
   },
   stanford: {
     orgName: 'Stanford ATS', orgShortName: 'ATS',
@@ -19,7 +22,8 @@ var CAMPUS_THEMES = {
     secondaryColor: '#FFFFFF', secondaryTextColor: '#8C1515',
     sidebarBg: '#1A0505', sidebarText: '#C4A8A8',
     sidebarActiveBg: 'rgba(140,21,21,0.25)', sidebarHover: 'rgba(255,255,255,0.06)',
-    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://campus-map.stanford.edu/', campusKey: 'stanford'
+    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://campus-map.stanford.edu/', campusKey: 'stanford',
+    headerBg: '#F4F4F4'  // Fog Light — warm off-white, cardinal pops on it
   },
   ucla: {
     orgName: 'UCLA BruinAccess', orgShortName: 'BruinAccess',
@@ -28,7 +32,8 @@ var CAMPUS_THEMES = {
     secondaryColor: '#FFD100', secondaryTextColor: '#2774AE',
     sidebarBg: '#0D1B2A', sidebarText: '#8FAFC8',
     sidebarActiveBg: 'rgba(39,116,174,0.25)', sidebarHover: 'rgba(255,255,255,0.06)',
-    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://map.ucla.edu/', campusKey: 'ucla'
+    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://map.ucla.edu/', campusKey: 'ucla',
+    headerBg: '#DAEBFE'  // Lightest Blue (PMS 2707C) — official UCLA palette
   },
   uci: {
     orgName: 'UCI AnteaterExpress', orgShortName: 'AntExpress',
@@ -37,7 +42,8 @@ var CAMPUS_THEMES = {
     secondaryColor: '#FECC07', secondaryTextColor: '#255799',
     sidebarBg: '#001A2E', sidebarText: '#7BAAC4',
     sidebarActiveBg: 'rgba(37,87,153,0.25)', sidebarHover: 'rgba(255,255,255,0.06)',
-    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://map.uci.edu/', campusKey: 'uci'
+    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://map.uci.edu/', campusKey: 'uci',
+    headerBg: '#E8EEF5'  // 10% tint of UCI Blue #255799
   }
 };
 
