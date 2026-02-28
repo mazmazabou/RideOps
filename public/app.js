@@ -79,15 +79,26 @@ let todayDriverStatus = [];
 let isDragging = false;
 
 async function loadTenantConfig() {
+  // Detect org slug from URL path (e.g. /usc, /stanford/driver → 'usc')
+  let orgSlug = null;
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const knownSlugs = ['usc', 'stanford', 'ucla', 'uci'];
+  if (pathParts.length > 0 && knownSlugs.indexOf(pathParts[0]) !== -1) {
+    orgSlug = pathParts[0];
+  }
+
   try {
-    const res = await fetch('/api/tenant-config');
+    const url = orgSlug ? '/api/tenant-config?campus=' + orgSlug : '/api/tenant-config';
+    const res = await fetch(url);
     if (res.ok) tenantConfig = await res.json();
   } catch {}
   if (!tenantConfig) return;
 
-  // Apply campus override from sessionStorage in demo mode
+  // SessionStorage campus override ONLY for demo.html legacy flow (not org-scoped URLs)
   let campusKey = null;
-  try { campusKey = sessionStorage.getItem('ro-demo-campus'); } catch {}
+  if (!orgSlug) {
+    try { campusKey = sessionStorage.getItem('ro-demo-campus'); } catch {}
+  }
   if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
     const ct = CAMPUS_THEMES[campusKey];
     tenantConfig.orgName = ct.orgName;
