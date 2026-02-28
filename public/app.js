@@ -74,7 +74,8 @@ let fleetVehicles = [];
 let rideScheduleAnchor = new Date();
 let emailConfigured = false;
 let tenantConfig = null;
-let historyExpandedGroups = new Set();
+let ridesDateFrom = '';
+let ridesDateTo = '';
 let todayDriverStatus = [];
 let isDragging = false;
 
@@ -1761,9 +1762,6 @@ async function saveAdminProfile(userId) {
 
 // ----- Ride Filter -----
 let rideFilterText = '';
-let historyFilterText = '';
-let historyDateFrom = '';
-let historyDateTo = '';
 
 function rideMatchesFilter(ride, filterText) {
   if (!filterText) return true;
@@ -2118,44 +2116,30 @@ function showVehiclePromptModal() {
   });
 }
 
-// ----- History Helpers -----
-function historyGroupKey(ride) {
-  return `${ride.riderEmail || ride.riderName}|${ride.pickupLocation}|${ride.dropoffLocation}|${ride.status}`;
-}
-function formatHistoryDateHeader(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
 function getDateKey(dateStr) {
   if (!dateStr) return 'unknown';
   const d = new Date(dateStr);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-function buildHistoryItem(ride) {
-  const item = document.createElement('div');
-  item.className = 'item';
-  const cancelledByOffice = ride.status === 'cancelled' && ride.cancelledBy === 'office';
-  item.innerHTML = `
-    <div>${statusBadge(ride.status)}${cancelledByOffice ? ' <span class="small-text">(cancelled by office)</span>' : ''} <span data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}" class="clickable-name">${ride.riderName}</span></div>
-    <div>${ride.pickupLocation} → ${ride.dropoffLocation}</div>
-    <div class="small-text">When: ${formatDate(ride.requestedTime)}</div>
-    ${ride.vehicleId ? `<div class="small-text">Cart: ${vehicles.find(v => v.id === ride.vehicleId)?.name || ride.vehicleId}</div>` : ''}
-  `;
-  item.appendChild(buildKebabMenu(ride, () => loadRides()));
-  return item;
-}
 
 // ----- Ride Lists -----
 let rideStatusFilter = 'all';
-let ridesDateFilter = '';
+let _ridesSelectedIds = new Set();
 
-function renderRideLists() {
-  const tbody = document.getElementById('rides-tbody');
-  const historyEl = document.getElementById('history-items');
-  if (!tbody) return;
-  if (historyEl) historyEl.innerHTML = '';
+function _ridesUpdateSelectionUI() {
+  const count = _ridesSelectedIds.size;
+  const bulkActions = document.getElementById('rides-bulk-actions');
+  const countEl = document.getElementById('rides-selected-count');
+  const selectAllCb = document.getElementById('rides-select-all');
+  if (bulkActions) bulkActions.style.display = count > 0 ? 'inline' : 'none';
+  if (countEl) countEl.textContent = count;
+  if (selectAllCb) {
+    const allCbs = document.querySelectorAll('#rides-tbody .ride-row-cb');
+    selectAllCb.checked = allCbs.length > 0 && count === allCbs.length;
+  }
+}
 
-  // Apply filters
+function getFilteredRides() {
   let filtered = rides;
 
   // Status filter
@@ -2165,9 +2149,12 @@ function renderRideLists() {
     filtered = filtered.filter(r => r.status === rideStatusFilter);
   }
 
-  // Date filter
-  if (ridesDateFilter) {
-    filtered = filtered.filter(r => r.requestedTime && r.requestedTime.startsWith(ridesDateFilter));
+  // Date range filter
+  if (ridesDateFrom) {
+    filtered = filtered.filter(r => r.requestedTime && getDateKey(r.requestedTime) >= ridesDateFrom);
+  }
+  if (ridesDateTo) {
+    filtered = filtered.filter(r => r.requestedTime && getDateKey(r.requestedTime) <= ridesDateTo);
   }
 
   // Text filter
@@ -2182,9 +2169,18 @@ function renderRideLists() {
     return db - da;
   });
 
+  return filtered;
+}
+
+function renderRideLists() {
+  const tbody = document.getElementById('rides-tbody');
+  if (!tbody) return;
+
+  const filtered = getFilteredRides();
+
   tbody.innerHTML = '';
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-text-muted);">No rides match the current filters.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--color-text-muted);">No rides match the current filters.</td></tr>';
   } else {
     filtered.forEach(ride => {
       const tr = document.createElement('tr');
@@ -2192,6 +2188,7 @@ function renderRideLists() {
       const pickup = abbreviateLocation(ride.pickupLocation);
       const dropoff = abbreviateLocation(ride.dropoffLocation);
       tr.innerHTML = `
+        <td><input type="checkbox" class="ride-row-cb" data-ride-id="${ride.id}" style="cursor:pointer;"></td>
         <td>${formatDate(ride.requestedTime)}</td>
         <td><span class="clickable-name" data-user="${ride.riderId || ''}" data-email="${ride.riderEmail || ''}">${ride.riderName}</span></td>
         <td title="${ride.pickupLocation} → ${ride.dropoffLocation}">${pickup} → ${dropoff}</td>
@@ -2199,8 +2196,16 @@ function renderRideLists() {
         <td>${ride.assignedDriverId ? `<span class="clickable-name" data-user="${ride.assignedDriverId}">${driverName}</span>` : '—'}</td>
         <td></td>
       `;
+      // Checkbox handler
+      const cb = tr.querySelector('.ride-row-cb');
+      cb.addEventListener('change', (e) => {
+        e.stopPropagation();
+        if (cb.checked) _ridesSelectedIds.add(ride.id);
+        else _ridesSelectedIds.delete(ride.id);
+        _ridesUpdateSelectionUI();
+      });
       // Quick actions in last cell
-      const actionsCell = tr.querySelectorAll('td')[5];
+      const actionsCell = tr.querySelectorAll('td')[6];
       if (ride.status === 'pending') {
         const approveBtn = document.createElement('button');
         approveBtn.className = 'ro-btn ro-btn--success ro-btn--sm';
@@ -2210,7 +2215,7 @@ function renderRideLists() {
       }
       tr.style.cursor = 'pointer';
       tr.onclick = (e) => {
-        if (e.target.closest('.ro-btn') || e.target.closest('.clickable-name') || e.target.closest('select')) return;
+        if (e.target.closest('.ro-btn') || e.target.closest('.clickable-name') || e.target.closest('select') || e.target.closest('.ride-row-cb')) return;
         openRideDrawer(ride);
       };
       tbody.appendChild(tr);
@@ -2221,76 +2226,11 @@ function renderRideLists() {
   const countEl = document.getElementById('ride-filter-count');
   if (countEl) countEl.textContent = `${filtered.length} ride${filtered.length !== 1 ? 's' : ''}`;
 
-  // History tab (still uses old format)
-  let historyFiltered = rides.filter(r => ['completed', 'no_show', 'denied', 'cancelled'].includes(r.status));
-  if (historyDateFrom) historyFiltered = historyFiltered.filter(r => r.requestedTime && getDateKey(r.requestedTime) >= historyDateFrom);
-  if (historyDateTo) historyFiltered = historyFiltered.filter(r => r.requestedTime && getDateKey(r.requestedTime) <= historyDateTo);
-  const history = historyFiltered.filter(r => rideMatchesFilter(r, historyFilterText));
-  if (historyEl) renderHistory(history);
-}
-
-function renderHistory(history) {
-  const historyEl = document.getElementById('history-items');
-  if (!historyEl) return;
-
-  const sorted = [...history].sort((a, b) => {
-    const da = a.requestedTime ? new Date(a.requestedTime).getTime() : 0;
-    const db = b.requestedTime ? new Date(b.requestedTime).getTime() : 0;
-    return db - da;
-  });
-
-  const dateGroups = new Map();
-  sorted.forEach(ride => {
-    const dk = getDateKey(ride.requestedTime);
-    if (!dateGroups.has(dk)) dateGroups.set(dk, { label: formatHistoryDateHeader(ride.requestedTime), rides: [] });
-    dateGroups.get(dk).rides.push(ride);
-  });
-
-  dateGroups.forEach((group, dateKey) => {
-    const dateHeader = document.createElement('div');
-    dateHeader.className = 'history-date-header';
-    dateHeader.textContent = group.label;
-    historyEl.appendChild(dateHeader);
-
-    const ridesInDay = group.rides;
-    let i = 0;
-    while (i < ridesInDay.length) {
-      const currentKey = historyGroupKey(ridesInDay[i]);
-      let runEnd = i + 1;
-      while (runEnd < ridesInDay.length && historyGroupKey(ridesInDay[runEnd]) === currentKey) runEnd++;
-      const runLength = runEnd - i;
-
-      if (runLength === 1) {
-        historyEl.appendChild(buildHistoryItem(ridesInDay[i]));
-      } else {
-        const groupId = `${dateKey}|${currentKey}`;
-        const isExpanded = historyExpandedGroups.has(groupId);
-        const firstRide = ridesInDay[i];
-        const summary = document.createElement('div');
-        summary.className = 'history-group-summary';
-        summary.innerHTML = `${statusBadge(firstRide.status)} <strong>${firstRide.riderName}</strong> <span class="small-text">${firstRide.pickupLocation} → ${firstRide.dropoffLocation}</span> <span class="history-group-count">${runLength}</span> <button class="history-group-toggle">${isExpanded ? 'Hide' : 'Show all'}</button>`;
-        const container = document.createElement('div');
-        container.className = 'history-group-rides' + (isExpanded ? ' expanded' : '');
-        for (let j = i; j < runEnd; j++) container.appendChild(buildHistoryItem(ridesInDay[j]));
-        summary.querySelector('.history-group-toggle').onclick = () => {
-          const nowExpanded = container.classList.toggle('expanded');
-          summary.querySelector('.history-group-toggle').textContent = nowExpanded ? 'Hide' : 'Show all';
-          if (nowExpanded) historyExpandedGroups.add(groupId);
-          else historyExpandedGroups.delete(groupId);
-        };
-        historyEl.appendChild(summary);
-        historyEl.appendChild(container);
-      }
-      i = runEnd;
-    }
-  });
-
-  if (!history.length) {
-    const hasFilters = historyFilterText || historyDateFrom || historyDateTo;
-    historyEl.innerHTML = hasFilters
-      ? '<div class="ro-empty"><i class="ti ti-filter-off"></i><div class="ro-empty__title">No rides match filters</div><div class="ro-empty__message">Try adjusting your date range or search text.</div></div>'
-      : '<div class="ro-empty"><i class="ti ti-history"></i><div class="ro-empty__title">No completed history yet</div><div class="ro-empty__message">Completed and no-show rides will appear here.</div></div>';
-  }
+  // Reset selection on re-render
+  _ridesSelectedIds = new Set();
+  _ridesUpdateSelectionUI();
+  const selectAllCb = document.getElementById('rides-select-all');
+  if (selectAllCb) selectAllCb.checked = false;
 }
 
 async function updateRide(url, body = null) {
@@ -4692,11 +4632,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Rides date filter
-  const ridesDateFilterInput = document.getElementById('rides-date-filter');
-  if (ridesDateFilterInput) {
-    ridesDateFilterInput.addEventListener('change', () => {
-      ridesDateFilter = ridesDateFilterInput.value || '';
+  // Rides date range filters
+  const ridesDateFromInput = document.getElementById('rides-date-from');
+  const ridesDateToInput = document.getElementById('rides-date-to');
+  if (ridesDateFromInput) {
+    ridesDateFromInput.addEventListener('change', () => {
+      ridesDateFrom = ridesDateFromInput.value || '';
+      renderRideLists();
+    });
+  }
+  if (ridesDateToInput) {
+    ridesDateToInput.addEventListener('change', () => {
+      ridesDateTo = ridesDateToInput.value || '';
       renderRideLists();
     });
   }
@@ -4710,26 +4657,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 300));
   }
 
-  // History filter inputs
-  const historyFilterInput = document.getElementById('history-filter-input');
-  if (historyFilterInput) {
-    historyFilterInput.addEventListener('input', debounce(() => {
-      historyFilterText = historyFilterInput.value.trim();
-      renderRideLists();
-    }, 300));
-  }
-  const historyDateFromInput = document.getElementById('history-date-from');
-  const historyDateToInput = document.getElementById('history-date-to');
-  if (historyDateFromInput) {
-    historyDateFromInput.addEventListener('change', () => {
-      historyDateFrom = historyDateFromInput.value || '';
-      renderRideLists();
+  // Rides view toggle (table / calendar)
+  const viewTableBtn = document.getElementById('rides-view-table-btn');
+  const viewCalBtn = document.getElementById('rides-view-calendar-btn');
+  const tableView = document.getElementById('rides-table-view');
+  const calView = document.getElementById('rides-calendar-view-container');
+  if (viewTableBtn && viewCalBtn) {
+    viewTableBtn.addEventListener('click', () => {
+      viewTableBtn.classList.add('active');
+      viewCalBtn.classList.remove('active');
+      if (tableView) tableView.style.display = '';
+      if (calView) calView.style.display = 'none';
+    });
+    viewCalBtn.addEventListener('click', () => {
+      viewCalBtn.classList.add('active');
+      viewTableBtn.classList.remove('active');
+      if (calView) calView.style.display = '';
+      if (tableView) tableView.style.display = 'none';
+      renderRideScheduleGrid();
     });
   }
-  if (historyDateToInput) {
-    historyDateToInput.addEventListener('change', () => {
-      historyDateTo = historyDateToInput.value || '';
-      renderRideLists();
+
+  // Rides select-all checkbox
+  const ridesSelectAllCb = document.getElementById('rides-select-all');
+  if (ridesSelectAllCb) {
+    ridesSelectAllCb.addEventListener('change', () => {
+      const checked = ridesSelectAllCb.checked;
+      document.querySelectorAll('#rides-tbody .ride-row-cb').forEach(cb => {
+        cb.checked = checked;
+        if (checked) _ridesSelectedIds.add(cb.dataset.rideId);
+        else _ridesSelectedIds.delete(cb.dataset.rideId);
+      });
+      _ridesUpdateSelectionUI();
     });
   }
 

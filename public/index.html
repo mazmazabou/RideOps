@@ -162,60 +162,57 @@
 
         <!-- ═══ RIDES PANEL ═══ -->
         <section class="tab-panel" id="rides-panel">
-          <div class="ro-tabs">
-            <button class="ro-tab active" data-subtarget="rides-active-view">Active Rides</button>
-            <button class="ro-tab" data-subtarget="rides-calendar-view">Calendar</button>
-            <button class="ro-tab" data-subtarget="rides-history-view">History</button>
+          <div class="filter-bar" id="rides-filter-bar">
+            <button class="filter-pill active" data-ride-status="all">All</button>
+            <button class="filter-pill" data-ride-status="pending">Pending</button>
+            <button class="filter-pill" data-ride-status="approved">Approved</button>
+            <button class="filter-pill" data-ride-status="scheduled">Scheduled</button>
+            <button class="filter-pill" data-ride-status="in_progress">In Progress</button>
+            <button class="filter-pill" data-ride-status="completed">Completed</button>
+            <button class="filter-pill" data-ride-status="no_show">No-Show</button>
+            <button class="filter-pill" data-ride-status="cancelled">Cancelled</button>
+            <button class="filter-pill" data-ride-status="denied">Denied</button>
+            <div style="flex:1"></div>
+            <input type="date" id="rides-date-from" class="ro-input" style="width:auto;" title="From date">
+            <input type="date" id="rides-date-to" class="ro-input" style="width:auto;" title="To date">
+            <input type="text" id="ride-filter-input" class="ro-input" placeholder="Search..." style="max-width:200px;">
           </div>
 
-          <div class="sub-panel active" id="rides-active-view">
-            <div class="filter-bar" id="rides-filter-bar">
-              <button class="filter-pill active" data-ride-status="all">All</button>
-              <button class="filter-pill" data-ride-status="pending">Pending</button>
-              <button class="filter-pill" data-ride-status="approved">Approved</button>
-              <button class="filter-pill" data-ride-status="scheduled">Scheduled</button>
-              <button class="filter-pill" data-ride-status="in_progress">In Progress</button>
-              <button class="filter-pill" data-ride-status="completed">Completed</button>
-              <button class="filter-pill" data-ride-status="no_show">No-Show</button>
-              <input type="date" id="rides-date-filter" class="ro-input" style="width:auto;">
-              <input type="text" id="ride-filter-input" class="ro-input" placeholder="Search..." style="max-width:200px;">
-              <span class="text-sm text-muted" id="ride-filter-count"></span>
-            </div>
-            <div class="ro-section">
-              <div class="ro-table-wrap">
-                <table class="ro-table" id="rides-table">
-                  <thead><tr>
-                    <th>Requested</th><th>Rider</th><th>Route</th><th>Status</th><th>Driver</th><th></th>
-                  </tr></thead>
-                  <tbody id="rides-tbody"></tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="sub-panel" id="rides-calendar-view">
-            <div class="ro-section">
-              <div class="flex items-center justify-between mb-16">
-                <button class="ro-btn ro-btn--outline ro-btn--sm" id="ride-week-prev"><i class="ti ti-chevron-left"></i> Prev Week</button>
-                <span class="text-sm fw-600" id="ride-week-label"></span>
-                <button class="ro-btn ro-btn--outline ro-btn--sm" id="ride-week-next">Next Week <i class="ti ti-chevron-right"></i></button>
-              </div>
-              <div id="ride-schedule-grid"></div>
+          <!-- Rides toolbar -->
+          <div class="filter-bar" style="padding-top:0; gap:12px; align-items:center;">
+            <span class="text-sm text-muted" id="ride-filter-count"></span>
+            <div style="flex:1"></div>
+            <span id="rides-bulk-actions" style="display:none;">
+              <button class="ro-btn ro-btn--danger ro-btn--sm" id="rides-delete-selected-btn"><i class="ti ti-trash"></i> Delete Selected (<span id="rides-selected-count">0</span>)</button>
+            </span>
+            <button class="ro-btn ro-btn--outline ro-btn--sm" id="rides-export-csv-btn" title="Export CSV"><i class="ti ti-download"></i> CSV</button>
+            <div class="ro-view-toggle" style="display:inline-flex; border:1px solid var(--color-border); border-radius:var(--radius-sm); overflow:hidden;">
+              <button class="ro-view-toggle__btn active" id="rides-view-table-btn" title="Table view"><i class="ti ti-list"></i></button>
+              <button class="ro-view-toggle__btn" id="rides-view-calendar-btn" title="Calendar view"><i class="ti ti-calendar"></i></button>
             </div>
           </div>
 
-          <div class="sub-panel" id="rides-history-view">
-            <div class="filter-bar">
-              <label class="text-sm text-muted" for="history-date-from">From</label>
-              <input type="date" id="history-date-from" class="ro-input" style="width:auto;">
-              <label class="text-sm text-muted" for="history-date-to">To</label>
-              <input type="date" id="history-date-to" class="ro-input" style="width:auto;">
-              <input type="text" id="history-filter-input" class="ro-input" placeholder="Search..." style="max-width:200px;">
+          <!-- Table view (default) -->
+          <div id="rides-table-view" class="ro-section">
+            <div class="ro-table-wrap">
+              <table class="ro-table" id="rides-table">
+                <thead><tr>
+                  <th style="width:32px"><input type="checkbox" id="rides-select-all"></th>
+                  <th>Requested</th><th>Rider</th><th>Route</th><th>Status</th><th>Driver</th><th></th>
+                </tr></thead>
+                <tbody id="rides-tbody"></tbody>
+              </table>
             </div>
-            <div class="ro-section" id="history-list">
-              <div class="ro-section__header"><h3 class="ro-section__title">Completed &amp; No-Show History</h3></div>
-              <div id="history-items"></div>
+          </div>
+
+          <!-- Calendar view (hidden by default) -->
+          <div id="rides-calendar-view-container" class="ro-section" style="display:none;">
+            <div class="flex items-center justify-between mb-16">
+              <button class="ro-btn ro-btn--outline ro-btn--sm" id="ride-week-prev"><i class="ti ti-chevron-left"></i> Prev Week</button>
+              <span class="text-sm fw-600" id="ride-week-label"></span>
+              <button class="ro-btn ro-btn--outline ro-btn--sm" id="ride-week-next">Next Week <i class="ti ti-chevron-right"></i></button>
             </div>
+            <div id="ride-schedule-grid"></div>
           </div>
         </section>
 
