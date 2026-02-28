@@ -27,6 +27,7 @@
   --color-page-bg:        #F8FAFB;
   --color-header-bg:      #EEF3F8;
   --color-surface:        #FFFFFF;
+  --color-surface-dim:    #F3F4F6;
   --color-surface-hover:  #F9FAFB;
   --color-border:         #E5E7EB;
   --color-border-light:   #F3F4F6;
@@ -152,6 +153,8 @@ body {
 .ro-table thead { background: var(--color-primary); }
 .ro-table th { padding: 10px 12px; text-align: left; font-weight: 600; color: var(--color-secondary, #fff); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.15); }
 .ro-table td { padding: 10px 12px; }
+.ro-table--sm th { padding: 6px 10px; font-size: 10px; }
+.ro-table--sm td { padding: 6px 10px; font-size: 12px; }
 .ro-table tbody tr { border-bottom: 1px solid var(--color-border-light); transition: background 0.1s; }
 .ro-table tbody tr:hover { background: var(--color-surface-hover); cursor: pointer; }
 
@@ -166,6 +169,9 @@ body {
 .ro-btn--success { background: var(--status-completed); color: #fff; border-color: var(--status-completed); }
 .ro-btn--success:hover { opacity: 0.9; }
 .ro-btn--sm { padding: 4px 10px; font-size: 11px; }
+.ro-btn--xs { padding: 2px 8px; font-size: 11px; }
+.ro-btn--ghost { background: transparent; color: var(--color-text-secondary); border-color: var(--color-border); }
+.ro-btn--ghost:hover { background: var(--color-surface-hover); color: var(--color-text); }
 .ro-btn--lg { padding: 12px 24px; font-size: 14px; }
 .ro-btn--full { width: 100%; justify-content: center; }
 .ro-btn--action { height: 56px; font-size: 16px; font-weight: 700; border-radius: 10px; }
@@ -1410,4 +1416,24 @@ body {
 .ro-view-toggle__btn.active {
   background: var(--color-primary);
   color: #fff;
+}
+
+/* ── Analytics Quick-Select ── */
+.analytics-quick-select {
+  display: flex;
+  gap: 4px;
+}
+.analytics-quick-select button.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+/* ── Sortable table styles ── */
+.ro-table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+}
+.ro-table th[data-sort]:hover {
+  color: var(--color-primary);
 }

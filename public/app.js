@@ -2945,6 +2945,44 @@ function getAnalyticsDateParams() {
   return qs ? '?' + qs : '';
 }
 
+function setAnalyticsQuickRange(preset) {
+  var _today = new Date();
+  var todayStr = _today.getFullYear() + '-' + String(_today.getMonth() + 1).padStart(2, '0') + '-' + String(_today.getDate()).padStart(2, '0');
+  var fromStr = todayStr;
+  var toStr = todayStr;
+
+  switch (preset) {
+    case 'today':
+      fromStr = todayStr;
+      break;
+    case '7d': {
+      var d7 = new Date(_today.getTime() - 6 * 86400000);
+      fromStr = d7.getFullYear() + '-' + String(d7.getMonth() + 1).padStart(2, '0') + '-' + String(d7.getDate()).padStart(2, '0');
+      break;
+    }
+    case '30d': {
+      var d30 = new Date(_today.getTime() - 29 * 86400000);
+      fromStr = d30.getFullYear() + '-' + String(d30.getMonth() + 1).padStart(2, '0') + '-' + String(d30.getDate()).padStart(2, '0');
+      break;
+    }
+    case 'this-month':
+      fromStr = todayStr.slice(0, 8) + '01';
+      break;
+    case 'semester': {
+      var month = _today.getMonth();
+      var year = _today.getFullYear();
+      if (month <= 4) { fromStr = year + '-01-10'; }
+      else if (month <= 6) { fromStr = year + '-05-16'; }
+      else { fromStr = year + '-08-15'; }
+      break;
+    }
+  }
+  var fromInput = document.getElementById('analytics-from');
+  var toInput = document.getElementById('analytics-to');
+  if (fromInput) fromInput.value = fromStr;
+  if (toInput) toInput.value = toStr;
+}
+
 /* ── Chart tooltip helpers ── */
 function getChartTooltip() {
   let el = document.getElementById('chart-tooltip');
@@ -3365,24 +3403,46 @@ function getKpiColorClass(label, value) {
   return 'kpi-card--neutral';
 }
 
-function renderKPIGrid(data) {
+function renderKPIGrid(summaryData, tardinessData, fleetData) {
   const grid = document.getElementById('analytics-kpi-grid');
   if (!grid) return;
+
+  const total = summaryData.totalRides || 0;
+  const completionRate = summaryData.completionRate || 0;
+  const noShowRate = summaryData.noShowRate || 0;
+  const activeRiders = summaryData.uniqueRiders || 0;
+
+  // Driver punctuality from tardiness data
+  var punctuality = 100;
+  if (tardinessData && tardinessData.summary) {
+    var totalClockIns = tardinessData.summary.totalClockIns || 0;
+    var tardyCount = tardinessData.summary.tardyCount || 0;
+    punctuality = totalClockIns > 0 ? Math.round((totalClockIns - tardyCount) / totalClockIns * 100) : 100;
+  }
+
+  // Fleet availability
+  var fleetAvail = '\u2014';
+  if (fleetData && fleetData.summary) {
+    var available = fleetData.summary.available || 0;
+    var fleetTotal = fleetData.summary.totalFleet || 0;
+    fleetAvail = fleetTotal > 0 ? available + '/' + fleetTotal : '\u2014';
+  }
+
   const kpis = [
-    { label: 'Total Rides', value: data.totalRides },
-    { label: 'Completed', value: data.completedRides },
-    { label: 'No-Shows', value: data.noShows },
-    { label: 'Completion Rate', value: data.completionRate + '%' },
-    { label: 'People Helped', value: data.peopleHelped ?? 0 },
-    { label: 'Total Requesters', value: data.uniqueRiders },
-    { label: 'Active Drivers', value: data.uniqueDrivers }
+    { label: 'Total Rides', value: total, icon: 'ti-car', colorClass: 'kpi-card--neutral' },
+    { label: 'Completion Rate', value: completionRate + '%', icon: 'ti-circle-check', colorClass: completionRate >= 85 ? 'kpi-card--good' : completionRate >= 70 ? 'kpi-card--warning' : 'kpi-card--danger' },
+    { label: 'No-Show Rate', value: noShowRate + '%', icon: 'ti-user-x', colorClass: noShowRate <= 5 ? 'kpi-card--good' : noShowRate <= 15 ? 'kpi-card--warning' : 'kpi-card--danger' },
+    { label: 'Active Riders', value: activeRiders, icon: 'ti-users', colorClass: 'kpi-card--neutral' },
+    { label: 'Driver Punctuality', value: punctuality + '%', icon: 'ti-clock-check', colorClass: punctuality >= 90 ? 'kpi-card--good' : punctuality >= 80 ? 'kpi-card--warning' : 'kpi-card--danger' },
+    { label: 'Fleet Available', value: fleetAvail, icon: 'ti-bus', colorClass: 'kpi-card--neutral' }
   ];
-  grid.innerHTML = kpis.map(k => `
-    <div class="kpi-card ${getKpiColorClass(k.label, k.value)}">
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-label">${k.label}</div>
-    </div>
-  `).join('');
+
+  grid.innerHTML = kpis.map(function(k) {
+    return '<div class="kpi-card ' + k.colorClass + '">' +
+      '<div class="kpi-value">' + k.value + '</div>' +
+      '<div class="kpi-label"><i class="ti ' + k.icon + '" style="margin-right:4px;"></i>' + k.label + '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function renderVehicleCards(vehicles) {
@@ -3557,11 +3617,13 @@ function getStatusColor(status) {
 }
 
 async function loadAnalyticsSummary() {
+  // KPI rendering is now handled by loadAllAnalytics which combines summary + tardiness + fleet data.
+  // This function is kept for compatibility but no longer renders KPIs directly.
   try {
     const res = await fetch('/api/analytics/summary' + getAnalyticsDateParams());
-    if (!res.ok) return;
-    renderKPIGrid(await res.json());
-  } catch (e) { console.error('Analytics summary error:', e); }
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) { console.error('Analytics summary error:', e); return null; }
 }
 
 async function loadAnalyticsFrequency() {
@@ -3837,14 +3899,397 @@ async function renderTardinessSection(container, data) {
   });
 }
 
+// ── New Analytics Data Loaders ──
+
+async function loadRideVolume() {
+  try {
+    var res = await fetch('/api/analytics/ride-volume' + getAnalyticsDateParams());
+    if (!res.ok) return;
+    var data = await res.json();
+    renderRideVolumeChart(data);
+  } catch (e) { console.error('Ride volume error:', e); }
+}
+
+async function loadRideOutcomes() {
+  try {
+    var res = await fetch('/api/analytics/ride-outcomes' + getAnalyticsDateParams());
+    if (!res.ok) return;
+    var data = await res.json();
+    renderDonutChart('chart-ride-outcomes', data.distribution);
+  } catch (e) { console.error('Ride outcomes error:', e); }
+}
+
+async function loadPeakHours() {
+  try {
+    var res = await fetch('/api/analytics/peak-hours' + getAnalyticsDateParams());
+    if (!res.ok) return;
+    var data = await res.json();
+    renderPeakHoursHeatmap('chart-peak-hours', data);
+  } catch (e) { console.error('Peak hours error:', e); }
+}
+
+async function loadTopRoutes() {
+  try {
+    var res = await fetch('/api/analytics/routes' + getAnalyticsDateParams());
+    if (!res.ok) return;
+    var data = await res.json();
+    renderTopRoutesTable('chart-top-routes', data.routes);
+  } catch (e) { console.error('Top routes error:', e); }
+}
+
+async function loadDriverLeaderboard() {
+  try {
+    var res = await fetch('/api/analytics/driver-performance' + getAnalyticsDateParams());
+    if (!res.ok) return;
+    var data = await res.json();
+    renderDriverLeaderboard('chart-driver-leaderboard', data.drivers);
+  } catch (e) { console.error('Driver leaderboard error:', e); }
+}
+
+async function loadShiftCoverage() {
+  try {
+    var res = await fetch('/api/analytics/shift-coverage' + getAnalyticsDateParams());
+    if (!res.ok) return;
+    var data = await res.json();
+    renderShiftCoverageChart('chart-shift-coverage', data);
+  } catch (e) { console.error('Shift coverage error:', e); }
+}
+
+async function loadFleetUtilization() {
+  try {
+    var res = await fetch('/api/analytics/fleet-utilization' + getAnalyticsDateParams());
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) { console.error('Fleet utilization error:', e); return null; }
+}
+
+async function loadRiderCohorts() {
+  try {
+    var res = await fetch('/api/analytics/rider-cohorts' + getAnalyticsDateParams());
+    if (!res.ok) return;
+    var data = await res.json();
+    renderRiderCohorts('chart-rider-cohorts', data);
+  } catch (e) { console.error('Rider cohorts error:', e); }
+}
+
+async function downloadExcelReport() {
+  var btn = document.getElementById('download-excel-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2 ti-spin"></i> Generating...'; }
+  try {
+    var qs = getAnalyticsDateParams();
+    var res = await fetch('/api/analytics/export-report' + qs);
+    if (!res.ok) { showToast('Failed to generate report', 'error'); return; }
+    var blob = await res.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    var fromVal = document.getElementById('analytics-from') ? document.getElementById('analytics-from').value : 'report';
+    var toVal = document.getElementById('analytics-to') ? document.getElementById('analytics-to').value : '';
+    a.download = 'rideops-report-' + fromVal + '-to-' + toVal + '.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Report downloaded successfully', 'success');
+  } catch (e) {
+    console.error('Export error:', e);
+    showToast('Failed to download report', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-download"></i> Download .xlsx'; }
+  }
+}
+
+// ── New Chart Rendering Functions ──
+
+function renderRideVolumeChart(data) {
+  var container = document.getElementById('chart-ride-volume');
+  if (!container) return;
+  if (!data.data || !data.data.length) {
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-area-line"></i><div class="ro-empty__title">No ride data</div><div class="ro-empty__message">No rides found in this period.</div></div>';
+    return;
+  }
+  var lineData = data.data.map(function(r) {
+    return {
+      label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: r.total || 0,
+      raw: r
+    };
+  });
+  renderLineChart('chart-ride-volume', lineData, {
+    unit: 'rides',
+    color: getCurrentCampusPalette()[0],
+    tooltipFn: function(raw) {
+      return raw.date + ': ' + raw.total + ' rides (' + raw.completed + ' completed, ' + raw.noShows + ' no-shows, ' + raw.cancelled + ' cancelled)';
+    }
+  });
+}
+
+function renderDonutChart(containerId, distribution) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var items = [
+    { label: 'Completed', value: distribution.completed || 0, color: 'var(--status-completed)' },
+    { label: 'No-Shows', value: distribution.noShows || 0, color: 'var(--status-no-show)' },
+    { label: 'Cancelled', value: distribution.cancelled || 0, color: 'var(--status-cancelled)' },
+    { label: 'Denied', value: distribution.denied || 0, color: 'var(--status-denied)' }
+  ].filter(function(i) { return i.value > 0; });
+
+  var total = items.reduce(function(s, i) { return s + i.value; }, 0);
+  if (total === 0) {
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-donut-3"></i><div class="ro-empty__title">No outcomes</div><div class="ro-empty__message">No terminal rides in this period.</div></div>';
+    return;
+  }
+
+  var W = 300, H = 260;
+  var cx = 130, cy = 130, r = 95, strokeW = 28;
+  var circumference = 2 * Math.PI * r;
+  var offset = 0;
+
+  var arcs = '';
+  items.forEach(function(item) {
+    var pct = item.value / total;
+    var dashLen = pct * circumference;
+    arcs += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + item.color + '" stroke-width="' + strokeW + '" stroke-dasharray="' + dashLen + ' ' + (circumference - dashLen) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" />';
+    offset += dashLen;
+  });
+
+  var legend = items.map(function(i) {
+    var pct = (i.value / total * 100).toFixed(1);
+    return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;"><span style="width:10px;height:10px;border-radius:2px;background:' + i.color + ';flex-shrink:0;"></span>' + i.label + ': ' + i.value + ' (' + pct + '%)</div>';
+  }).join('');
+
+  container.innerHTML =
+    '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:200px;height:200px;">' +
+        arcs +
+        '<text x="' + cx + '" y="' + (cy - 8) + '" text-anchor="middle" style="font-size:28px;font-weight:700;fill:var(--color-text);">' + total + '</text>' +
+        '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" style="font-size:12px;fill:var(--color-text-muted);">total rides</text>' +
+      '</svg>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;">' + legend + '</div>' +
+    '</div>';
+}
+
+function renderPeakHoursHeatmap(containerId, data) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+
+  var grid = data.grid || [];
+  var maxCount = data.maxCount || 1;
+  var opHours = data.operatingHours || { start: 8, end: 19 };
+  var dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  var palette = getCurrentCampusPalette();
+  var baseColor = palette[0] || '#4682B4';
+
+  // Resolve CSS variable to hex if needed
+  if (baseColor.indexOf('var(') === 0) {
+    baseColor = '#4682B4'; // fallback
+  }
+
+  // Build lookup
+  var lookup = {};
+  grid.forEach(function(cell) { lookup[cell.dow + '-' + cell.hour] = cell.total; });
+
+  var html = '<div style="overflow-x:auto;"><table style="border-collapse:separate;border-spacing:3px;width:100%;font-size:12px;">';
+  html += '<thead><tr><th style="padding:4px 8px;font-size:11px;color:var(--color-text-muted);text-align:left;">Hour</th>';
+  dayLabels.forEach(function(d) { html += '<th style="padding:4px 8px;font-size:11px;color:var(--color-text-muted);text-align:center;">' + d + '</th>'; });
+  html += '</tr></thead><tbody>';
+
+  for (var hour = opHours.start; hour < opHours.end; hour++) {
+    var label = (hour > 12 ? hour - 12 : hour) + (hour >= 12 ? 'pm' : 'am');
+    html += '<tr><td style="padding:4px 8px;font-size:11px;color:var(--color-text-muted);white-space:nowrap;font-weight:500;">' + label + '</td>';
+    for (var dow = 1; dow <= 5; dow++) {
+      var count = lookup[dow + '-' + hour] || 0;
+      var intensity = maxCount > 0 ? count / maxCount : 0;
+      var rr = parseInt(baseColor.slice(1, 3), 16);
+      var gg = parseInt(baseColor.slice(3, 5), 16);
+      var bb = parseInt(baseColor.slice(5, 7), 16);
+      var bg = count > 0 ? 'rgba(' + rr + ', ' + gg + ', ' + bb + ', ' + Math.max(0.08, intensity * 0.85) + ')' : 'var(--color-surface-dim)';
+      var textColor = intensity > 0.5 ? '#fff' : 'var(--color-text)';
+      html += '<td style="padding:8px 4px;text-align:center;background:' + bg + ';color:' + textColor + ';border-radius:4px;font-weight:' + (count > 0 ? '600' : '400') + ';min-width:48px;cursor:default;" title="' + dayLabels[dow - 1] + ' ' + label + ': ' + count + ' rides">' + (count > 0 ? count : '\u2014') + '</td>';
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--color-text-muted);"><span>Low</span>';
+  for (var i = 0; i < 5; i++) {
+    var opacity = 0.08 + i * 0.2;
+    var rr2 = parseInt(baseColor.slice(1, 3), 16);
+    var gg2 = parseInt(baseColor.slice(3, 5), 16);
+    var bb2 = parseInt(baseColor.slice(5, 7), 16);
+    html += '<span style="display:inline-block;width:20px;height:14px;border-radius:3px;background:rgba(' + rr2 + ',' + gg2 + ',' + bb2 + ',' + opacity + ');"></span>';
+  }
+  html += '<span>High</span></div>';
+
+  container.innerHTML = html;
+}
+
+function renderTopRoutesTable(containerId, routes) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  if (!routes || !routes.length) {
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-route"></i><div class="ro-empty__title">No routes</div><div class="ro-empty__message">No route data for this period.</div></div>';
+    return;
+  }
+  var top10 = routes.slice(0, 10);
+  var html = '<table class="ro-table ro-table--sm" style="width:100%;"><thead><tr><th>Route</th><th style="text-align:right;">Rides</th><th style="text-align:right;">Completion</th></tr></thead><tbody>';
+  top10.forEach(function(r) {
+    var rateColor = r.completionRate >= 85 ? 'var(--status-completed)' : r.completionRate >= 70 ? 'var(--status-on-the-way)' : 'var(--status-no-show)';
+    html += '<tr><td style="font-size:12px;">' + r.pickupLocation + ' \u2192 ' + r.dropoffLocation + '</td><td style="text-align:right;font-weight:600;">' + r.total + '</td><td style="text-align:right;"><span style="color:' + rateColor + ';font-weight:600;">' + r.completionRate + '%</span></td></tr>';
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function renderDriverLeaderboard(containerId, drivers) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  if (!drivers || !drivers.length) {
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-steering-wheel"></i><div class="ro-empty__title">No driver data</div><div class="ro-empty__message">No driver performance data for this period.</div></div>';
+    return;
+  }
+  var sorted = drivers.slice().sort(function(a, b) { return b.completed - a.completed; });
+  var html = '<table class="ro-table ro-table--sm" style="width:100%;"><thead><tr><th>Driver</th><th style="text-align:right;">Rides</th><th style="text-align:right;">Completion</th><th style="text-align:right;">On-Time</th></tr></thead><tbody>';
+  sorted.forEach(function(d) {
+    var compRate = d.completionRate || 0;
+    var punctRate = d.punctualityRate || 100;
+    var compColor = compRate >= 85 ? 'var(--status-completed)' : compRate >= 70 ? 'var(--status-on-the-way)' : 'var(--status-no-show)';
+    var punctColor = punctRate >= 90 ? 'var(--status-completed)' : punctRate >= 80 ? 'var(--status-on-the-way)' : 'var(--status-no-show)';
+    html += '<tr><td style="font-size:12px;">' + d.driverName + '</td><td style="text-align:right;font-weight:600;">' + d.completed + '</td><td style="text-align:right;"><span style="color:' + compColor + ';font-weight:600;">' + compRate + '%</span></td><td style="text-align:right;"><span style="color:' + punctColor + ';font-weight:600;">' + punctRate + '%</span></td></tr>';
+  });
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function renderShiftCoverageChart(containerId, data) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  if (!data.daily || !data.daily.length) {
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-calendar-stats"></i><div class="ro-empty__title">No coverage data</div><div class="ro-empty__message">No shift coverage data for this period.</div></div>';
+    return;
+  }
+
+  var totals = data.totals || {};
+  var coverageRate = totals.coverageRate || 0;
+  var coverageColor = coverageRate >= 95 ? 'var(--status-completed)' : coverageRate >= 80 ? 'var(--status-on-the-way)' : 'var(--status-no-show)';
+
+  var html = '<div style="display:flex;gap:24px;margin-bottom:16px;flex-wrap:wrap;">' +
+    '<div style="text-align:center;"><div style="font-size:24px;font-weight:700;color:' + coverageColor + ';">' + coverageRate + '%</div><div style="font-size:11px;color:var(--color-text-muted);">Coverage Rate</div></div>' +
+    '<div style="text-align:center;"><div style="font-size:24px;font-weight:700;">' + (totals.scheduledHours || 0) + 'h</div><div style="font-size:11px;color:var(--color-text-muted);">Scheduled</div></div>' +
+    '<div style="text-align:center;"><div style="font-size:24px;font-weight:700;">' + (totals.actualHours || 0) + 'h</div><div style="font-size:11px;color:var(--color-text-muted);">Actual</div></div>' +
+    '<div style="text-align:center;"><div style="font-size:24px;font-weight:700;">' + (totals.totalCompletedRides || 0) + '</div><div style="font-size:11px;color:var(--color-text-muted);">Rides Completed</div></div>' +
+  '</div>';
+
+  html += '<table class="ro-table ro-table--sm" style="width:100%;"><thead><tr><th>Date</th><th style="text-align:right;">Scheduled</th><th style="text-align:right;">Actual</th><th style="text-align:right;">Gap</th><th style="text-align:right;">Rides</th></tr></thead><tbody>';
+  data.daily.forEach(function(d) {
+    var gapColor = d.gapHours < 0 ? 'var(--status-no-show)' : d.gapHours > 0 ? 'var(--status-completed)' : '';
+    var gapText = d.gapHours > 0 ? '+' + d.gapHours + 'h' : d.gapHours + 'h';
+    var dateStr = new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    html += '<tr><td style="font-size:12px;">' + dateStr + '</td><td style="text-align:right;">' + d.scheduledHours + 'h</td><td style="text-align:right;">' + d.actualHours + 'h</td><td style="text-align:right;color:' + gapColor + ';font-weight:600;">' + gapText + '</td><td style="text-align:right;">' + d.completedRides + '</td></tr>';
+  });
+  html += '</tbody></table>';
+
+  container.innerHTML = html;
+}
+
+function renderRiderCohorts(containerId, data) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var summary = data.summary || {};
+  var items = [
+    { label: 'Active', value: summary.active || 0, color: 'var(--status-completed)', icon: 'ti-user-check' },
+    { label: 'New', value: summary.new || 0, color: 'var(--status-approved)', icon: 'ti-user-plus' },
+    { label: 'Returning', value: summary.returning || 0, color: 'var(--color-primary)', icon: 'ti-refresh' },
+    { label: 'At-Risk', value: summary.atRisk || 0, color: 'var(--status-on-the-way)', icon: 'ti-alert-triangle' },
+    { label: 'Churned', value: summary.churned || 0, color: 'var(--color-text-muted)', icon: 'ti-user-minus' },
+    { label: 'Terminated', value: summary.terminated || 0, color: 'var(--status-no-show)', icon: 'ti-ban' }
+  ];
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px;">';
+  items.forEach(function(i) {
+    html += '<div style="text-align:center;padding:12px;border-radius:8px;background:var(--color-surface-dim);">' +
+      '<i class="ti ' + i.icon + '" style="font-size:20px;color:' + i.color + ';"></i>' +
+      '<div style="font-size:20px;font-weight:700;color:' + i.color + ';margin:4px 0;">' + i.value + '</div>' +
+      '<div style="font-size:11px;color:var(--color-text-muted);">' + i.label + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  if (data.retentionRate !== undefined) {
+    html += '<div style="margin-top:12px;text-align:center;font-size:12px;color:var(--color-text-muted);">Retention Rate: <strong>' + data.retentionRate + '%</strong></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function renderFleetUtilChart(containerId, data) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  if (!data || !data.vehicles || !data.vehicles.length) {
+    container.innerHTML = '<div class="ro-empty"><i class="ti ti-bus"></i><div class="ro-empty__title">No fleet data</div><div class="ro-empty__message">No vehicle data available.</div></div>';
+    return;
+  }
+  var palette = getCurrentCampusPalette();
+  var vehicles = data.vehicles.filter(function(v) { return v.status !== 'retired'; });
+  var maxRides = Math.max.apply(null, vehicles.map(function(v) { return v.totalRides || 0; }).concat([1]));
+
+  var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+  vehicles.forEach(function(v, i) {
+    var pct = maxRides > 0 ? ((v.totalRides || 0) / maxRides * 100) : 0;
+    var color = palette[i % palette.length];
+    var typeIcon = v.type === 'accessible' ? 'ti-wheelchair' : 'ti-car';
+    html += '<div style="display:flex;align-items:center;gap:8px;">' +
+      '<i class="ti ' + typeIcon + '" style="color:var(--color-text-muted);font-size:14px;width:16px;"></i>' +
+      '<span style="font-size:12px;min-width:70px;white-space:nowrap;">' + v.name + '</span>' +
+      '<div style="flex:1;background:var(--color-surface-dim);border-radius:4px;height:20px;overflow:hidden;">' +
+        '<div style="width:' + pct + '%;height:100%;background:' + color + ';border-radius:4px;transition:width 0.3s;"></div>' +
+      '</div>' +
+      '<span style="font-size:12px;font-weight:600;min-width:35px;text-align:right;">' + (v.totalRides || 0) + '</span>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  if (data.summary) {
+    html += '<div style="margin-top:12px;font-size:11px;color:var(--color-text-muted);">' + data.summary.totalFleet + ' vehicles total \u00B7 ' + data.summary.available + ' available \u00B7 ' + (data.summary.overdueCount || 0) + ' maintenance overdue</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+// ── Updated Analytics Orchestrator ──
+
 async function loadAllAnalytics() {
+  // Fetch KPI data sources first (in parallel)
+  var results = await Promise.all([
+    fetch('/api/analytics/summary' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    fetch('/api/analytics/tardiness' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    fetch('/api/analytics/fleet-utilization' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+  ]);
+
+  var summaryData = results[0];
+  var tardinessData = results[1];
+  var fleetData = results[2];
+
+  // Render KPIs from combined data
+  if (summaryData) renderKPIGrid(summaryData, tardinessData, fleetData);
+
+  // Render fleet utilization chart
+  if (fleetData) renderFleetUtilChart('chart-fleet-util', fleetData);
+
+  // Load everything else in parallel
   await Promise.all([
-    loadAnalyticsSummary(),
+    loadRideVolume(),
+    loadRideOutcomes(),
+    loadPeakHours(),
     loadAnalyticsFrequency(),
+    loadTopRoutes(),
+    loadDriverLeaderboard(),
+    loadShiftCoverage(),
+    loadRiderCohorts(),
     loadAnalyticsHotspots(),
     loadAnalyticsMilestones(),
     loadSemesterReport(),
-    loadTardinessAnalytics()
+    tardinessData ? renderTardinessSection(document.getElementById('tardiness-analytics-container'), tardinessData) : Promise.resolve()
   ]);
 }
 
@@ -5129,17 +5574,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (ridePrev) ridePrev.addEventListener('click', () => changeRideWeek(-1));
   if (rideNext) rideNext.addEventListener('click', () => changeRideWeek(1));
 
-  // Analytics: default date filter to today
+  // Analytics: default date filter to last 7 days
   const now = new Date();
   const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  const sevenDaysAgo = new Date(now.getTime() - 6 * 86400000);
+  const sevenDaysAgoStr = sevenDaysAgo.getFullYear() + '-' + String(sevenDaysAgo.getMonth() + 1).padStart(2, '0') + '-' + String(sevenDaysAgo.getDate()).padStart(2, '0');
   const analyticsFrom = document.getElementById('analytics-from');
   const analyticsTo = document.getElementById('analytics-to');
-  if (analyticsFrom) analyticsFrom.value = today;
+  if (analyticsFrom) analyticsFrom.value = sevenDaysAgoStr;
   if (analyticsTo) analyticsTo.value = today;
 
   // Analytics: lazy load on first tab click
   const analyticsRefreshBtn = document.getElementById('analytics-refresh-btn');
   if (analyticsRefreshBtn) analyticsRefreshBtn.addEventListener('click', loadAllAnalytics);
+
+  // Analytics: quick-select range buttons
+  document.querySelectorAll('.analytics-quick-select button[data-range]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.analytics-quick-select button').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      setAnalyticsQuickRange(btn.dataset.range);
+      loadAllAnalytics();
+    });
+  });
+
+  // Excel download button
+  var downloadExcelBtn = document.getElementById('download-excel-btn');
+  if (downloadExcelBtn) downloadExcelBtn.addEventListener('click', downloadExcelReport);
+
   const addVehicleBtn = document.getElementById('add-vehicle-btn');
   if (addVehicleBtn) addVehicleBtn.addEventListener('click', addVehicle);
   const exportCsvBtn = document.getElementById('export-csv-btn');
