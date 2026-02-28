@@ -31,6 +31,7 @@ const DEFAULT_TENANT = {
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   primaryColor: '#4682B4',
   secondaryColor: '#D2B48C',
+  secondaryTextColor: '#4B3A2A',
   mapUrl: null,
   mapTitle: 'Campus Map',
   idFieldLabel: 'Member ID',

@@ -1,5 +1,17 @@
 /* ── RideOps Shared Utilities ── */
 
+// Lighten (positive amount) or darken (negative amount) a hex color.
+// amount: -255 to 255. Positive = mix toward white, negative = mix toward black.
+function shadeHex(hex, amount) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var n = parseInt(hex, 16);
+  var r = Math.min(255, Math.max(0, ((n >> 16) & 255) + amount));
+  var g = Math.min(255, Math.max(0, ((n >> 8)  & 255) + amount));
+  var b = Math.min(255, Math.max(0, ( n        & 255) + amount));
+  return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
 // Convert hex color to "r, g, b" string for rgba() usage
 function hexToRgb(hex) {
   hex = hex.replace('#', '');
@@ -41,8 +53,18 @@ async function applyTenantTheme() {
     if (config.primaryColor) {
       root.style.setProperty('--color-primary', config.primaryColor);
       root.style.setProperty('--color-primary-rgb', hexToRgb(config.primaryColor));
+      // Compute derived shades so hover states, focus rings, and subtle backgrounds
+      // reflect the actual tenant color instead of staying as hardcoded steelblue.
+      root.style.setProperty('--color-primary-dark',   shadeHex(config.primaryColor, -25));
+      root.style.setProperty('--color-primary-light',  shadeHex(config.primaryColor, 80));
+      root.style.setProperty('--color-primary-subtle', shadeHex(config.primaryColor, 120));
     }
-    if (config.secondaryColor) root.style.setProperty('--color-accent', config.secondaryColor);
+    if (config.secondaryColor) {
+      root.style.setProperty('--color-accent', config.secondaryColor);
+      root.style.setProperty('--color-accent-dark', shadeHex(config.secondaryColor, -20));
+      root.style.setProperty('--color-secondary', config.secondaryColor);
+      root.style.setProperty('--color-secondary-rgb', hexToRgb(config.secondaryColor));
+    }
 
     // Apply sidebar overrides if campus theme provides them
     if (campusKey && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[campusKey]) {
@@ -53,6 +75,9 @@ async function applyTenantTheme() {
       if (ct.sidebarHover) root.style.setProperty('--color-sidebar-hover', ct.sidebarHover);
       if (ct.sidebarBorder) root.style.setProperty('--color-sidebar-border', ct.sidebarBorder);
       root.style.setProperty('--color-sidebar-active', ct.primaryColor);
+      if (ct.secondaryTextColor) root.style.setProperty('--color-secondary-text', ct.secondaryTextColor);
+      if (ct.primaryLight) root.style.setProperty('--color-primary-light', ct.primaryLight);
+      if (ct.primaryDark)  root.style.setProperty('--color-primary-dark',  ct.primaryDark);
     }
 
     // Apply org name/short name to DOM

@@ -12,6 +12,9 @@
   --color-accent:         #D2B48C;
   --color-accent-dark:    #C4A067;
   --color-primary-subtle: #EEF3F8;
+  --color-secondary:      #D2B48C;
+  --color-secondary-rgb:  210, 180, 140;
+  --color-secondary-text: #4B3A2A;
 
   /* Sidebar — overridable per campus theme */
   --color-sidebar-bg:     #1E2B3A;

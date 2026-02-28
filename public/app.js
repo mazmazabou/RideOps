@@ -95,7 +95,14 @@ async function loadTenantConfig() {
     const root = document.documentElement;
     root.style.setProperty('--color-primary', ct.primaryColor);
     root.style.setProperty('--color-primary-rgb', hexToRgb(ct.primaryColor));
-    if (ct.secondaryColor) root.style.setProperty('--color-accent', ct.secondaryColor);
+    if (ct.secondaryColor) {
+      root.style.setProperty('--color-accent', ct.secondaryColor);
+      root.style.setProperty('--color-secondary', ct.secondaryColor);
+      root.style.setProperty('--color-secondary-rgb', hexToRgb(ct.secondaryColor));
+    }
+    if (ct.secondaryTextColor) root.style.setProperty('--color-secondary-text', ct.secondaryTextColor);
+    if (ct.primaryLight) root.style.setProperty('--color-primary-light', ct.primaryLight);
+    if (ct.primaryDark) root.style.setProperty('--color-primary-dark', ct.primaryDark);
     if (ct.sidebarBg) root.style.setProperty('--color-sidebar-bg', ct.sidebarBg);
     if (ct.sidebarText) root.style.setProperty('--color-sidebar-text', ct.sidebarText);
     if (ct.sidebarActiveBg) root.style.setProperty('--color-sidebar-active-bg', ct.sidebarActiveBg);
