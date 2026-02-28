@@ -2914,7 +2914,7 @@ app.post('/api/notifications/bulk-delete', requireAuth, async (req, res) => {
   if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
   try {
     const result = await query(
-      'DELETE FROM notifications WHERE id = ANY($1::uuid[]) AND user_id = $2',
+      'DELETE FROM notifications WHERE id = ANY($1::text[]) AND user_id = $2',
       [ids, req.session.userId]
     );
     res.json({ deleted: result.rowCount });

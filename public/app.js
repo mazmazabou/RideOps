@@ -4827,8 +4827,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (res.ok) {
               const data = await res.json();
               showToastNew('Deleted ' + data.deleted + ' ride' + (data.deleted !== 1 ? 's' : ''), 'success');
+            } else {
+              const err = await res.json().catch(() => ({}));
+              showToastNew(err.error || 'Failed to delete rides', 'error');
             }
-          } catch {}
+          } catch (e) {
+            console.error('Bulk ride delete error:', e);
+            showToastNew('Failed to delete rides', 'error');
+          }
           _ridesSelectedIds = new Set();
           _ridesUpdateSelectionUI();
           await loadRides();
@@ -4900,13 +4906,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         confirmClass: 'ro-btn--danger',
         onConfirm: async function() {
           let deleted = 0;
+          let failed = 0;
           for (const id of ids) {
             try {
               const res = await fetch('/api/admin/users/' + id, { method: 'DELETE' });
               if (res.ok) deleted++;
-            } catch {}
+              else failed++;
+            } catch {
+              failed++;
+            }
           }
-          showToastNew('Deleted ' + deleted + ' user' + (deleted !== 1 ? 's' : ''), 'success');
+          if (deleted > 0) showToastNew('Deleted ' + deleted + ' user' + (deleted !== 1 ? 's' : ''), 'success');
+          if (failed > 0) showToastNew(failed + ' user' + (failed !== 1 ? 's' : '') + ' failed to delete', 'error');
           _usersSelectedIds = new Set();
           _usersUpdateSelectionUI();
           await loadAdminUsers();

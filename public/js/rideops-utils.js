@@ -557,10 +557,14 @@ function renderNotificationDrawer(notifications, unreadCount) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: ids })
-          }).then(function() {
+          }).then(function(r) {
+            if (!r.ok) throw new Error('Failed');
+            showToastNew('Deleted ' + ids.length + ' notification' + (ids.length !== 1 ? 's' : ''), 'success');
             openNotificationDrawer();
             pollNotificationCount();
-          }).catch(function() {});
+          }).catch(function() {
+            showToastNew('Failed to delete notifications', 'error');
+          });
         }
       });
     });
@@ -577,10 +581,14 @@ function renderNotificationDrawer(notifications, unreadCount) {
         confirmClass: 'ro-btn--danger',
         onConfirm: function() {
           fetch('/api/notifications/all', { method: 'DELETE' })
-            .then(function() {
+            .then(function(r) {
+              if (!r.ok) throw new Error('Failed');
+              showToastNew('All notifications cleared', 'success');
               openNotificationDrawer();
               pollNotificationCount();
-            }).catch(function() {});
+            }).catch(function() {
+              showToastNew('Failed to clear notifications', 'error');
+            });
         }
       });
     });
