@@ -32,7 +32,7 @@ var CAMPUS_THEMES = {
     secondaryColor: '#FFD100', secondaryTextColor: '#2774AE',
     sidebarBg: '#0D1B2A', sidebarText: '#8FAFC8',
     sidebarActiveBg: 'rgba(39,116,174,0.25)', sidebarHover: 'rgba(255,255,255,0.06)',
-    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://map.ucla.edu/', campusKey: 'ucla',
+    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6608.890031780498!2d-118.44687!3d34.068921!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80c2bc85f179c2a3%3A0xf6a491a8cc730837!2sUCLA!5e0!3m2!1sen!2sus!4v1', campusKey: 'ucla',
     headerBg: '#DAEBFE'  // Lightest Blue (PMS 2707C) — official UCLA palette
   },
   uci: {
@@ -42,7 +42,7 @@ var CAMPUS_THEMES = {
     secondaryColor: '#FECC07', secondaryTextColor: '#255799',
     sidebarBg: '#001A2E', sidebarText: '#7BAAC4',
     sidebarActiveBg: 'rgba(37,87,153,0.25)', sidebarHover: 'rgba(255,255,255,0.06)',
-    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://map.uci.edu/', campusKey: 'uci',
+    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6620.471084289972!2d-117.846!3d33.6405!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80dcde0e2592bf91%3A0x79fbc4d6c29d9bfa!2sUniversity%20of%20California%2C%20Irvine!5e0!3m2!1sen!2sus!4v1', campusKey: 'uci',
     headerBg: '#E8EEF5'  // 10% tint of UCI Blue #255799
   }
 };
