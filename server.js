@@ -77,6 +77,10 @@ try { allCampusLocations.stanford = require('./tenants/stanford-locations'); } c
 try { allCampusLocations.ucla = require('./tenants/ucla-locations'); } catch {}
 try { allCampusLocations.uci = require('./tenants/uci-locations'); } catch {}
 
+// ----- Org-scoped campus configs -----
+const VALID_ORG_SLUGS = ['usc', 'stanford', 'ucla', 'uci'];
+const campusConfigs = require('./tenants/campus-configs');
+
 // ----- Notification event types -----
 const NOTIFICATION_EVENT_TYPES = [
   { key: 'driver_tardy', label: 'Driver Clocked In Late', description: 'A driver clocks in after their scheduled shift start time', defaultThreshold: null, thresholdUnit: null, category: 'staff' },
@@ -716,7 +720,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(401).json({ error: 'Invalid username or password' });
   }
   setSessionFromUser(req, user);
-  const responseData = { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role };
+  const responseData = { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, campus: req.session.campus || null };
   if (user.must_change_password) responseData.mustChangePassword = true;
   res.json(responseData);
 });
@@ -751,7 +755,13 @@ app.get('/api/client-config', (req, res) => {
   res.json({ isDev: isDevRequest(req) });
 });
 
-app.get('/api/tenant-config', (req, res) => res.json(TENANT));
+app.get('/api/tenant-config', (req, res) => {
+  const campus = req.session.campus || req.query.campus;
+  if (campus && campusConfigs[campus]) {
+    return res.json({ ...TENANT, ...campusConfigs[campus] });
+  }
+  res.json(TENANT);
+});
 
 app.get('/api/program-rules', async (req, res) => {
   try {
@@ -1255,6 +1265,38 @@ app.get('/api/admin/email-status', requireOffice, (req, res) => {
   res.json({ configured });
 });
 
+// ----- Org-scoped routes (must come before generic page routes) -----
+VALID_ORG_SLUGS.forEach(slug => {
+  // Main org route — login page (unauthenticated) or dashboard (authenticated)
+  app.get('/' + slug, (req, res) => {
+    req.session.campus = slug;
+    if (req.session.userId) {
+      if (req.session.role === 'driver') return res.redirect('/' + slug + '/driver');
+      if (req.session.role === 'rider') return res.redirect('/' + slug + '/rider');
+      return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  });
+
+  // Driver view
+  app.get('/' + slug + '/driver', requireAuth, (req, res) => {
+    req.session.campus = slug;
+    res.sendFile(path.join(__dirname, 'public', 'driver.html'));
+  });
+
+  // Rider view
+  app.get('/' + slug + '/rider', requireAuth, (req, res) => {
+    req.session.campus = slug;
+    res.sendFile(path.join(__dirname, 'public', 'rider.html'));
+  });
+
+  // Signup
+  app.get('/' + slug + '/signup', (req, res) => {
+    req.session.campus = slug;
+    res.sendFile(path.join(__dirname, 'public', 'signup.html'));
+  });
+});
+
 // ----- Pages -----
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -1308,22 +1350,28 @@ app.get('/demo-config.js', (req, res) => {
       document.head.appendChild(s);
 
       window.addEventListener('DOMContentLoaded', function() {
-        var path = window.location.pathname;
+        var pathname = window.location.pathname;
         var role = 'Office Manager';
-        if (path.indexOf('/driver') !== -1) role = 'Driver';
-        else if (path.indexOf('/rider') !== -1) role = 'Rider';
+        if (pathname.indexOf('/driver') !== -1) role = 'Driver';
+        else if (pathname.indexOf('/rider') !== -1) role = 'Rider';
+
+        var pathParts = pathname.split('/').filter(Boolean);
+        var knownSlugs = ['usc', 'stanford', 'ucla', 'uci'];
+        var orgSlug = (pathParts.length > 0 && knownSlugs.indexOf(pathParts[0]) !== -1) ? pathParts[0] : null;
+        var switchUrl = orgSlug ? '/' + orgSlug : '/demo.html';
+        var logoutRedirect = orgSlug ? '/' + orgSlug : '/demo.html';
 
         var b = document.createElement('div');
         b.id = 'demo-banner';
         b.style.cssText = 'position:fixed;top:0;left:0;right:0;height:32px;z-index:99999;background:#1E2B3A;color:#94A3B8;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:12px;font-family:system-ui,sans-serif;';
         b.innerHTML = '<span>\\u25C8 DEMO MODE \\u00B7 Viewing as: <span style="color:#E2E8F0;font-weight:600;">' + role + '</span></span>'
-          + '<span><a href="/demo.html" style="color:#94A3B8;text-decoration:none;margin-right:16px;">Switch Role \\u2197</a>'
+          + '<span><a href="' + switchUrl + '" style="color:#94A3B8;text-decoration:none;margin-right:16px;">Switch Role \\u2197</a>'
           + '<a href="https://ride-ops.com" style="color:#64748B;text-decoration:none;">ride-ops.com</a></span>';
         document.body.prepend(b);
 
         window.logout = function() {
           fetch('/api/auth/logout', { method: 'POST' }).then(function() {
-            window.location.href = '/demo.html';
+            window.location.href = logoutRedirect;
           });
         };
       });
@@ -1906,8 +1954,8 @@ app.put('/api/rides/:id', requireOffice, async (req, res) => {
 });
 
 app.get('/api/locations', requireAuth, (req, res) => {
-  const campus = req.query.campus;
-  if (DEMO_MODE && campus && allCampusLocations[campus]) {
+  const campus = req.query.campus || req.session.campus;
+  if (campus && allCampusLocations[campus]) {
     return res.json(allCampusLocations[campus]);
   }
   res.json(campusLocations);
