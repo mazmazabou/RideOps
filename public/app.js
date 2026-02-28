@@ -4068,6 +4068,140 @@ async function downloadExcelReport() {
   }
 }
 
+// ── Report Preview ──
+
+var REPORT_SHEETS = {
+  full: {
+    label: 'Full Report (All Sheets)',
+    desc: 'Comprehensive export with all available data sheets.',
+    sheets: [
+      { name: 'Summary', icon: 'ti-list-details', desc: 'Aggregate KPIs and rates' },
+      { name: 'Daily Volume', icon: 'ti-chart-bar', desc: 'Rides per day with status breakdown' },
+      { name: 'Routes', icon: 'ti-route', desc: 'Top routes by frequency' },
+      { name: 'Driver Performance', icon: 'ti-steering-wheel', desc: 'Per-driver rides, punctuality, hours' },
+      { name: 'Rider Analysis', icon: 'ti-users', desc: 'Active, new, returning, and at-risk riders' },
+      { name: 'Fleet', icon: 'ti-car', desc: 'Vehicle usage and maintenance' },
+      { name: 'Shift Coverage', icon: 'ti-clock', desc: 'Scheduled vs actual driver-hours' },
+      { name: 'Peak Hours', icon: 'ti-flame', desc: 'Day-of-week by hour heatmap' }
+    ]
+  },
+  rides: {
+    label: 'Rides Only',
+    desc: 'Ride volume, daily trends, and popular routes.',
+    sheets: [
+      { name: 'Summary', icon: 'ti-list-details', desc: 'Aggregate KPIs and rates' },
+      { name: 'Daily Volume', icon: 'ti-chart-bar', desc: 'Rides per day with status breakdown' },
+      { name: 'Routes', icon: 'ti-route', desc: 'Top routes by frequency' }
+    ]
+  },
+  drivers: {
+    label: 'Driver Performance',
+    desc: 'Driver scorecards and shift coverage analysis.',
+    sheets: [
+      { name: 'Summary', icon: 'ti-list-details', desc: 'Aggregate KPIs and rates' },
+      { name: 'Driver Performance', icon: 'ti-steering-wheel', desc: 'Per-driver rides, punctuality, hours' },
+      { name: 'Shift Coverage', icon: 'ti-clock', desc: 'Scheduled vs actual driver-hours' }
+    ]
+  },
+  riders: {
+    label: 'Rider Analysis',
+    desc: 'Rider cohorts, activity, and engagement metrics.',
+    sheets: [
+      { name: 'Summary', icon: 'ti-list-details', desc: 'Aggregate KPIs and rates' },
+      { name: 'Rider Analysis', icon: 'ti-users', desc: 'Active, new, returning, and at-risk riders' }
+    ]
+  },
+  fleet: {
+    label: 'Fleet Report',
+    desc: 'Vehicle utilization and maintenance history.',
+    sheets: [
+      { name: 'Summary', icon: 'ti-list-details', desc: 'Aggregate KPIs and rates' },
+      { name: 'Fleet', icon: 'ti-car', desc: 'Vehicle usage and maintenance' }
+    ]
+  }
+};
+
+function updateReportPreview(summaryData) {
+  var container = document.getElementById('report-preview-table');
+  if (!container) return;
+
+  var sel = document.getElementById('report-type-select');
+  var type = sel ? sel.value : 'full';
+  var info = REPORT_SHEETS[type] || REPORT_SHEETS.full;
+
+  // Date range display
+  var fromEl = document.getElementById('analytics-from');
+  var toEl = document.getElementById('analytics-to');
+  var fromStr = fromEl ? fromEl.value : '';
+  var toStr = toEl ? toEl.value : '';
+  var dateLabel = '';
+  function fmtShortDate(s) {
+    if (!s) return '';
+    var d = new Date(s + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  if (fromStr && toStr) {
+    dateLabel = fmtShortDate(fromStr) + ' \u2013 ' + fmtShortDate(toStr);
+  } else if (fromStr) {
+    dateLabel = 'From ' + fmtShortDate(fromStr);
+  }
+
+  // Build the sheets list
+  var sheetsHtml = info.sheets.map(function(s) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;">' +
+      '<i class="ti ' + s.icon + '" style="font-size:16px;color:var(--color-primary);opacity:0.7;width:20px;text-align:center;"></i>' +
+      '<span style="font-weight:600;font-size:13px;min-width:130px;">' + s.name + '</span>' +
+      '<span style="font-size:12px;color:var(--color-text-muted);">' + s.desc + '</span>' +
+      '</div>';
+  }).join('');
+
+  // Build data summary if we have it
+  var summaryHtml = '';
+  if (summaryData) {
+    var items = [
+      { icon: 'ti-receipt', label: 'Rides', value: summaryData.totalRides },
+      { icon: 'ti-circle-check', label: 'Completed', value: summaryData.completedRides },
+      { icon: 'ti-steering-wheel', label: 'Drivers', value: summaryData.uniqueDrivers },
+      { icon: 'ti-users', label: 'Riders', value: summaryData.uniqueRiders }
+    ];
+    summaryHtml = '<div style="display:flex;gap:16px;flex-wrap:wrap;padding:12px 16px;background:var(--color-surface-dim);border-radius:var(--radius-sm);margin-bottom:12px;">';
+    items.forEach(function(item) {
+      summaryHtml += '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<i class="ti ' + item.icon + '" style="font-size:14px;color:var(--color-text-muted);"></i>' +
+        '<span style="font-size:13px;font-weight:700;">' + item.value + '</span>' +
+        '<span style="font-size:12px;color:var(--color-text-muted);">' + item.label + '</span>' +
+        '</div>';
+    });
+    summaryHtml += '</div>';
+  } else if (analyticsReportData) {
+    // Use cached data
+    return updateReportPreview(analyticsReportData);
+  }
+
+  var html = '';
+
+  // Data summary bar
+  html += summaryHtml;
+
+  // Description
+  html += '<div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:10px;">' +
+    '<i class="ti ti-info-circle" style="margin-right:4px;opacity:0.6;"></i>' +
+    info.desc;
+  if (dateLabel) {
+    html += ' <span style="color:var(--color-text-muted);font-size:12px;">(' + dateLabel + ')</span>';
+  }
+  html += '</div>';
+
+  // Sheets list
+  html += '<div style="font-size:12px;font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Included Sheets (' + info.sheets.length + ')</div>';
+  html += '<div style="border:1px solid var(--color-border-light);border-radius:var(--radius-sm);padding:4px 12px;">' + sheetsHtml + '</div>';
+
+  container.innerHTML = html;
+
+  // Cache summary data for dropdown changes
+  if (summaryData) analyticsReportData = summaryData;
+}
+
 // ── New Chart Rendering Functions ──
 
 function renderRideVolumeChart(data) {
@@ -4361,6 +4495,9 @@ async function loadAllAnalytics() {
 
   // Render KPIs from combined data
   if (summaryData) renderKPIGrid(summaryData, tardinessData, fleetData);
+
+  // Update report preview with summary data
+  updateReportPreview(summaryData);
 
   // Render fleet utilization chart
   if (fleetData) renderFleetUtilChart('chart-fleet-util', fleetData);
@@ -5690,6 +5827,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Excel download button
   var downloadExcelBtn = document.getElementById('download-excel-btn');
   if (downloadExcelBtn) downloadExcelBtn.addEventListener('click', downloadExcelReport);
+
+  // Report type dropdown — update preview on change
+  var reportTypeSelect = document.getElementById('report-type-select');
+  if (reportTypeSelect) reportTypeSelect.addEventListener('change', function() { updateReportPreview(); });
 
   const addVehicleBtn = document.getElementById('add-vehicle-btn');
   if (addVehicleBtn) addVehicleBtn.addEventListener('click', addVehicle);
