@@ -4478,24 +4478,43 @@ function renderFleetUtilChart(containerId, data) {
 // ── Updated Analytics Orchestrator ──
 
 async function loadAllAnalytics() {
-  // Show skeleton loading states
-  showAnalyticsSkeleton('analytics-kpi-grid', 'kpi');
-  showAnalyticsSkeleton('chart-ride-volume', 'chart');
-  showAnalyticsSkeleton('chart-ride-outcomes', 'donut');
-  showAnalyticsSkeleton('chart-peak-hours', 'heatmap');
-  showAnalyticsSkeleton('chart-dow', 'chart');
-  showAnalyticsSkeleton('chart-hour', 'chart');
-  showAnalyticsSkeleton('chart-top-routes', 'table');
-  showAnalyticsSkeleton('chart-driver-leaderboard', 'table');
-  showAnalyticsSkeleton('chart-shift-coverage', 'table');
-  showAnalyticsSkeleton('chart-fleet-util', 'chart');
-  showAnalyticsSkeleton('chart-rider-cohorts', 'chart');
+  // Initialize or refresh widget system (creates dynamic widget card DOM)
+  if (typeof initWidgetSystem === 'function') {
+    if (typeof _widgetUserId === 'undefined' || !_widgetUserId) {
+      // First call: full init
+      initWidgetSystem(currentUser ? currentUser.id : 'default');
+    } else {
+      // Subsequent calls (date change, refresh): just rebuild DOM
+      renderWidgetGrid();
+    }
+  }
+
+  // Helper: check if a container exists in the DOM (widget is visible)
+  function has(id) { return !!document.getElementById(id); }
+
+  // Show skeleton loading states for visible widgets
+  if (has('analytics-kpi-grid')) showAnalyticsSkeleton('analytics-kpi-grid', 'kpi');
+  if (has('chart-ride-volume')) showAnalyticsSkeleton('chart-ride-volume', 'chart');
+  if (has('chart-ride-outcomes')) showAnalyticsSkeleton('chart-ride-outcomes', 'donut');
+  if (has('chart-peak-hours')) showAnalyticsSkeleton('chart-peak-hours', 'heatmap');
+  if (has('chart-dow')) showAnalyticsSkeleton('chart-dow', 'chart');
+  if (has('chart-hour')) showAnalyticsSkeleton('chart-hour', 'chart');
+  if (has('chart-top-routes')) showAnalyticsSkeleton('chart-top-routes', 'table');
+  if (has('chart-driver-leaderboard')) showAnalyticsSkeleton('chart-driver-leaderboard', 'table');
+  if (has('chart-shift-coverage')) showAnalyticsSkeleton('chart-shift-coverage', 'table');
+  if (has('chart-fleet-util')) showAnalyticsSkeleton('chart-fleet-util', 'chart');
+  if (has('chart-rider-cohorts')) showAnalyticsSkeleton('chart-rider-cohorts', 'chart');
+
+  // Determine which shared data sources are needed
+  var needKPI = has('analytics-kpi-grid');
+  var needTardiness = needKPI || has('tardiness-analytics-container');
+  var needFleet = needKPI || has('chart-fleet-util');
 
   // Fetch KPI data sources first (in parallel)
   var results = await Promise.all([
-    fetch('/api/analytics/summary' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
-    fetch('/api/analytics/tardiness' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
-    fetch('/api/analytics/fleet-utilization' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+    needKPI ? fetch('/api/analytics/summary' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }) : Promise.resolve(null),
+    needTardiness ? fetch('/api/analytics/tardiness' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }) : Promise.resolve(null),
+    needFleet ? fetch('/api/analytics/fleet-utilization' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }) : Promise.resolve(null)
   ]);
 
   var summaryData = results[0];
@@ -4503,29 +4522,32 @@ async function loadAllAnalytics() {
   var fleetData = results[2];
 
   // Render KPIs from combined data
-  if (summaryData) renderKPIGrid(summaryData, tardinessData, fleetData);
+  if (summaryData && has('analytics-kpi-grid')) renderKPIGrid(summaryData, tardinessData, fleetData);
 
   // Update report preview with summary data
   updateReportPreview(summaryData);
 
-  // Render fleet utilization chart
-  if (fleetData) renderFleetUtilChart('chart-fleet-util', fleetData);
+  // Render fleet utilization chart (if visible in widget grid)
+  if (fleetData && has('chart-fleet-util')) renderFleetUtilChart('chart-fleet-util', fleetData);
 
-  // Load everything else in parallel
-  await Promise.all([
-    loadRideVolume(),
-    loadRideOutcomes(),
-    loadPeakHours(),
-    loadAnalyticsFrequency(),
-    loadTopRoutes(),
-    loadDriverLeaderboard(),
-    loadShiftCoverage(),
-    loadRiderCohorts(),
-    loadAnalyticsHotspots(),
-    loadAnalyticsMilestones(),
-    loadSemesterReport(),
-    tardinessData ? renderTardinessSection(document.getElementById('tardiness-analytics-container'), tardinessData) : Promise.resolve()
-  ]);
+  // Load everything else in parallel — only for visible containers
+  var loaders = [];
+  if (has('chart-ride-volume')) loaders.push(loadRideVolume());
+  if (has('chart-ride-outcomes')) loaders.push(loadRideOutcomes());
+  if (has('chart-peak-hours')) loaders.push(loadPeakHours());
+  if (has('chart-dow') || has('chart-hour')) loaders.push(loadAnalyticsFrequency());
+  if (has('chart-top-routes')) loaders.push(loadTopRoutes());
+  if (has('chart-driver-leaderboard')) loaders.push(loadDriverLeaderboard());
+  if (has('chart-shift-coverage')) loaders.push(loadShiftCoverage());
+  if (has('chart-rider-cohorts')) loaders.push(loadRiderCohorts());
+  // Hotspots & milestones are on separate sub-tabs but also available as widgets
+  if (has('hotspot-pickups') || has('hotspot-dropoffs') || has('hotspot-matrix')) loaders.push(loadAnalyticsHotspots());
+  if (has('driver-milestones') || has('rider-milestones')) loaders.push(loadAnalyticsMilestones());
+  // These always load (on their own sub-tabs)
+  loaders.push(loadSemesterReport());
+  if (tardinessData) loaders.push(renderTardinessSection(document.getElementById('tardiness-analytics-container'), tardinessData));
+
+  await Promise.all(loaders);
 }
 
 function logVehicleMaintenance(vehicleId) {
@@ -5388,6 +5410,72 @@ async function loadRetentionSettings() {
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTenantConfig();
   if (!await checkAuth()) return;
+
+  // Register widget loaders for the widget system
+  if (typeof registerWidgetLoader === 'function') {
+    registerWidgetLoader('kpi-grid', async function() {
+      var results = await Promise.all([
+        fetch('/api/analytics/summary' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+        fetch('/api/analytics/tardiness' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+        fetch('/api/analytics/fleet-utilization' + getAnalyticsDateParams()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+      ]);
+      if (results[0]) renderKPIGrid(results[0], results[1], results[2]);
+    });
+    registerWidgetLoader('ride-volume', loadRideVolume);
+    registerWidgetLoader('ride-outcomes', loadRideOutcomes);
+    registerWidgetLoader('peak-hours', loadPeakHours);
+    registerWidgetLoader('rides-by-dow', loadAnalyticsFrequency);
+    registerWidgetLoader('rides-by-hour', loadAnalyticsFrequency);
+    registerWidgetLoader('top-routes', loadTopRoutes);
+    registerWidgetLoader('driver-leaderboard', loadDriverLeaderboard);
+    registerWidgetLoader('shift-coverage', loadShiftCoverage);
+    registerWidgetLoader('fleet-utilization', async function() {
+      var data = await loadFleetUtilization();
+      if (data) renderFleetUtilChart('chart-fleet-util', data);
+    });
+    registerWidgetLoader('rider-cohorts', loadRiderCohorts);
+    registerWidgetLoader('hotspot-pickups', async function() {
+      try {
+        var res = await fetch('/api/analytics/hotspots' + getAnalyticsDateParams());
+        if (!res.ok) return;
+        var data = await res.json();
+        if (data.topPickups) renderHotspotList('w-hotspot-pickups', data.topPickups, '', 'pickups');
+      } catch(e) {}
+    });
+    registerWidgetLoader('hotspot-dropoffs', async function() {
+      try {
+        var res = await fetch('/api/analytics/hotspots' + getAnalyticsDateParams());
+        if (!res.ok) return;
+        var data = await res.json();
+        if (data.topDropoffs) renderHotspotList('w-hotspot-dropoffs', data.topDropoffs, 'darkgold', 'dropoffs');
+      } catch(e) {}
+    });
+    registerWidgetLoader('route-demand-matrix', async function() {
+      try {
+        var res = await fetch('/api/analytics/hotspots' + getAnalyticsDateParams());
+        if (!res.ok) return;
+        var data = await res.json();
+        if (data.matrix) renderODMatrix('w-hotspot-matrix', data.matrix);
+      } catch(e) {}
+    });
+    registerWidgetLoader('driver-milestones', async function() {
+      try {
+        var res = await fetch('/api/analytics/milestones');
+        if (!res.ok) return;
+        var data = await res.json();
+        if (data.drivers) renderMilestoneList('w-driver-milestones', data.drivers, 'driver');
+      } catch(e) {}
+    });
+    registerWidgetLoader('rider-milestones', async function() {
+      try {
+        var res = await fetch('/api/analytics/milestones');
+        if (!res.ok) return;
+        var data = await res.json();
+        if (data.riders) renderMilestoneList('w-rider-milestones', data.riders, 'rider');
+      } catch(e) {}
+    });
+  }
+
   const sidebarUserName = document.getElementById('sidebar-user-name');
   if (sidebarUserName && currentUser?.name) sidebarUserName.textContent = currentUser.name;
   if (typeof window.applyDevOnlyVisibility === 'function') {

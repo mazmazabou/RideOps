@@ -1130,6 +1130,166 @@ body {
   .analytics-date-bar { padding: 8px 12px; }
 }
 
+/* ── Widget Dashboard System ── */
+.widget-toolbar-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+}
+.widget-toolbar-bar #widget-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.widget-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.widget-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.widget-card--large { grid-column: 1 / -1; }
+.widget-card--medium { /* default, spans 1 column */ }
+
+.widget-card__header {
+  background: var(--color-primary);
+  color: var(--color-secondary);
+  padding: 10px 16px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.widget-card__title {
+  color: inherit;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  flex: 1;
+}
+.widget-card__title i { margin-right: 4px; color: inherit; opacity: 0.8; }
+.widget-card__body { padding: 12px 16px 16px; }
+
+/* Drag handle and action buttons — hidden by default, shown in edit mode */
+.widget-card__drag-handle {
+  display: none;
+  cursor: grab;
+  color: inherit;
+  opacity: 0.6;
+  font-size: 16px;
+  padding: 0 2px;
+}
+.widget-card__drag-handle:active { cursor: grabbing; }
+
+.widget-card__actions {
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+.widget-action {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 2px;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  transition: opacity 0.15s;
+}
+.widget-action:hover { opacity: 1; }
+
+/* Edit mode: show controls */
+.widget-grid--editing .widget-card__drag-handle,
+.widget-grid--editing .widget-card__actions {
+  display: flex;
+}
+.widget-grid--editing .widget-card {
+  box-shadow: 0 0 0 1px var(--color-primary-light);
+}
+
+/* SortableJS ghost/drag states */
+.sortable-ghost {
+  opacity: 0.4;
+  background: var(--color-primary-subtle);
+}
+.sortable-drag {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Widget Library Items */
+.widget-library-group__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  padding: 12px 0 6px;
+}
+.widget-library-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  background: var(--color-surface);
+  transition: border-color 0.15s;
+}
+.widget-library-item:hover {
+  border-color: var(--color-primary-light);
+}
+.widget-library-item__icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.widget-library-item__info { flex: 1; min-width: 0; }
+.widget-library-item__name { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.widget-library-item__desc { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; line-height: 1.3; }
+.widget-library-item__size {
+  display: inline-block;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-dim, #f0f0f0);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill, 999px);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.widget-library-item__add { flex-shrink: 0; align-self: center; }
+
+@media (max-width: 768px) {
+  .widget-grid { grid-template-columns: 1fr; padding: 0 12px 16px; }
+  .widget-card--large { grid-column: 1; }
+  .widget-toolbar-bar { padding: 8px 12px; }
+}
+@media print {
+  .widget-toolbar-bar { display: none !important; }
+  .widget-card { break-inside: avoid; page-break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+}
+
 /* ── OD Matrix ── */
 .od-matrix { width: 100%; border-collapse: separate; border-spacing: 2px; font-size: 11px; }
 .od-matrix th { padding: 4px 6px; font-weight: 600; color: var(--color-text-secondary); font-size: 10px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

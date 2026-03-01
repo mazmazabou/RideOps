@@ -266,74 +266,17 @@
           </div>
 
           <div class="sub-panel active" id="analytics-dashboard-view">
-            <!-- KPI Row -->
-            <div class="analytics-card analytics-card--wide analytics-card--kpi" style="margin:16px 24px 0;">
-              <div class="kpi-bar" id="analytics-kpi-grid"></div>
-            </div>
-
-            <!-- Row 2: Volume chart + Outcome donut -->
-            <div class="analytics-card-grid">
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-chart-area-line"></i> Ride Volume</h4></div>
-                <div class="analytics-card__body" id="chart-ride-volume"></div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-chart-donut-3"></i> Ride Outcomes</h4></div>
-                <div class="analytics-card__body" id="chart-ride-outcomes"></div>
+            <div class="widget-toolbar-bar">
+              <button class="ro-btn ro-btn--outline ro-btn--sm" id="widget-customize-btn" type="button">
+                <i class="ti ti-layout-dashboard"></i> Customize
+              </button>
+              <div id="widget-toolbar" style="display:none;">
+                <button class="ro-btn ro-btn--primary ro-btn--sm" id="widget-done-btn" type="button"><i class="ti ti-check"></i> Done</button>
+                <button class="ro-btn ro-btn--outline ro-btn--sm" id="widget-add-btn" type="button"><i class="ti ti-plus"></i> Add Widget</button>
+                <button class="ro-btn ro-btn--ghost ro-btn--sm" id="widget-reset-btn" type="button"><i class="ti ti-refresh"></i> Reset</button>
               </div>
             </div>
-
-            <!-- Row 3: Peak Hours Heatmap (full width) -->
-            <div class="analytics-card-grid">
-              <div class="analytics-card analytics-card--wide">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-flame"></i> Peak Hours</h4></div>
-                <div class="analytics-card__body" id="chart-peak-hours"></div>
-              </div>
-            </div>
-
-            <!-- Row 4: DOW + Hour charts -->
-            <div class="analytics-card-grid">
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title">Rides by Day of Week</h4></div>
-                <div class="analytics-card__body" id="chart-dow"></div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title">Rides by Hour</h4></div>
-                <div class="analytics-card__body" id="chart-hour"></div>
-              </div>
-            </div>
-
-            <!-- Row 5: Top Routes + Driver Leaderboard -->
-            <div class="analytics-card-grid">
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-route"></i> Top Routes</h4></div>
-                <div class="analytics-card__body" id="chart-top-routes"></div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-steering-wheel"></i> Driver Leaderboard</h4></div>
-                <div class="analytics-card__body" id="chart-driver-leaderboard"></div>
-              </div>
-            </div>
-
-            <!-- Row 6: Shift Coverage (full width) -->
-            <div class="analytics-card-grid">
-              <div class="analytics-card analytics-card--wide">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-calendar-stats"></i> Shift Coverage</h4></div>
-                <div class="analytics-card__body" id="chart-shift-coverage"></div>
-              </div>
-            </div>
-
-            <!-- Row 7: Fleet Utilization + Rider Cohorts -->
-            <div class="analytics-card-grid">
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-bus"></i> Fleet Utilization</h4></div>
-                <div class="analytics-card__body" id="chart-fleet-util"></div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-card__header"><h4 class="analytics-card__title"><i class="ti ti-users-group"></i> Rider Cohorts</h4></div>
-                <div class="analytics-card__body" id="chart-rider-cohorts"></div>
-              </div>
-            </div>
+            <div class="widget-grid" id="widget-grid"></div>
           </div>
 
           <div class="sub-panel" id="analytics-hotspots-view">
@@ -558,8 +501,22 @@
     <div id="vehicle-drawer-body"></div>
   </aside>
 
+  <!-- Widget Library Drawer -->
+  <div id="widget-library-backdrop" class="ro-drawer-overlay"></div>
+  <aside id="widget-library-drawer" class="ro-drawer">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="font-size:16px; font-weight:700; margin:0;"><i class="ti ti-layout-grid-add"></i> Widget Library</h3>
+      <button class="ro-btn ro-btn--outline ro-btn--sm" id="widget-library-close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="text-xs text-muted" style="margin-bottom:16px;">Click the + button to add a widget to your dashboard.</div>
+    <div id="widget-library-list"></div>
+  </aside>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <script src="/utils.js"></script>
   <script src="/js/rideops-utils.js"></script>
+  <script src="/js/widget-registry.js"></script>
+  <script src="/js/widget-system.js"></script>
   <script src="app.js"></script>
   <script>
     // Initialize new navigation system after app.js loads

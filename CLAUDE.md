@@ -100,9 +100,11 @@ Default login credentials (password: `demo123`):
 - `public/js/rideops-utils.js` — Shared UI utilities: `statusBadge()`, `showToastNew()`, `showModalNew()`, `initSidebar()`, `initBottomTabs()`, `formatTime()`, `formatDate()`, `renderNotificationDrawer()`, `pollNotificationCount()`
 - `public/css/rideops-theme.css` — All CSS custom properties, component styles, layout classes
 - `public/campus-themes.js` — Per-campus color palettes for charts/UI (`getCampusPalette()`)
+- `public/js/widget-registry.js` — Widget definitions (WIDGET_REGISTRY, WIDGET_CATEGORIES, DEFAULT_WIDGET_LAYOUT)
+- `public/js/widget-system.js` — Widget dashboard runtime: layout persistence, grid rendering, edit mode, SortableJS integration
 - `public/demo-config.js` — Demo mode configuration
-- `public/driver.html` — Driver-facing mobile view (self-contained with inline JS/CSS)
-- `public/rider.html` — Rider request form and ride history (self-contained with inline JS/CSS)
+- `public/driver.html` — Driver-facing mobile view (self-contained with inline JS/CSS, campus-themed header)
+- `public/rider.html` — Rider request form and ride history (self-contained with inline JS/CSS, campus-themed header)
 - `public/index.html` — Office/admin console (dispatch, rides, staff, fleet, analytics, settings, users)
 - `public/login.html` / `signup.html` — Auth pages with org-scoped URL support
 - `public/demo.html` — Demo mode role picker with campus-specific links
@@ -153,14 +155,17 @@ Default login credentials (password: `demo123`):
 - Ride checkbox selections persist across poll re-renders (not reset on table refresh)
 
 ### Analytics Architecture
+- **Widget System:** Customizable dashboard with drag-and-drop widget cards (SortableJS CDN). 16 registered widgets across 8 categories. Users can add/remove/resize/reorder widgets. Layout persisted per-user in localStorage with versioned schema (`WIDGET_LAYOUT_VERSION`).
+- **Widget Files:** `widget-registry.js` (static metadata), `widget-system.js` (runtime). Widget loaders registered in `app.js` DOMContentLoaded via `registerWidgetLoader()`.
+- **Widget Container IDs:** Dashboard widgets use IDs from `WIDGET_REGISTRY.containerId`. Hotspot/milestone widgets use `w-` prefix (`w-hotspot-pickups`) to avoid duplicate IDs with sub-tab containers.
 - **Date Range Picker:** Quick-select buttons (Today, 7D, 30D, Month, Semester) + manual from/to inputs
 - **Default Range:** Last 7 days (set on page load, persists across sub-tab switches within session)
-- **Dashboard Sub-Tab Widgets:** KPI bar (6 cards) → Ride Volume line + Outcomes donut → Peak Hours heatmap → DOW + Hour column charts → Top Routes + Driver Leaderboard → Shift Coverage → Fleet Utilization + Rider Cohorts
 - **Reports Sub-Tab:** Excel export with report type selector (Full/Rides/Drivers/Riders/Fleet) + semester report + wrapped
 - **Excel Export:** 8-sheet workbook via exceljs: Summary, Daily Volume, Routes, Driver Performance, Rider Analysis, Fleet, Shift Coverage, Peak Hours — all with conditional formatting
 - **Loading States:** Skeleton placeholders (pulse animation) shown for all chart containers during fetch
 - **Chart Colors:** All charts use `getCampusPalette()` from `campus-themes.js` for campus-aware theming
 - **Sortable Tables:** Top Routes and Driver Leaderboard tables support click-to-sort on column headers
+- **Calendar View Filters:** Calendar (FullCalendar) respects the same status/date/text filter pills as the table view via `renderRideViews()` helper
 
 ## Database Schema
 
@@ -393,6 +398,7 @@ The frontend uses a Tabler-based design system.
 - Tabler CSS: `https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css`
 - Tabler Icons: `https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css`
 - FullCalendar: `https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js` (office view only)
+- SortableJS: `https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js` (analytics widget drag-and-drop)
 - DiceBear API: `https://api.dicebear.com/9.x` — client-side avatar generation, no API key needed
 
 ### Color System (Three-Layer Theming)
