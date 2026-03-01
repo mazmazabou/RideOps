@@ -602,7 +602,7 @@
           const cfg = await getOpsConfig();
           gracePeriodSeconds = Number(cfg.grace_period_minutes || 5) * 60;
           window._opsGraceMins = Number(cfg.grace_period_minutes || 5);
-        } catch(e) {}
+        } catch(e) { console.warn('Failed to load ops config for grace period:', e); }
         await loadProfile();
         await loadData();
         window._pollIntervals = [
