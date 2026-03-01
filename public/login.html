@@ -9,7 +9,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="/campus-themes.js"></script>
-  <script src="/demo-config.js"></script>
+  <script>
+    (function() {
+      try {
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var slug = ['usc','stanford','ucla','uci'].indexOf(parts[0]) !== -1 ? parts[0] : null;
+        if (slug && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[slug]) {
+          var ct = CAMPUS_THEMES[slug];
+          var root = document.documentElement;
+          root.style.setProperty('--color-primary', ct.primaryColor);
+          root.style.setProperty('--color-primary-rgb', hexToRgb(ct.primaryColor));
+        }
+      } catch(e) {}
+    })();
+  </script>
   <style>
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--color-page-bg); }
     .login-wrap { width: 100%; max-width: 400px; padding: 24px; }
@@ -97,7 +110,7 @@
             document.getElementById('signup-link').style.display = 'block';
           }
         }
-      } catch {}
+      } catch (err) { console.warn('Failed to check signup status:', err.message); }
       fetch('/api/tenant-config').then(r=>r.ok?r.json():null).then(c=>{
         if(!c)return;
         document.title=c.orgName;
@@ -106,7 +119,7 @@
         if(c.primaryColor){
           document.documentElement.style.setProperty('--color-primary',c.primaryColor);
         }
-      }).catch(()=>{});
+      }).catch(function(err) { console.warn('Failed to load tenant config:', err.message); });
     })();
 
     let loginUserData = null;

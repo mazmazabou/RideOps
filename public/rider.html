@@ -24,7 +24,6 @@
       }
     })();
   </script>
-  <script src="/demo-config.js"></script>
   <!-- Locations loaded dynamically from /api/locations -->
   <style>
     body { padding-bottom: 56px; }
@@ -210,7 +209,7 @@
     var opsConfig = null;
     async function init() {
       var me = await fetchMe();
-      if (!me) { window.location.href = '/login.html'; return; }
+      if (!me) { window.location.href = '/login'; return; }
       if (!me.demoMode && me.role !== 'rider') {
         window.location.href = me.role === 'office' ? '/' : '/driver.html';
         return;
@@ -232,7 +231,21 @@
       initNotificationBell('#notif-bell-btn');
       await loadAllRides();
       autoSwitchToActiveRide();
-      window._pollIntervals = [setInterval(loadAllRides, 5000)];
+      function startRiderPolling() {
+        stopRiderPolling();
+        window._pollIntervals = [setInterval(loadAllRides, 5000)];
+      }
+      function stopRiderPolling() {
+        if (window._pollIntervals) {
+          window._pollIntervals.forEach(function(id) { clearInterval(id); });
+          window._pollIntervals = [];
+        }
+      }
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) { stopRiderPolling(); }
+        else { loadAllRides(); startRiderPolling(); }
+      });
+      startRiderPolling();
     }
 
     function applyDynamicServiceHours() {
@@ -903,7 +916,8 @@
       html += '<div style="margin-bottom:8px;"><label class="ro-label">Preferred Name</label><input type="text" class="ro-input" id="drawer-preferred-name" placeholder="What should drivers call you?" maxlength="50"></div>';
       html += '<div style="margin-bottom:8px;"><label class="ro-label">Major</label><input type="text" class="ro-input" id="drawer-major" placeholder="e.g. Computer Science" maxlength="100"></div>';
       html += '<div style="margin-bottom:8px;"><label class="ro-label">Graduation Year</label><select class="ro-input" id="drawer-grad-year"><option value="">—</option>';
-      for (var yr = 2024; yr <= 2030; yr++) html += '<option value="' + yr + '">' + yr + '</option>';
+      var _curYr = new Date().getFullYear();
+      for (var yr = _curYr; yr <= _curYr + 6; yr++) html += '<option value="' + yr + '">' + yr + '</option>';
       html += '</select></div>';
       html += '<div style="margin-bottom:8px;"><label class="ro-label">Bio</label><input type="text" class="ro-input" id="drawer-bio" placeholder="Quick note for your driver (120 chars)" maxlength="120"></div>';
       html += '<div style="margin-bottom:12px;"><label class="ro-label">Avatar</label><div id="rider-avatar-picker-wrap"></div></div>';

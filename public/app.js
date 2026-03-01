@@ -5,7 +5,7 @@
 // Handle 401 session expiry on API responses — returns true if session expired
 function handleSessionExpiry(res) {
   if (res.status === 401) {
-    showToast('Your session has expired. Please log in again.', 'error');
+    showToastNew('Your session has expired. Please log in again.', 'error');
     setTimeout(() => { window.location.href = '/login'; }, 2000);
     return true;
   }
@@ -585,7 +585,7 @@ async function openAdminDrawer(userId, scrollTo) {
     // Wire reset miss count
     const resetMissBtn = body.querySelector('#drawer-reset-miss-count');
     if (resetMissBtn) resetMissBtn.onclick = async () => {
-      const confirmed = await showConfirmModal({
+      const confirmed = await showModalNew({
         title: 'Reset Miss Count',
         message: `Reset ${user.name || user.username}'s consecutive no-show count to 0? This will restore their ability to have rides approved.`,
         confirmLabel: 'Reset',
@@ -596,10 +596,10 @@ async function openAdminDrawer(userId, scrollTo) {
       try {
         const res = await fetch(`/api/admin/users/${userId}/reset-miss-count`, { method: 'POST' });
         const result = await res.json();
-        if (!res.ok) { showToast(result.error || 'Reset failed', 'error'); return; }
-        showToast('Miss count reset to 0', 'success');
+        if (!res.ok) { showToastNew(result.error || 'Reset failed', 'error'); return; }
+        showToastNew('Miss count reset to 0', 'success');
         openAdminDrawer(userId);
-      } catch { showToast('Network error', 'error'); }
+      } catch { showToastNew('Network error', 'error'); }
     };
 
     // Wire edit toggle
@@ -636,7 +636,7 @@ async function openAdminDrawer(userId, scrollTo) {
         });
         const result = await res.json();
         if (!res.ok) { msg.textContent = result.error || 'Update failed'; msg.style.color = 'var(--status-no-show)'; return; }
-        showToast('User updated successfully', 'success');
+        showToastNew('User updated successfully', 'success');
         await loadAdminUsers();
         openAdminDrawer(userId);
       } catch { msg.textContent = 'Network error'; msg.style.color = 'var(--status-no-show)'; }
@@ -659,7 +659,7 @@ async function openAdminDrawer(userId, scrollTo) {
         const result = await res.json();
         if (!res.ok) { msg.textContent = result.error || 'Reset failed'; msg.style.color = 'var(--status-no-show)'; return; }
         if (result.emailSent) {
-          showToast('Password reset. Notification email sent.', 'success');
+          showToastNew('Password reset. Notification email sent.', 'success');
           msg.textContent = 'Password reset successfully. Email sent.';
           msg.style.color = 'var(--status-completed)';
         } else {
@@ -669,7 +669,7 @@ async function openAdminDrawer(userId, scrollTo) {
           resultDiv.style.display = 'block';
           body.querySelector('#drawer-pw-display').textContent = pw;
           body.querySelector('#drawer-pw-copy').onclick = () => {
-            navigator.clipboard.writeText(pw).then(() => showToast('Copied to clipboard', 'success'));
+            navigator.clipboard.writeText(pw).then(() => showToastNew('Copied to clipboard', 'success'));
           };
           pwResetBtn.style.display = 'none';
           body.querySelector('#drawer-pw-input').parentElement.style.display = 'none';
@@ -760,7 +760,7 @@ function showEditUserModal(user) {
         msg.style.color = 'var(--status-no-show)';
         return;
       }
-      showToast('User updated successfully', 'success');
+      showToastNew('User updated successfully', 'success');
       close();
       await loadAdminUsers();
     } catch {
@@ -823,7 +823,7 @@ function resetUserPassword(userId, userName) {
         return;
       }
       if (data.emailSent) {
-        showToast('Password reset. Notification email sent.', 'success');
+        showToastNew('Password reset. Notification email sent.', 'success');
         close();
       } else {
         msg.textContent = 'Password reset successfully.';
@@ -832,7 +832,7 @@ function resetUserPassword(userId, userName) {
         resultDiv.style.display = 'block';
         overlay.querySelector('#reset-pw-display').textContent = pw;
         overlay.querySelector('#reset-pw-copy').onclick = () => {
-          navigator.clipboard.writeText(pw).then(() => showToast('Copied to clipboard', 'success'));
+          navigator.clipboard.writeText(pw).then(() => showToastNew('Copied to clipboard', 'success'));
         };
         overlay.querySelector('#reset-pw-confirm').style.display = 'none';
         overlay.querySelector('#reset-pw-input').parentElement.style.display = 'none';
@@ -845,7 +845,7 @@ function resetUserPassword(userId, userName) {
 }
 
 async function deleteUser(id) {
-  const confirmed = await showConfirmModal({
+  const confirmed = await showModalNew({
     title: 'Delete User',
     message: 'Are you sure you want to delete this user? This action cannot be undone.',
     confirmLabel: 'Delete',
@@ -857,10 +857,10 @@ async function deleteUser(id) {
   const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const err = await res.json();
-    showToast(err.error || 'Failed to delete user', 'error');
+    showToastNew(err.error || 'Failed to delete user', 'error');
     return;
   }
-  showToast('User deleted successfully', 'success');
+  showToastNew('User deleted successfully', 'success');
   if (drawerUserId === id) closeAdminDrawer();
   await loadAdminUsers();
   selectedAdminUser = null;
@@ -931,11 +931,11 @@ function showCreateUserModal() {
     const role = document.getElementById('modal-new-role')?.value;
     const password = document.getElementById('modal-new-password')?.value;
     if (!name || !username || !email || !memberId || !role || !password) {
-      showToast('All required fields must be filled', 'error');
+      showToastNew('All required fields must be filled', 'error');
       return;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-      showToast('Username may only contain letters, numbers, and underscores', 'error');
+      showToastNew('Username may only contain letters, numbers, and underscores', 'error');
       return;
     }
     try {
@@ -946,21 +946,21 @@ function showCreateUserModal() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || 'Could not create user', 'error');
+        showToastNew(data.error || 'Could not create user', 'error');
         return;
       }
       overlay.remove();
       if (data.emailSent) {
-        showToast('User created. Welcome email sent.', 'success');
+        showToastNew('User created. Welcome email sent.', 'success');
       } else {
         const safeUser = data.username || email.split('@')[0];
         const clipText = `Username: ${safeUser}\nPassword: ${password}`;
-        showToast(`User created — Username: ${safeUser}`, 'success');
+        showToastNew(`User created — Username: ${safeUser}`, 'success');
         navigator.clipboard.writeText(clipText).catch(() => {});
       }
       await loadAdminUsers();
     } catch {
-      showToast('Network error', 'error');
+      showToastNew('Network error', 'error');
     }
   };
 }
@@ -1021,11 +1021,11 @@ async function clockEmployee(id, isIn) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      showToast(err.error || `Failed to clock ${isIn ? 'in' : 'out'}`, 'error');
+      showToastNew(err.error || `Failed to clock ${isIn ? 'in' : 'out'}`, 'error');
       return;
     }
   } catch {
-    showToast('Network error — could not update clock status', 'error');
+    showToastNew('Network error — could not update clock status', 'error');
     return;
   }
   await loadEmployees();
@@ -1220,9 +1220,9 @@ async function onCalendarSelect(info) {
     });
     await loadShifts();
     if (shiftCalendar) shiftCalendar.refetchEvents();
-    showToast('Shift added', 'success');
+    showToastNew('Shift added', 'success');
   } catch {
-    showToast('Failed to add shift', 'error');
+    showToastNew('Failed to add shift', 'error');
   }
 }
 
@@ -1246,7 +1246,7 @@ async function onShiftEventDrop(info) {
   const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
   if (!opDays.includes(dayOfWeek)) {
     info.revert();
-    showToast('Shifts must be on operating days', 'error');
+    showToastNew('Shifts must be on operating days', 'error');
     return;
   }
   const startTime = info.event.start.toTimeString().substring(0, 5);
@@ -1258,10 +1258,10 @@ async function onShiftEventDrop(info) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dayOfWeek, startTime, endTime, weekStart })
     });
-    if (!res.ok) { info.revert(); showToast('Failed to move shift', 'error'); return; }
+    if (!res.ok) { info.revert(); showToastNew('Failed to move shift', 'error'); return; }
     await loadShifts();
-    showToast('Shift moved', 'success');
-  } catch { info.revert(); showToast('Failed to move shift', 'error'); }
+    showToastNew('Shift moved', 'success');
+  } catch { info.revert(); showToastNew('Failed to move shift', 'error'); }
 }
 
 async function onShiftEventResize(info) {
@@ -1273,10 +1273,10 @@ async function onShiftEventResize(info) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endTime })
     });
-    if (!res.ok) { info.revert(); showToast('Failed to resize shift', 'error'); return; }
+    if (!res.ok) { info.revert(); showToastNew('Failed to resize shift', 'error'); return; }
     await loadShifts();
-    showToast('Shift updated', 'success');
-  } catch { info.revert(); showToast('Failed to resize shift', 'error'); }
+    showToastNew('Shift updated', 'success');
+  } catch { info.revert(); showToastNew('Failed to resize shift', 'error'); }
 }
 
 function onShiftEventMount(info) {
@@ -1364,7 +1364,7 @@ function onShiftEventClick(info) {
   // Delete handler
   popover.querySelector('[data-action="delete"]').onclick = async () => {
     closeShiftPopover();
-    const confirmed = await showConfirmModal({
+    const confirmed = await showModalNew({
       title: 'Delete Shift',
       message: `Delete ${empName}'s shift on ${dayName}?`,
       confirmLabel: 'Delete',
@@ -1374,7 +1374,7 @@ function onShiftEventClick(info) {
     if (!confirmed) return;
     await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' });
     await loadShifts();
-    showToast('Shift deleted', 'success');
+    showToastNew('Shift deleted', 'success');
   };
 
   // Save notes handler
@@ -1386,11 +1386,11 @@ function onShiftEventClick(info) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: newNotes })
       });
-      if (!res.ok) { showToast('Failed to save notes', 'error'); return; }
+      if (!res.ok) { showToastNew('Failed to save notes', 'error'); return; }
       closeShiftPopover();
       await loadShifts();
-      showToast('Notes saved', 'success');
-    } catch { showToast('Failed to save notes', 'error'); }
+      showToastNew('Notes saved', 'success');
+    } catch { showToastNew('Failed to save notes', 'error'); }
   };
 }
 
@@ -1458,11 +1458,11 @@ function showShiftContextMenu(e, calEvent, eventEl) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId: empId, dayOfWeek, startTime, endTime, notes, weekStart })
       });
-      if (!res.ok) { showToast('Failed to duplicate shift', 'error'); return; }
+      if (!res.ok) { showToastNew('Failed to duplicate shift', 'error'); return; }
       await loadShifts();
       if (shiftCalendar) shiftCalendar.refetchEvents();
-      showToast('Shift duplicated', 'success');
-    } catch { showToast('Failed to duplicate shift', 'error'); }
+      showToastNew('Shift duplicated', 'success');
+    } catch { showToastNew('Failed to duplicate shift', 'error'); }
   };
 
   // Edit Details — open the popover anchored to the original calendar event element
@@ -1475,7 +1475,7 @@ function showShiftContextMenu(e, calEvent, eventEl) {
   menu.querySelector('[data-action="delete"]').onclick = async () => {
     closeShiftContextMenu();
     const dayName = DAY_NAMES[dayOfWeek] || '';
-    const confirmed = await showConfirmModal({
+    const confirmed = await showModalNew({
       title: 'Delete Shift',
       message: `Delete ${empName}'s shift on ${dayName}?`,
       confirmLabel: 'Delete',
@@ -1485,7 +1485,7 @@ function showShiftContextMenu(e, calEvent, eventEl) {
     if (!confirmed) return;
     await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' });
     await loadShifts();
-    showToast('Shift deleted', 'success');
+    showToastNew('Shift deleted', 'success');
   };
 }
 
@@ -1858,7 +1858,7 @@ function buildAssignDropdown(ride, onDone) {
     const driverId = select.value;
     if (!driverId) return;
     const driverName = employees.find((e) => e.id === driverId)?.name || 'driver';
-    const confirmed = await showConfirmModal({
+    const confirmed = await showModalNew({
       title: 'Assign Ride',
       message: `Assign this ride to ${driverName}?`,
       confirmLabel: 'Assign',
@@ -1873,9 +1873,9 @@ function buildAssignDropdown(ride, onDone) {
     });
     if (!res.ok) {
       const err = await res.json();
-      showToast(err.error || 'Failed to assign', 'error');
+      showToastNew(err.error || 'Failed to assign', 'error');
     } else {
-      showToast(`Ride assigned to ${driverName}`, 'success');
+      showToastNew(`Ride assigned to ${driverName}`, 'success');
     }
     if (onDone) await onDone();
   };
@@ -1896,7 +1896,7 @@ function buildReassignDropdown(ride, excludeDriverId, onDone) {
     const driverId = select.value;
     if (!driverId) return;
     const driverName = employees.find((e) => e.id === driverId)?.name || 'driver';
-    const confirmed = await showConfirmModal({
+    const confirmed = await showModalNew({
       title: 'Reassign Ride',
       message: `Reassign this ride to ${driverName}?`,
       confirmLabel: 'Reassign',
@@ -1911,9 +1911,9 @@ function buildReassignDropdown(ride, excludeDriverId, onDone) {
     });
     if (!res.ok) {
       const err = await res.json();
-      showToast(err.error || 'Failed to reassign', 'error');
+      showToastNew(err.error || 'Failed to reassign', 'error');
     } else {
-      showToast(`Ride reassigned to ${driverName}`, 'success');
+      showToastNew(`Ride reassigned to ${driverName}`, 'success');
     }
     if (onDone) await onDone();
   };
@@ -1925,7 +1925,7 @@ function buildCancelButton(ride, onDone) {
   btn.className = 'btn danger';
   btn.textContent = 'Cancel';
   btn.onclick = async () => {
-    const confirmed = await showConfirmModal({
+    const confirmed = await showModalNew({
       title: 'Cancel Ride',
       message: 'Cancel this ride? This cannot be undone.',
       confirmLabel: 'Cancel Ride',
@@ -1936,9 +1936,9 @@ function buildCancelButton(ride, onDone) {
     const res = await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' });
     if (!res.ok) {
       const err = await res.json();
-      showToast(err.error || 'Failed to cancel', 'error');
+      showToastNew(err.error || 'Failed to cancel', 'error');
     } else {
-      showToast('Ride cancelled', 'success');
+      showToastNew('Ride cancelled', 'success');
     }
     if (onDone) await onDone();
   };
@@ -1976,7 +1976,7 @@ function buildKebabMenu(ride, onDone) {
     deleteBtn.onclick = async (e) => {
       e.stopPropagation();
       dropdown.classList.remove('open');
-      const confirmed = await showConfirmModal({
+      const confirmed = await showModalNew({
         title: 'Delete Ride',
         message: 'Delete this ride? This cannot be undone.',
         confirmLabel: 'Delete Ride',
@@ -1987,9 +1987,9 @@ function buildKebabMenu(ride, onDone) {
       const res = await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' });
       if (!res.ok) {
         const err = await res.json();
-        showToast(err.error || 'Failed to delete', 'error');
+        showToastNew(err.error || 'Failed to delete', 'error');
       } else {
-        showToast('Ride deleted', 'success');
+        showToastNew('Ride deleted', 'success');
       }
       if (onDone) await onDone();
     };
@@ -2112,7 +2112,7 @@ async function showEditRideModal(ride, onDone) {
         msg.style.color = 'var(--status-no-show)';
         return;
       }
-      showToast('Ride updated successfully', 'success');
+      showToastNew('Ride updated successfully', 'success');
       close();
       if (onDone) await onDone();
     } catch {
@@ -2127,7 +2127,7 @@ function buildUnassignButton(ride, driverName, onDone) {
   btn.className = 'btn secondary';
   btn.textContent = 'Unassign';
   btn.onclick = async () => {
-    const confirmed = await showConfirmModal({
+    const confirmed = await showModalNew({
       title: 'Unassign Driver',
       message: `Unassign ${driverName} from this ride? It will return to the Available queue.`,
       confirmLabel: 'Unassign',
@@ -2138,9 +2138,9 @@ function buildUnassignButton(ride, driverName, onDone) {
     const res = await fetch(`/api/rides/${ride.id}/unassign`, { method: 'POST' });
     if (!res.ok) {
       const err = await res.json();
-      showToast(err.error || 'Failed to unassign', 'error');
+      showToastNew(err.error || 'Failed to unassign', 'error');
     } else {
-      showToast('Ride unassigned', 'success');
+      showToastNew('Ride unassigned', 'success');
     }
     if (onDone) await onDone();
   };
@@ -2179,7 +2179,7 @@ function showVehiclePromptModal() {
     document.getElementById('vehicle-prompt-cancel').onclick = () => cleanup(null);
     document.getElementById('vehicle-prompt-confirm').onclick = () => {
       const val = document.getElementById('vehicle-prompt-select').value;
-      if (!val) { showToast('Please select a vehicle', 'warning'); return; }
+      if (!val) { showToastNew('Please select a vehicle', 'warning'); return; }
       cleanup(val);
     };
     overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
@@ -2330,7 +2330,7 @@ async function updateRide(url, body = null) {
   const res = await fetch(url, options);
   if (!res.ok) {
     const err = await res.json();
-    showToast(err.error || 'Failed to update ride', 'error');
+    showToastNew(err.error || 'Failed to update ride', 'error');
     return false;
   }
   await loadRides();
@@ -2345,7 +2345,7 @@ async function claimRide(rideId, driverId) {
   });
   if (!res.ok) {
     const err = await res.json();
-    showToast(err.error || 'Cannot claim ride', 'error');
+    showToastNew(err.error || 'Cannot claim ride', 'error');
   }
   await loadRides();
 }
@@ -2733,7 +2733,7 @@ function openRideDrawer(ride) {
     }));
     actionsEl.appendChild(makeBtn("I'm Here", 'ro-btn ro-btn--outline ro-btn--full', () => updateRide(`/api/rides/${ride.id}/here`).then(reload)));
     actionsEl.appendChild(makeBtn('Complete', 'ro-btn ro-btn--success ro-btn--full', async () => {
-      const confirmed = await showConfirmModal({ title: 'Complete Ride', message: 'Mark this ride as completed?', confirmLabel: 'Complete', type: 'warning' });
+      const confirmed = await showModalNew({ title: 'Complete Ride', message: 'Mark this ride as completed?', confirmLabel: 'Complete', type: 'warning' });
       if (!confirmed) return;
       if (!ride.vehicleId) {
         const vehicleId = await showVehiclePromptModal();
@@ -2745,7 +2745,7 @@ function openRideDrawer(ride) {
       reload();
     }));
     actionsEl.appendChild(makeBtn('No-Show', 'ro-btn ro-btn--danger ro-btn--full', async () => {
-      const confirmed = await showConfirmModal({ title: 'Confirm No-Show', message: 'Mark this rider as a no-show?', confirmLabel: 'Mark No-Show', type: 'danger' });
+      const confirmed = await showModalNew({ title: 'Confirm No-Show', message: 'Mark this rider as a no-show?', confirmLabel: 'Mark No-Show', type: 'danger' });
       if (confirmed) { await updateRide(`/api/rides/${ride.id}/no-show`); reload(); }
     }, !graceInfo.canNoShow));
   }
@@ -2755,13 +2755,13 @@ function openRideDrawer(ride) {
     hr.style.cssText = 'border:none;border-top:1px solid var(--color-border);margin:8px 0;';
     actionsEl.appendChild(hr);
     actionsEl.appendChild(makeBtn('Unassign Driver', 'ro-btn ro-btn--outline ro-btn--full', async () => {
-      const confirmed = await showConfirmModal({ title: 'Unassign Driver', message: `Unassign ${driverName}?`, confirmLabel: 'Unassign', type: 'warning' });
+      const confirmed = await showModalNew({ title: 'Unassign Driver', message: `Unassign ${driverName}?`, confirmLabel: 'Unassign', type: 'warning' });
       if (confirmed) {
         try {
           const res = await fetch(`/api/rides/${ride.id}/unassign`, { method: 'POST' });
-          if (!res.ok) { const err = await res.json().catch(() => ({})); showToast(err.error || 'Failed to unassign', 'error'); }
-          else { showToast('Driver unassigned', 'success'); }
-        } catch { showToast('Network error', 'error'); }
+          if (!res.ok) { const err = await res.json().catch(() => ({})); showToastNew(err.error || 'Failed to unassign', 'error'); }
+          else { showToastNew('Driver unassigned', 'success'); }
+        } catch { showToastNew('Network error', 'error'); }
         reload();
       }
     }));
@@ -2772,13 +2772,13 @@ function openRideDrawer(ride) {
 
   if (!isTerminal) {
     actionsEl.appendChild(makeBtn('Cancel Ride', 'ro-btn ro-btn--danger ro-btn--full', async () => {
-      const confirmed = await showConfirmModal({ title: 'Cancel Ride', message: 'Cancel this ride?', confirmLabel: 'Cancel Ride', type: 'danger' });
+      const confirmed = await showModalNew({ title: 'Cancel Ride', message: 'Cancel this ride?', confirmLabel: 'Cancel Ride', type: 'danger' });
       if (confirmed) {
         try {
           const res = await fetch(`/api/rides/${ride.id}/cancel`, { method: 'POST' });
-          if (!res.ok) { const err = await res.json().catch(() => ({})); showToast(err.error || 'Failed to cancel', 'error'); }
-          else { showToast('Ride cancelled', 'success'); }
-        } catch { showToast('Network error', 'error'); }
+          if (!res.ok) { const err = await res.json().catch(() => ({})); showToastNew(err.error || 'Failed to cancel', 'error'); }
+          else { showToastNew('Ride cancelled', 'success'); }
+        } catch { showToastNew('Network error', 'error'); }
         reload();
       }
     }));
@@ -2935,7 +2935,7 @@ function buildContactPill(protocol, phone, icon, label) {
     link.href = '#';
     link.onclick = (e) => {
       e.preventDefault();
-      showToast('No phone number available', 'warning');
+      showToastNew('No phone number available', 'warning');
     };
   }
   return link;
@@ -4067,7 +4067,7 @@ async function downloadExcelReport() {
   try {
     var qs = getAnalyticsDateParams();
     var res = await fetch('/api/analytics/export-report' + qs);
-    if (!res.ok) { showToast('Failed to generate report', 'error'); return; }
+    if (!res.ok) { showToastNew('Failed to generate report', 'error'); return; }
     var blob = await res.blob();
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -4079,10 +4079,10 @@ async function downloadExcelReport() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('Report downloaded successfully', 'success');
+    showToastNew('Report downloaded successfully', 'success');
   } catch (e) {
     console.error('Export error:', e);
-    showToast('Failed to download report', 'error');
+    showToastNew('Failed to download report', 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-download"></i> Download .xlsx'; }
   }
@@ -4580,7 +4580,7 @@ function logVehicleMaintenance(vehicleId) {
       const notes = document.getElementById('maintenance-notes')?.value?.trim();
       const mileage = document.getElementById('maintenance-mileage')?.value?.trim();
       if (!notes) {
-        showToast('Please describe what was serviced', 'error');
+        showToastNew('Please describe what was serviced', 'error');
         return;
       }
       const payload = { notes };
@@ -4592,9 +4592,9 @@ function logVehicleMaintenance(vehicleId) {
       });
       if (!res.ok) {
         const err = await res.json();
-        showToast(err.error || 'Failed to log maintenance', 'error');
+        showToastNew(err.error || 'Failed to log maintenance', 'error');
       } else {
-        showToast('Maintenance logged', 'success');
+        showToastNew('Maintenance logged', 'success');
         await loadFleetVehicles();
         if (document.getElementById('vehicle-drawer')?.classList.contains('open')) {
           openVehicleDrawer(vehicleId);
@@ -4605,7 +4605,7 @@ function logVehicleMaintenance(vehicleId) {
 }
 
 async function deleteVehicle(vehicleId, vehicleName) {
-  const confirmed = await showConfirmModal({
+  const confirmed = await showModalNew({
     title: 'Delete Vehicle',
     message: `Are you sure you want to delete "${vehicleName || 'this vehicle'}"? This action cannot be undone.`,
     confirmLabel: 'Delete',
@@ -4616,15 +4616,15 @@ async function deleteVehicle(vehicleId, vehicleName) {
   const res = await fetch(`/api/vehicles/${vehicleId}`, { method: 'DELETE' });
   if (!res.ok) {
     const err = await res.json();
-    showToast(err.error || 'Failed to delete', 'error');
+    showToastNew(err.error || 'Failed to delete', 'error');
   } else {
-    showToast('Vehicle deleted', 'success');
+    showToastNew('Vehicle deleted', 'success');
     loadFleetVehicles();
   }
 }
 
 async function retireVehicle(vehicleId, vehicleName) {
-  const confirmed = await showConfirmModal({
+  const confirmed = await showModalNew({
     title: 'Retire Vehicle',
     message: `Retire "${vehicleName || 'this vehicle'}"? It will be hidden from driver dropdowns but its ride history will be preserved.`,
     confirmLabel: 'Retire',
@@ -4635,9 +4635,9 @@ async function retireVehicle(vehicleId, vehicleName) {
   const res = await fetch(`/api/vehicles/${vehicleId}/retire`, { method: 'POST' });
   if (!res.ok) {
     const err = await res.json();
-    showToast(err.error || 'Failed to retire vehicle', 'error');
+    showToastNew(err.error || 'Failed to retire vehicle', 'error');
   } else {
-    showToast('Vehicle retired', 'success');
+    showToastNew('Vehicle retired', 'success');
     loadFleetVehicles();
   }
 }
@@ -4657,7 +4657,7 @@ function showFleetStatusInfo() {
 }
 
 async function reactivateVehicle(vehicleId, vehicleName) {
-  const confirmed = await showConfirmModal({
+  const confirmed = await showModalNew({
     title: 'Reactivate Vehicle',
     message: `Reactivate "${vehicleName || 'this vehicle'}"? It will become available for assignment again.`,
     confirmLabel: 'Reactivate',
@@ -4672,9 +4672,9 @@ async function reactivateVehicle(vehicleId, vehicleName) {
   });
   if (!res.ok) {
     const err = await res.json();
-    showToast(err.error || 'Failed to reactivate vehicle', 'error');
+    showToastNew(err.error || 'Failed to reactivate vehicle', 'error');
   } else {
-    showToast('Vehicle reactivated', 'success');
+    showToastNew('Vehicle reactivated', 'success');
     loadFleetVehicles();
   }
 }
@@ -4804,7 +4804,7 @@ async function addVehicle() {
     overlay.querySelector('#add-veh-confirm').onclick = () => {
       const name = overlay.querySelector('#add-veh-name').value.trim();
       const type = overlay.querySelector('#add-veh-type').value;
-      if (!name) { showToast('Name is required', 'error'); return; }
+      if (!name) { showToastNew('Name is required', 'error'); return; }
       cleanup({ name, type });
     };
     overlay.onclick = (e) => { if (e.target === overlay) cleanup(null); };
@@ -4817,9 +4817,9 @@ async function addVehicle() {
   });
   if (!res.ok) {
     const err = await res.json();
-    showToast(err.error || 'Failed to add vehicle', 'error');
+    showToastNew(err.error || 'Failed to add vehicle', 'error');
   } else {
-    showToast('Vehicle added', 'success');
+    showToastNew('Vehicle added', 'success');
     loadFleetVehicles();
   }
 }
@@ -4831,7 +4831,7 @@ function exportTableCSV(tableEl, filename) {
     Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
   );
   downloadCSV(headers, rows, filename);
-  showToast('CSV downloaded', 'success');
+  showToastNew('CSV downloaded', 'success');
 }
 
 function downloadCSV(headers, rows, filename) {
@@ -4853,7 +4853,7 @@ function downloadCSV(headers, rows, filename) {
 
 function exportSemesterCSV() {
   if (!analyticsReportData) {
-    showToast('Load the report first', 'error');
+    showToastNew('Load the report first', 'error');
     return;
   }
   const d = analyticsReportData;
@@ -4877,7 +4877,7 @@ function exportSemesterCSV() {
     d.driverLeaderboard.forEach(dr => rows.push([dr.name, dr.completed, '']));
   }
   downloadCSV(headers, rows, `rideops-report-${d.semesterLabel.replace(/\s/g, '-').toLowerCase()}.csv`);
-  showToast('CSV downloaded', 'success');
+  showToastNew('CSV downloaded', 'success');
 }
 
 // ----- Initialize -----
@@ -4987,7 +4987,7 @@ async function loadBusinessRules() {
         if (isActive) {
           const activeCount = container.querySelectorAll('.day-pill-btn.ro-btn--primary').length;
           if (activeCount <= 1) {
-            showToast('At least one operating day must be selected', 'error');
+            showToastNew('At least one operating day must be selected', 'error');
             return;
           }
         }
@@ -5014,26 +5014,26 @@ async function saveBusinessRules() {
 
   // Client-side validation
   if (activeDays.length === 0) {
-    showToast('At least one operating day must be selected', 'error');
+    showToastNew('At least one operating day must be selected', 'error');
     return;
   }
 
   const startInput = document.querySelector('[data-key="service_hours_start"]');
   const endInput = document.querySelector('[data-key="service_hours_end"]');
   if (startInput && endInput && startInput.value >= endInput.value) {
-    showToast('Service hours start must be earlier than end time', 'error');
+    showToastNew('Service hours start must be earlier than end time', 'error');
     return;
   }
 
   const graceInput = document.querySelector('[data-key="grace_period_minutes"]');
   if (graceInput && (isNaN(parseInt(graceInput.value)) || parseInt(graceInput.value) < 1)) {
-    showToast('Grace period must be at least 1 minute', 'error');
+    showToastNew('Grace period must be at least 1 minute', 'error');
     return;
   }
 
   const strikesInput = document.querySelector('[data-key="max_no_show_strikes"]');
   if (strikesInput && (isNaN(parseInt(strikesInput.value)) || parseInt(strikesInput.value) < 1)) {
-    showToast('Max no-show strikes must be at least 1', 'error');
+    showToastNew('Max no-show strikes must be at least 1', 'error');
     return;
   }
 
@@ -5061,16 +5061,16 @@ async function saveBusinessRules() {
     if (handleSessionExpiry(res)) return;
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      showToast(data.error || 'Failed to save business rules', 'error');
+      showToastNew(data.error || 'Failed to save business rules', 'error');
       return;
     }
-    showToast('Business rules saved', 'success');
+    showToastNew('Business rules saved', 'success');
     // Invalidate cached ops config
     if (typeof invalidateOpsConfig === 'function') invalidateOpsConfig();
     // Refresh calendar settings dynamically
     refreshCalendarSettings();
   } catch (err) {
-    showToast('Failed to save business rules', 'error');
+    showToastNew('Failed to save business rules', 'error');
     console.error('saveBusinessRules error:', err);
   }
 }
@@ -5122,14 +5122,14 @@ async function saveProgramGuidelines() {
     if (handleSessionExpiry(res)) return;
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      showToast(data.error || 'Failed to save guidelines', 'error');
+      showToastNew(data.error || 'Failed to save guidelines', 'error');
       return;
     }
     const data = await res.json().catch(() => ({}));
-    if (data.ok) { showToast('Program guidelines saved', 'success'); window._cachedRulesHtml = null; }
-    else showToast(data.error || 'Save failed', 'error');
+    if (data.ok) { showToastNew('Program guidelines saved', 'success'); window._cachedRulesHtml = null; }
+    else showToastNew(data.error || 'Save failed', 'error');
   } catch (err) {
-    showToast('Failed to save guidelines', 'error');
+    showToastNew('Failed to save guidelines', 'error');
     console.error('saveProgramGuidelines error:', err);
   } finally {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="ti ti-device-floppy"></i> Save'; }
@@ -5843,8 +5843,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isUnassigned && sourceRowType === 'driver') {
           const res = await fetch(`/api/rides/${rideId}/unassign`, { method: 'POST' });
           const result = await res.json();
-          if (!res.ok) { showToast(result.error || 'Unassign failed', 'error'); return; }
-          showToast('Ride moved to unassigned', 'success');
+          if (!res.ok) { showToastNew(result.error || 'Unassign failed', 'error'); return; }
+          showToastNew('Ride moved to unassigned', 'success');
           await loadRides();
           return;
         }
@@ -5861,11 +5861,11 @@ document.addEventListener('DOMContentLoaded', async () => {
           res = await fetch(`/api/rides/${rideId}/reassign`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ driverId: targetDriverId }) });
         } else { return; }
         const result = await res.json();
-        if (!res.ok) { showToast(result.error || 'Assignment failed', 'error'); return; }
+        if (!res.ok) { showToastNew(result.error || 'Assignment failed', 'error'); return; }
         const driverName = employees.find(emp => emp.id === targetDriverId)?.name || 'driver';
-        showToast(`Ride assigned to ${driverName}`, 'success');
+        showToastNew(`Ride assigned to ${driverName}`, 'success');
         await loadRides();
-      } catch { showToast('Network error', 'error'); }
+      } catch { showToastNew('Network error', 'error'); }
     });
   }
 
@@ -6026,10 +6026,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initNotificationBell('#notif-bell-btn');
 
-  window._pollIntervals = [
-    setInterval(loadRides, 5000),
-    setInterval(loadVehicles, 15000),
-    setInterval(renderDriverConsole, 1000),
-    setInterval(renderSchedule, 5000)
-  ];
+  // Polling with tab-visibility optimization
+  function startPolling() {
+    stopPolling();
+    window._pollIntervals = [
+      setInterval(loadRides, 5000),
+      setInterval(loadVehicles, 15000),
+      setInterval(renderDriverConsole, 1000),
+      setInterval(renderSchedule, 5000)
+    ];
+  }
+  function stopPolling() {
+    if (window._pollIntervals) {
+      window._pollIntervals.forEach(function(id) { clearInterval(id); });
+      window._pollIntervals = [];
+    }
+  }
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      stopPolling();
+    } else {
+      loadRides();
+      startPolling();
+    }
+  });
+  startPolling();
 });

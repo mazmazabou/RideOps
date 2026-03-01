@@ -24,7 +24,6 @@
       }
     })();
   </script>
-  <script src="/demo-config.js"></script>
   <style>
     body { background: rgba(var(--color-primary-rgb, 70,130,180), 0.03); }
     .driver-header { position: sticky; top: 0; z-index: 20; height: 48px; background: var(--color-primary); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; color: #fff; }
@@ -86,14 +85,18 @@
           <label class="ro-label" for="profile-grad-year">Graduation Year</label>
           <select id="profile-grad-year" class="ro-input">
             <option value="">—</option>
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
-            <option value="2028">2028</option>
-            <option value="2029">2029</option>
-            <option value="2030">2030</option>
           </select>
+          <script>
+            (function() {
+              var sel = document.getElementById('profile-grad-year');
+              var yr = new Date().getFullYear();
+              for (var y = yr; y <= yr + 6; y++) {
+                var opt = document.createElement('option');
+                opt.value = y; opt.textContent = y;
+                sel.appendChild(opt);
+              }
+            })();
+          </script>
         </div>
         <div style="margin-bottom:12px;">
           <label class="ro-label" for="profile-bio">Bio</label>
@@ -611,10 +614,24 @@
         } catch(e) { console.warn('Failed to load ops config for grace period:', e); }
         await loadProfile();
         await loadData();
-        window._pollIntervals = [
-          setInterval(loadData, 3000),
-          setInterval(updateGraceTimers, 1000)
-        ];
+        function startDriverPolling() {
+          stopDriverPolling();
+          window._pollIntervals = [
+            setInterval(loadData, 3000),
+            setInterval(updateGraceTimers, 1000)
+          ];
+        }
+        function stopDriverPolling() {
+          if (window._pollIntervals) {
+            window._pollIntervals.forEach(function(id) { clearInterval(id); });
+            window._pollIntervals = [];
+          }
+        }
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden) { stopDriverPolling(); }
+          else { loadData(); startDriverPolling(); }
+        });
+        startDriverPolling();
       } catch {
         window.location.href = '/login';
       }

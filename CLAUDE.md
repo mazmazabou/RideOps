@@ -100,13 +100,12 @@ Default login credentials (password: `demo123`):
 
 - `server.js` — Express server, all API routes, DB schema init, auth middleware, tenant loading, business logic
 - `public/app.js` — Main frontend logic for office/admin console (~5000 lines)
-- `public/utils.js` — Shared UI utilities: toast, modal, empty state, dev-mode detection
+- `public/utils.js` — Shared UI utilities: empty state, dev-mode detection, toast icon helper (toast/modal functions moved to rideops-utils.js)
 - `public/js/rideops-utils.js` — Shared UI utilities: `statusBadge()`, `showToastNew()`, `showModalNew()`, `initSidebar()`, `initBottomTabs()`, `formatTime()`, `formatDate()`, `renderNotificationDrawer()`, `pollNotificationCount()`
 - `public/css/rideops-theme.css` — All CSS custom properties, component styles, layout classes
 - `public/campus-themes.js` — Per-campus color palettes for charts/UI (`getCampusPalette()`)
 - `public/js/widget-registry.js` — Widget definitions (WIDGET_REGISTRY, WIDGET_CATEGORIES, DEFAULT_WIDGET_LAYOUT)
 - `public/js/widget-system.js` — Widget dashboard runtime: layout persistence, grid rendering, edit mode, SortableJS integration
-- `public/demo-config.js` — Demo mode configuration
 - `public/driver.html` — Driver-facing mobile view (self-contained with inline JS/CSS, campus-themed header with synchronous FOUC prevention, Map tab with campus map iframe via tenantConfig.mapUrl, per-ride vehicle selector)
 - `public/rider.html` — Rider request form and ride history (self-contained with inline JS/CSS, campus-themed header with synchronous FOUC prevention)
 - `public/index.html` — Office/admin console (dispatch, rides, staff, fleet, analytics, settings, users)
@@ -174,7 +173,7 @@ Default login credentials (password: `demo123`):
   - `rider.html` has inline `<script>` for rider interface
 - Tenant theming: pages fetch `/api/tenant-config` and apply dynamic branding
 - Campus detection: URL path parsing (`/usc/office` → campus=usc) + session fallback
-- Polling intervals:
+- Polling intervals (all pause via `visibilitychange` when tab is backgrounded):
   - Office console: rides refresh every 5s
   - Driver console: data refresh every 3s, grace timers update every 1s
   - Rider console: rides refresh every 5s
@@ -433,6 +432,11 @@ All analytics endpoints support `?from=&to=` date params (default: last 7 days).
 - **Password minimum:** 8 characters (`MIN_PASSWORD_LENGTH` constant) — enforced in signup, change-password, admin-create, and admin-reset
 - **Multi-step DB operations:** Always wrap in transactions (`BEGIN`/`COMMIT`/`ROLLBACK` via `pool.connect()`)
 - **`addRideEvent()` transactions:** Accepts optional `txClient` parameter for transaction passthrough
+- **Toast notifications:** Use `showToastNew()` from `rideops-utils.js` (never `showToast` from `utils.js`)
+- **Modals:** Use `showModalNew()` from `rideops-utils.js` (returns Promise, supports `await`) — never `showConfirmModal`
+- **Empty states:** Use `showEmptyState()` with Tabler icon names (`ti ti-*`)
+- **Polling:** All polling intervals must pause via `visibilitychange` listener when tab is backgrounded
+- **URL references:** Use extensionless paths (`/login` not `/login.html`)
 
 ## UI Redesign Architecture
 
@@ -449,7 +453,7 @@ The frontend uses a Tabler-based design system.
 - **Layer 1 — Platform defaults** (in rideops-theme.css :root): SteelBlue #4682B4 primary, Tan #D2B48C accent
 - **Layer 2 — Tenant override** (injected by JS from /api/tenant-config): primaryColor, secondaryColor
 - **Layer 3 — Campus palette** (campus-themes.js): Per-campus color arrays for charts, dispatch grid, analytics
-- **FOUC Prevention:** driver.html and rider.html include synchronous `<script>` in `<head>` that reads `CAMPUS_THEMES[slug]` and sets `--color-primary`, `--color-primary-rgb`, `--color-header-bg` before first paint
+- **FOUC Prevention:** All pages (index.html, driver.html, rider.html, login.html, signup.html) include synchronous `<script>` in `<head>` that reads `CAMPUS_THEMES[slug]` and sets `--color-primary`, `--color-primary-rgb`, `--color-header-bg`, `--color-sidebar-bg` before first paint
 - **Status colors are semantic and universal** — never overridden per tenant
 
 ### CRITICAL: Panel Visibility
@@ -522,9 +526,9 @@ pending, approved, scheduled, driver_on_the_way, driver_arrived_grace, completed
 ### Medium Priority
 - **No pagination on rides API:** Returns all rides every 5 seconds.
 - **Demo re-seed interval:** `setInterval` re-seeds demo data every hour, overwriting mid-demo changes.
-- **Polling ignores tab visibility:** Office console generates ~17 API requests/minute even when backgrounded.
-- **Two toast systems + two modal systems:** Legacy `showToast`/`showConfirmModal` (utils.js) vs new `showToastNew`/`showModalNew` (rideops-utils.js).
-- **`utils.js:158`:** `showEmptyState()` renders Material Symbols icon class (not loaded) instead of Tabler Icons.
+- ~~**Polling ignores tab visibility:**~~ **RESOLVED** — All 3 views (office, driver, rider) pause polling via `visibilitychange` and resume with immediate data refresh.
+- ~~**Two toast systems + two modal systems:**~~ **RESOLVED** — `showToast`/`showConfirmModal` removed from utils.js; all code uses `showToastNew`/`showModalNew` from rideops-utils.js.
+- ~~**`utils.js:158`:**~~ **RESOLVED** — `showEmptyState()` uses Tabler Icons (`ti ti-*`) instead of Material Symbols.
 - ~~**Password minimum inconsistency:**~~ **RESOLVED** — Standardized to 8 characters (`MIN_PASSWORD_LENGTH` constant).
 - ~~**Email env var mismatch:**~~ **RESOLVED** — `email.js` reads `NOTIFICATION_FROM_NAME`/`NOTIFICATION_FROM` (with `FROM_NAME`/`FROM_EMAIL` as legacy fallback).
 - ~~**Notification emails hardcode "RideOps":**~~ **RESOLVED** — `notification-service.js` uses `setTenantConfig()` to inject org name and primary color into email templates.

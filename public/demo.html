@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
+  <script src="/js/rideops-utils.js"></script>
   <style>
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--color-page-bg); }
     .demo-wrap { width: 100%; max-width: 480px; padding: 24px; }
@@ -104,7 +105,6 @@
   </div>
 
   <script src="/campus-themes.js"></script>
-  <script src="/demo-config.js"></script>
   <script>
     // Load tenant config for demo page
     fetch('/api/tenant-config').then(function(r) { return r.ok ? r.json() : null; }).then(function(c) {
@@ -179,11 +179,11 @@
           window.location.href = redirectTo;
         } else {
           var data = await res.json().catch(function() { return {}; });
-          alert(data.error || 'Login failed. Please try again.');
+          showToastNew(data.error || 'Login failed. Please try again.', 'error');
           rows.forEach(function(r) { r.style.pointerEvents = ''; r.style.opacity = ''; });
         }
       } catch (e) {
-        alert('Network error. Please try again.');
+        showToastNew('Network error. Please try again.', 'error');
         rows.forEach(function(r) { r.style.pointerEvents = ''; r.style.opacity = ''; });
       }
     }

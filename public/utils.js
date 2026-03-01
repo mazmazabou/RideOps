@@ -57,87 +57,6 @@
     return icons[type] || icons.info;
   }
 
-  function showToast(message, type = 'info', duration = 3000) {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-      <span class="toast-icon"><i class="${getToastIcon(type)}"></i></span>
-      <span class="toast-message">${message}</span>
-    `;
-    document.body.appendChild(toast);
-
-    setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, duration);
-  }
-
-  function normalizeConfirmOptions(titleOrOptions, message, confirmText, cancelText) {
-    if (typeof titleOrOptions === 'object' && titleOrOptions !== null) {
-      return {
-        title: titleOrOptions.title || 'Confirm Action',
-        message: titleOrOptions.message || 'Are you sure?',
-        confirmLabel: titleOrOptions.confirmLabel || 'Confirm',
-        cancelLabel: titleOrOptions.cancelLabel || 'Cancel',
-        type: titleOrOptions.type || 'warning'
-      };
-    }
-
-    return {
-      title: titleOrOptions || 'Confirm Action',
-      message: message || 'Are you sure?',
-      confirmLabel: confirmText || 'Confirm',
-      cancelLabel: cancelText || 'Cancel',
-      type: 'warning'
-    };
-  }
-
-  function showConfirmModal(titleOrOptions, message, confirmText, cancelText) {
-    return new Promise((resolve) => {
-      const opts = normalizeConfirmOptions(titleOrOptions, message, confirmText, cancelText);
-
-      const modal = document.createElement('div');
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `
-        <div class="modal-box">
-          <h3 class="modal-title">${opts.title}</h3>
-          <p class="modal-message">${opts.message}</p>
-          <div class="modal-actions">
-            <button class="btn secondary modal-cancel">${opts.cancelLabel}</button>
-            <button class="btn ${opts.type === 'danger' ? 'danger' : 'primary'} modal-confirm">${opts.confirmLabel}</button>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(modal);
-
-      const cleanup = () => {
-        modal.classList.add('hiding');
-        setTimeout(() => modal.remove(), 200);
-      };
-
-      modal.querySelector('.modal-cancel').onclick = () => {
-        cleanup();
-        resolve(false);
-      };
-
-      modal.querySelector('.modal-confirm').onclick = () => {
-        cleanup();
-        resolve(true);
-      };
-
-      modal.onclick = (event) => {
-        if (event.target === modal) {
-          cleanup();
-          resolve(false);
-        }
-      };
-
-      setTimeout(() => modal.classList.add('show'), 10);
-    });
-  }
-
   function showEmptyState(containerOrId, options = {}) {
     const {
       icon = 'inbox',
@@ -155,7 +74,7 @@
 
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon"><span class="material-symbols-outlined">${icon}</span></div>
+        <div class="empty-icon"><i class="ti ti-${icon}" style="font-size: 48px; opacity: 0.4;"></i></div>
         <h3 class="empty-title">${title}</h3>
         ${message ? `<p class="empty-message">${message}</p>` : ''}
         ${actionLabel ? `<button class="btn secondary empty-action">${actionLabel}</button>` : ''}
@@ -179,8 +98,6 @@
   window.isDevEnvironment = isDevEnvironment;
   window.applyDevOnlyVisibility = applyDevOnlyVisibility;
   window.getToastIcon = getToastIcon;
-  window.showToast = showToast;
-  window.showConfirmModal = showConfirmModal;
   window.showEmptyState = showEmptyState;
   window.formatDateTime = formatDateTime;
 })();

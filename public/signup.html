@@ -9,7 +9,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="/campus-themes.js"></script>
-  <script src="/demo-config.js"></script>
+  <script>
+    (function() {
+      try {
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var slug = ['usc','stanford','ucla','uci'].indexOf(parts[0]) !== -1 ? parts[0] : null;
+        if (slug && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[slug]) {
+          var ct = CAMPUS_THEMES[slug];
+          var root = document.documentElement;
+          root.style.setProperty('--color-primary', ct.primaryColor);
+          root.style.setProperty('--color-primary-rgb', hexToRgb(ct.primaryColor));
+        }
+      } catch(e) {}
+    })();
+  </script>
   <style>
     body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--color-page-bg); }
     .signup-wrap { width: 100%; max-width: 440px; padding: 24px; }
@@ -119,7 +132,8 @@
         if (!res.ok) return true;
         const data = await res.json();
         return !!data.allowed;
-      } catch {
+      } catch (err) {
+        console.warn('Failed to check signup status:', err.message);
         return true;
       }
     }
@@ -170,7 +184,8 @@
         var knownSlugs = ['usc', 'stanford', 'ucla', 'uci'];
         var orgSlug = (pathParts.length > 0 && knownSlugs.indexOf(pathParts[0]) !== -1) ? pathParts[0] : null;
         setTimeout(() => { window.location.href = orgSlug ? '/' + orgSlug + '/rider' : '/rider'; }, 600);
-      } catch {
+      } catch (err) {
+        console.warn('Signup error:', err.message);
         errorEl.textContent = 'Network error. Please try again.';
         errorEl.classList.add('show');
       }

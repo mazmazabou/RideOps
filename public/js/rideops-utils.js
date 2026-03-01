@@ -155,25 +155,53 @@ function showToastNew(message, type) {
 
 // Modal system
 function showModalNew(opts) {
+  // Note: title, body, confirmLabel, cancelLabel are all developer-controlled strings (never user input)
   var title = opts.title || 'Confirm';
-  var body = opts.body || '';
+  var body = opts.body || opts.message || '';
   var confirmLabel = opts.confirmLabel || 'Confirm';
-  var confirmClass = opts.confirmClass || 'ro-btn--danger';
+  var cancelLabel = opts.cancelLabel || 'Cancel';
+  var confirmClass = opts.confirmClass || (opts.type === 'danger' ? 'ro-btn--danger' : 'ro-btn--primary');
   var onConfirm = opts.onConfirm;
+
   var overlay = document.createElement('div');
   overlay.className = 'ro-modal-overlay open';
-  overlay.innerHTML =
-    '<div class="ro-modal">' +
-    '<div class="ro-modal__title">' + title + '</div>' +
-    '<div class="ro-modal__body">' + body + '</div>' +
-    '<div class="ro-modal__actions">' +
-    '<button class="ro-btn ro-btn--outline" data-action="cancel">Cancel</button>' +
-    '<button class="ro-btn ' + confirmClass + '" data-action="confirm">' + confirmLabel + '</button>' +
-    '</div></div>';
+
+  var modal = document.createElement('div');
+  modal.className = 'ro-modal';
+
+  var titleEl = document.createElement('div');
+  titleEl.className = 'ro-modal__title';
+  titleEl.textContent = title;
+  modal.appendChild(titleEl);
+
+  var bodyEl = document.createElement('div');
+  bodyEl.className = 'ro-modal__body';
+  bodyEl.textContent = body;
+  modal.appendChild(bodyEl);
+
+  var actions = document.createElement('div');
+  actions.className = 'ro-modal__actions';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'ro-btn ro-btn--outline';
+  cancelBtn.textContent = cancelLabel;
+  var confirmBtn = document.createElement('button');
+  confirmBtn.className = 'ro-btn ' + confirmClass;
+  confirmBtn.textContent = confirmLabel;
+  actions.appendChild(cancelBtn);
+  actions.appendChild(confirmBtn);
+  modal.appendChild(actions);
+  overlay.appendChild(modal);
   document.body.appendChild(overlay);
-  overlay.querySelector('[data-action="cancel"]').onclick = function() { overlay.remove(); };
-  overlay.querySelector('[data-action="confirm"]').onclick = function() { if (onConfirm) onConfirm(); overlay.remove(); };
-  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+  return new Promise(function(resolve) {
+    cancelBtn.onclick = function() { overlay.remove(); resolve(false); };
+    confirmBtn.onclick = function() {
+      if (onConfirm) onConfirm();
+      overlay.remove();
+      resolve(true);
+    };
+    overlay.onclick = function(e) { if (e.target === overlay) { overlay.remove(); resolve(false); } };
+  });
 }
 
 // Drawer system
