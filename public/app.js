@@ -1543,7 +1543,8 @@ async function renderRideScheduleGrid() {
   const weekEnd = new Date(activeDates[activeDates.length - 1]);
   weekEnd.setHours(23, 59, 59, 999);
 
-  rides.forEach((ride) => {
+  const filteredRides = getFilteredRides();
+  filteredRides.forEach((ride) => {
     if (!ride.requestedTime) return;
     const date = new Date(ride.requestedTime);
     if (isNaN(date.getTime())) return;
@@ -2242,6 +2243,14 @@ function getFilteredRides() {
   });
 
   return filtered;
+}
+
+function renderRideViews() {
+  renderRideLists();
+  const calView = document.getElementById('rides-calendar-view-container');
+  if (calView && calView.style.display !== 'none') {
+    renderRideScheduleGrid();
+  }
 }
 
 function renderRideLists() {
@@ -5420,7 +5429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.querySelectorAll('#rides-filter-bar .filter-pill').forEach(p => {
         p.classList.toggle('active', rideStatusFilter.has(p.dataset.rideStatus));
       });
-      renderRideLists();
+      renderRideViews();
     });
   });
 
@@ -5430,13 +5439,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (ridesDateFromInput) {
     ridesDateFromInput.addEventListener('change', () => {
       ridesDateFrom = ridesDateFromInput.value || '';
-      renderRideLists();
+      renderRideViews();
     });
   }
   if (ridesDateToInput) {
     ridesDateToInput.addEventListener('change', () => {
       ridesDateTo = ridesDateToInput.value || '';
-      renderRideLists();
+      renderRideViews();
     });
   }
 
@@ -5445,7 +5454,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (rideFilterInput) {
     rideFilterInput.addEventListener('input', debounce(() => {
       rideFilterText = rideFilterInput.value.trim();
-      renderRideLists();
+      renderRideViews();
     }, 300));
   }
 
