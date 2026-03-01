@@ -230,6 +230,14 @@ Default login credentials (password: `demo123`):
 ### ID Generation
 IDs follow pattern: `prefix_${random}` (e.g., `ride_abc123`, `shift_xyz789`, `driver_xy12ab`, `rider_ab34cd`, `veh_cart1`, `notif_abc123`)
 
+### Indexes
+The following indexes are created by `runMigrations()`:
+- `idx_rides_status`, `idx_rides_requested_time`, `idx_rides_rider_id`, `idx_rides_assigned_driver`, `idx_rides_rider_email`, `idx_rides_vehicle_id`, `idx_rides_status_time` (compound)
+- `idx_ride_events_ride_id`
+- `idx_shifts_employee_id`
+- `idx_clock_events_employee`, `idx_clock_events_date`, `idx_clock_events_employee_date` (compound)
+- `idx_notifications_user_read` (compound), `idx_notifications_user_id`, `idx_notifications_created_at`
+
 ### Configurable Settings (tenant_settings)
 | Key | Default | Type | Category |
 |-----|---------|------|----------|
@@ -422,6 +430,9 @@ All analytics endpoints support `?from=&to=` date params (default: last 7 days).
 - **Security:** Never expose password hashes; sanitize all database queries with parameterized statements
 - **Branding:** Never hardcode org-specific text (USC, DART, etc.) — use tenant config. Default to "RideOps"
 - **ID format:** Text-based IDs like `ride_abc123`, `notif_xyz789` — NOT UUIDs. Use `$1::text[]` for array casts, never `$1::uuid[]`
+- **Password minimum:** 8 characters (`MIN_PASSWORD_LENGTH` constant) — enforced in signup, change-password, admin-create, and admin-reset
+- **Multi-step DB operations:** Always wrap in transactions (`BEGIN`/`COMMIT`/`ROLLBACK` via `pool.connect()`)
+- **`addRideEvent()` transactions:** Accepts optional `txClient` parameter for transaction passthrough
 
 ## UI Redesign Architecture
 
@@ -497,8 +508,8 @@ pending, approved, scheduled, driver_on_the_way, driver_arrived_grace, completed
 - ~~**No graceful shutdown:**~~ **RESOLVED** — SIGTERM/SIGINT handlers with 15s timeout.
 
 ### High Priority
-- **Missing DB indexes:** `rides` table has zero indexes beyond PK. Will degrade at scale (1000+ rides/semester). Need indexes on status, requested_time, rider_email, assigned_driver_id, rider_id, vehicle_id. Also `ride_events(ride_id)`, `shifts(employee_id)`.
-- **No transactions:** Multi-step operations (no-show, completion, cancellation) use separate queries without transaction wrapping. Server crash mid-flow → inconsistent data.
+- ~~**Missing DB indexes:**~~ **RESOLVED** — 13 indexes added across rides, ride_events, shifts, clock_events, notifications.
+- ~~**No transactions:**~~ **RESOLVED** — No-show, completion, cancellation, approval, and claim wrapped in BEGIN/COMMIT/ROLLBACK.
 - ~~**Stored XSS:**~~ **RESOLVED** — Sanitizer now strips `on*` event handlers and `javascript:` URLs.
 - ~~**Sync bcrypt:**~~ **RESOLVED** — All `hashSync`/`compareSync` replaced with async equivalents.
 - ~~**Missing error handling:**~~ **RESOLVED** — All async routes wrapped with `wrapAsync()`, global error middleware added.
@@ -514,7 +525,7 @@ pending, approved, scheduled, driver_on_the_way, driver_arrived_grace, completed
 - **Polling ignores tab visibility:** Office console generates ~17 API requests/minute even when backgrounded.
 - **Two toast systems + two modal systems:** Legacy `showToast`/`showConfirmModal` (utils.js) vs new `showToastNew`/`showModalNew` (rideops-utils.js).
 - **`utils.js:158`:** `showEmptyState()` renders Material Symbols icon class (not loaded) instead of Tabler Icons.
-- **Password minimum inconsistency:** Signup requires 6 chars, change-password requires 8, admin-create has no minimum.
+- ~~**Password minimum inconsistency:**~~ **RESOLVED** — Standardized to 8 characters (`MIN_PASSWORD_LENGTH` constant).
 - **Email env var mismatch:** Code reads `FROM_NAME`/`FROM_EMAIL`, docs say `NOTIFICATION_FROM`/`NOTIFICATION_FROM_NAME`.
 - **Notification emails hardcode "RideOps":** Should use tenant orgName for white-label branding.
-- **`db/schema.sql` stale:** Missing 4 tables and ~15 columns added via migrations.
+- ~~**`db/schema.sql` stale:**~~ **RESOLVED** — Regenerated with all 13 tables, columns, indexes, and constraints.
