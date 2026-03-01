@@ -124,7 +124,9 @@ Default login credentials (password: `demo123`):
 - `public/favicon.svg` — RideOps favicon (blue circle with RO)
 - `db/schema.sql` — PostgreSQL schema reference
 - `docs/reference/AUDIT_REPORT.md` — Pre-demo platform audit (2026-03-01)
+- `docs/reference/SECURITY.md` — Security posture overview for university IT evaluators
 - `docs/reference/school-themes.md` — Campus color palette specifications
+- `.nvmrc` — Node.js version pin (18)
 
 ## Project Structure
 
