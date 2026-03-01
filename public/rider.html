@@ -97,6 +97,10 @@
   </header>
 
   <main class="rider-main">
+    <div id="terminated-banner" style="display:none; background:rgba(239,68,68,0.08); color:var(--status-no-show); padding:14px 16px; border-radius:var(--radius-sm); margin:0 16px 12px; font-size:13px; font-weight:600; line-height:1.5;">
+      <i class="ti ti-alert-circle" style="vertical-align:middle; margin-right:4px;"></i>
+      Your ride privileges have been suspended due to repeated no-shows. Please contact the transportation office to reinstate your account.
+    </div>
     <!-- Book Panel -->
     <div class="tab-panel active" id="book-panel">
       <div class="step-indicator mb-16" id="step-indicator">
@@ -215,6 +219,14 @@
         return;
       }
       meUser = me;
+      // Show termination banner if rider is suspended
+      if (me.terminated) {
+        document.getElementById('terminated-banner').style.display = 'block';
+        document.getElementById('book-panel').style.display = 'none';
+        // Switch to My Rides tab since booking is disabled
+        var myRidesTab = document.querySelector('[data-target="myrides-panel"]');
+        if (myRidesTab) myRidesTab.click();
+      }
       // Enrich meUser with profile fields from /api/me
       fetch('/api/me').then(function(r) { return r.json(); }).then(function(p) {
         Object.assign(meUser, p);

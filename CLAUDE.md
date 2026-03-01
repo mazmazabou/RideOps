@@ -163,6 +163,7 @@ Default login credentials (password: `demo123`):
 - Graceful shutdown: SIGTERM/SIGINT handlers drain connections with 15s timeout
 - Role-based access control via middleware: `requireAuth`, `requireOffice`, `requireStaff`, `requireRider`
 - Database helpers: `query()`, `generateId()`, `addRideEvent()`, `mapRide()`, `getSetting()`
+- Startup recovery: `recoverStuckRides` reverts `driver_on_the_way`/`driver_arrived_grace` rides to `scheduled`. Resets all driver `active` states. Logs `system_recovery` ride events.
 
 ### Frontend Architecture
 - Frontend uses vanilla JS with `fetch()` to call REST API
@@ -273,6 +274,8 @@ pending → approved → scheduled → driver_on_the_way → driver_arrived_grac
 
 Riders can cancel pending/approved rides. Office can cancel any non-terminal ride.
 
+**On server restart:** `driver_on_the_way` and `driver_arrived_grace` rides are automatically reverted to `scheduled` with a `system_recovery` audit event. All driver `active` states are reset to `FALSE`.
+
 ## Business Rules (CRITICAL — do not break these)
 
 - **Service hours:** Configurable via tenant_settings (default: Monday–Friday, 8:00 AM – 7:00 PM)
@@ -287,6 +290,8 @@ Riders can cancel pending/approved rides. Office can cancel any non-terminal rid
   - Only approved, unassigned rides can be claimed
   - Only assigned driver (or office) can perform ride actions
 - **Ride approval:** Office must check miss count < max strikes before approving rides
+- **Rider termination enforcement:** When missCount >= maxStrikes AND strikes_enabled, riders receive 403 on ride submission and see termination banner in rider UI. Office can reinstate via miss count reset.
+- **Driver clock-out guard:** Drivers cannot clock out with rides in scheduled/driver_on_the_way/driver_arrived_grace. Must complete or unassign first (409 response).
 
 ## API Endpoints Overview
 
@@ -417,6 +422,7 @@ All analytics endpoints support `?from=&to=` date params (default: last 7 days).
 
 ### Dev Tools
 - `POST /api/dev/seed-rides` — Seed sample rides (office only, disabled in production)
+- `POST /api/dev/reseed` — Manually reseed demo data (office + DEMO_MODE only). Replaces automatic hourly interval.
 
 ## Code Conventions
 
@@ -525,7 +531,7 @@ pending, approved, scheduled, driver_on_the_way, driver_arrived_grace, completed
 
 ### Medium Priority
 - **No pagination on rides API:** Returns all rides every 5 seconds.
-- **Demo re-seed interval:** `setInterval` re-seeds demo data every hour, overwriting mid-demo changes.
+- ~~**Demo re-seed interval:**~~ **RESOLVED** — Removed automatic hourly reseed. Manual `POST /api/dev/reseed` endpoint (office + DEMO_MODE only).
 - ~~**Polling ignores tab visibility:**~~ **RESOLVED** — All 3 views (office, driver, rider) pause polling via `visibilitychange` and resume with immediate data refresh.
 - ~~**Two toast systems + two modal systems:**~~ **RESOLVED** — `showToast`/`showConfirmModal` removed from utils.js; all code uses `showToastNew`/`showModalNew` from rideops-utils.js.
 - ~~**`utils.js:158`:**~~ **RESOLVED** — `showEmptyState()` uses Tabler Icons (`ti ti-*`) instead of Material Symbols.

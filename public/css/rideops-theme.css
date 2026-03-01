@@ -867,7 +867,7 @@ input[type="checkbox"]:disabled {
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: #EF4444;
+  background: var(--status-no-show, #EF4444);
   color: #fff;
   font-size: 10px;
   font-weight: 700;

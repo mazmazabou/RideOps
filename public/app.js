@@ -497,11 +497,12 @@ async function openAdminDrawer(userId, scrollTo) {
     // Rider no-show banner (riders only, above details)
     if (user.role === 'rider') {
       const missCount = data.missCount || 0;
-      const severity = missCount >= 5 ? 'noshows-critical' : missCount > 0 ? 'noshows-warn' : 'noshows-clear';
+      const maxStrikes = data.maxStrikes || 5;
+      const severity = missCount >= maxStrikes ? 'noshows-critical' : missCount > 0 ? 'noshows-warn' : 'noshows-clear';
       html += `<div class="drawer-noshows-banner ${severity}">
         <div class="drawer-noshows-count">${missCount}</div>
-        <div class="drawer-noshows-label">consecutive no-show${missCount !== 1 ? 's' : ''}</div>
-        ${missCount >= 5 ? '<div class="small-text" style="font-weight:700; color:var(--status-no-show);">SERVICE TERMINATED</div>' : ''}
+        <div class="drawer-noshows-label">consecutive no-show${missCount !== 1 ? 's' : ''} (max ${maxStrikes})</div>
+        ${missCount >= maxStrikes ? '<div class="small-text" style="font-weight:700; color:var(--status-no-show);">SERVICE TERMINATED</div>' : ''}
         ${missCount > 0 ? '<button class="btn secondary small" id="drawer-reset-miss-count" style="margin-left:auto;">Reset</button>' : ''}
       </div>`;
     }

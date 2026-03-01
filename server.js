@@ -828,11 +828,11 @@ app.post('/api/auth/logout', (req, res) => {
   });
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', wrapAsync(async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  res.json({
+  const userData = {
     id: req.session.userId,
     username: req.session.username,
     name: req.session.name,
@@ -841,8 +841,24 @@ app.get('/api/auth/me', (req, res) => {
     memberId: req.session.memberId,
     role: req.session.role,
     demoMode: DEMO_MODE
-  });
-});
+  };
+
+  if (req.session.role === 'rider') {
+    const strikesEnabled = await getSetting('strikes_enabled');
+    if (strikesEnabled === 'true' || strikesEnabled === true) {
+      const maxStrikes = parseInt(await getSetting('max_no_show_strikes')) || 5;
+      const missResult = await query('SELECT count FROM rider_miss_counts WHERE email = $1', [req.session.email]);
+      const missCount = missResult.rows[0]?.count || 0;
+      userData.terminated = missCount >= maxStrikes;
+      userData.missCount = missCount;
+      userData.maxStrikes = maxStrikes;
+    } else {
+      userData.terminated = false;
+    }
+  }
+
+  res.json(userData);
+}));
 
 app.get('/api/auth/signup-allowed', (req, res) => {
   res.json({ allowed: SIGNUP_ENABLED });
@@ -1322,11 +1338,12 @@ app.get('/api/admin/users/:id/profile', requireOffice, wrapAsync(async (req, res
   }
 
   let missCount = 0;
+  let maxStrikes = parseInt(await getSetting('max_no_show_strikes')) || 5;
   if (user.role === 'rider' && user.email) {
     missCount = await getRiderMissCount(user.email);
   }
 
-  res.json({ user, upcoming, past, missCount });
+  res.json({ user, upcoming, past, missCount, maxStrikes });
 }));
 
 // Admin reset rider miss count
@@ -1563,6 +1580,21 @@ app.post('/api/employees/clock-in', requireStaff, wrapAsync(async (req, res) => 
 
 app.post('/api/employees/clock-out', requireStaff, wrapAsync(async (req, res) => {
   const { employeeId } = req.body;
+
+  // Check for active rides assigned to this driver
+  const activeRides = await query(
+    `SELECT id, status FROM rides
+     WHERE assigned_driver_id = $1
+     AND status IN ('scheduled', 'driver_on_the_way', 'driver_arrived_grace')`,
+    [employeeId]
+  );
+  if (activeRides.rows.length > 0) {
+    return res.status(409).json({
+      error: `You have ${activeRides.rows.length} active ride(s). Please complete or unassign them before clocking out.`,
+      activeRides: activeRides.rows.map(r => ({ id: r.id, status: r.status }))
+    });
+  }
+
   const result = await query(
     `UPDATE users SET active = FALSE, updated_at = NOW() WHERE id = $1 AND role = 'driver' RETURNING id, username, name, email, role, active`,
     [employeeId]
@@ -1837,6 +1869,24 @@ app.get('/api/rides', requireStaff, wrapAsync(async (req, res) => {
 
 app.post('/api/rides', requireAuth, wrapAsync(async (req, res) => {
   const { riderName, riderEmail, riderPhone, pickupLocation, dropoffLocation, requestedTime, notes } = req.body;
+
+  // Check if rider is terminated due to no-shows
+  if (req.session.role === 'rider') {
+    const strikesEnabled = await getSetting('strikes_enabled');
+    if (strikesEnabled === 'true' || strikesEnabled === true) {
+      const maxStrikes = parseInt(await getSetting('max_no_show_strikes')) || 5;
+      const missResult = await query(
+        'SELECT count FROM rider_miss_counts WHERE email = $1',
+        [req.session.email]
+      );
+      const missCount = missResult.rows[0]?.count || 0;
+      if (missCount >= maxStrikes) {
+        return res.status(403).json({
+          error: 'Your ride privileges have been suspended due to repeated no-shows. Please contact the office to reinstate your account.'
+        });
+      }
+    }
+  }
 
   if (!pickupLocation || !dropoffLocation || !requestedTime) {
     return res.status(400).json({ error: 'Pickup, dropoff, and requested time are required' });
@@ -4972,6 +5022,16 @@ app.post('/api/dev/seed-rides', requireOffice, wrapAsync(async (req, res) => {
   res.json({ message: `Seeded ${sampleRides.length} sample rides for today`, count: sampleRides.length });
 }));
 
+// Manual demo reseed (office + demo mode only)
+if (DEMO_MODE) {
+  app.post('/api/dev/reseed', requireOffice, wrapAsync(async (req, res) => {
+    const { seedDemoData } = require('./demo-seed');
+    await seedDemoData(pool);
+    console.log('Demo data manually re-seeded');
+    res.json({ success: true, message: 'Demo data reseeded' });
+  }));
+}
+
 // Global error handler — must be last middleware
 app.use((err, req, res, next) => {
   console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
@@ -4989,12 +5049,29 @@ let server;
 
   await initDb();
 
+  // Recover rides stuck in driver-active states after server restart
+  const stuckResult = await query(
+    `UPDATE rides
+     SET status = 'scheduled', grace_start_time = NULL, updated_at = NOW()
+     WHERE status IN ('driver_on_the_way', 'driver_arrived_grace')
+     RETURNING id`
+  );
+  if (stuckResult.rows.length > 0) {
+    console.log(`[STARTUP] Recovered ${stuckResult.rows.length} stuck ride(s) → reverted to 'scheduled'`);
+    for (const ride of stuckResult.rows) {
+      await addRideEvent(ride.id, null, 'system_recovery', 'Ride reverted to scheduled after server restart');
+    }
+  }
+
+  // Reset all driver active states on restart
+  const resetResult = await query("UPDATE users SET active = FALSE WHERE role = 'driver' AND active = TRUE RETURNING id");
+  if (resetResult.rows.length > 0) {
+    console.log(`[STARTUP] Reset ${resetResult.rows.length} driver clock-in state(s)`);
+  }
+
   if (DEMO_MODE) {
     const { seedDemoData } = require('./demo-seed');
     await seedDemoData(pool).then(() => console.log('Demo data seeded')).catch(console.error);
-    setInterval(() => {
-      seedDemoData(pool).then(() => console.log('Demo data re-seeded')).catch(console.error);
-    }, 60 * 60 * 1000);
   }
 
   server = app.listen(PORT, () => {
