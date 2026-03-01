@@ -155,6 +155,7 @@
     let vehicles = [];
     let gracePeriodSeconds = 300;
 
+    let _lastMapRideId = null;
     const ACTIVE_STATUSES = ['driver_on_the_way', 'driver_arrived_grace'];
     const ASSIGNED_OPEN_STATUSES = ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'];
 
@@ -418,8 +419,8 @@
       const riderName = activeRide.riderName || 'Rider';
       const mapHref = campusMapUrl || '#';
       panel.innerHTML = `
-        <div style="padding:16px;display:flex;flex-direction:column;gap:16px;">
-          <div style="background:var(--color-surface);border-radius:12px;padding:16px;border:1px solid var(--color-border);">
+        <div style="padding:16px;display:flex;flex-direction:column;gap:16px;height:calc(100vh - 128px);box-sizing:border-box;">
+          <div style="background:var(--color-surface);border-radius:12px;padding:16px;border:1px solid var(--color-border);flex-shrink:0;">
             <div style="font-size:12px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Active Ride</div>
             <div style="font-weight:700;font-size:15px;margin-bottom:12px;">${riderName}</div>
             <div style="display:flex;flex-direction:column;gap:6px;">
@@ -440,21 +441,21 @@
              style="display:flex;align-items:center;justify-content:center;gap:10px;
                     background:var(--color-primary);color:white;
                     padding:16px;border-radius:12px;text-decoration:none;
-                    font-weight:700;font-size:16px;letter-spacing:0.3px;
+                    font-weight:700;font-size:16px;letter-spacing:0.3px;flex-shrink:0;
                     box-shadow:0 4px 12px rgba(var(--color-primary-rgb),0.35);">
             <i class="ti ti-map-2" style="font-size:20px;"></i>
             Open Campus Map
           </a>` : ''}
           ${campusMapUrl ? `
-          <div style="border-radius:12px;overflow:hidden;border:1px solid var(--color-border);height:380px;">
+          <div style="border-radius:12px;overflow:hidden;border:1px solid var(--color-border);flex:1;min-height:200px;">
             <iframe
               src="${campusMapUrl}"
-              width="100%" height="380" style="border:0;display:block;"
+              width="100%" height="100%" style="border:0;display:block;"
               allowfullscreen loading="lazy"
               title="Campus Map">
             </iframe>
           </div>
-          <div style="font-size:11px;color:var(--color-text-muted);text-align:center;margin-top:-4px;">
+          <div style="font-size:11px;color:var(--color-text-muted);text-align:center;margin-top:-4px;flex-shrink:0;">
             Campus map — use pinch/zoom to navigate
           </div>` : ''}
         </div>`;
@@ -544,7 +545,12 @@
 
       document.getElementById('home-content').innerHTML = renderHomePanel(isActive, today);
       document.getElementById('rides-content').innerHTML = renderRidesPanel(today);
-      renderMapTab();
+      const activeRide = getActiveRide();
+      const activeRideId = activeRide ? activeRide.id : null;
+      if (activeRideId !== _lastMapRideId) {
+        renderMapTab();
+        _lastMapRideId = activeRideId;
+      }
       populateVehicleDropdown();
     }
 
