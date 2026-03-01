@@ -44,8 +44,8 @@ function isConfigured() {
 }
 
 function getFrom() {
-  const name = process.env.FROM_NAME || 'RideOps';
-  const email = process.env.FROM_EMAIL || process.env.SMTP_USER || 'hello@ride-ops.com';
+  const name = process.env.NOTIFICATION_FROM_NAME || process.env.FROM_NAME || 'RideOps';
+  const email = process.env.NOTIFICATION_FROM || process.env.FROM_EMAIL || process.env.SMTP_USER || 'hello@ride-ops.com';
   return `"${name}" <${email}>`;
 }
 

@@ -1,17 +1,26 @@
 // notification-service.js — RideOps Notification Dispatch Service
 const { sendEmail } = require('./email');
 
+// ── Tenant config ──
+let _orgName = 'RideOps';
+let _primaryColor = '#4682B4';
+
+function setTenantConfig(tenant) {
+  if (tenant.orgName) _orgName = tenant.orgName;
+  if (tenant.primaryColor) _primaryColor = tenant.primaryColor;
+}
+
 // ── Email templates ──
 
 function wrapTemplate(content) {
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 520px; margin: 0 auto; padding: 24px;">
-      <div style="border-bottom: 2px solid #4682B4; padding-bottom: 12px; margin-bottom: 20px;">
-        <span style="font-size: 18px; font-weight: 700; color: #1E2B3A;">RideOps</span>
+      <div style="border-bottom: 2px solid ${_primaryColor}; padding-bottom: 12px; margin-bottom: 20px;">
+        <span style="font-size: 18px; font-weight: 700; color: #1E2B3A;">${_orgName}</span>
       </div>
       ${content}
       <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid #E5E7EB; font-size: 11px; color: #9CA3AF;">
-        This is an automated notification from RideOps. Manage your notification preferences in Settings.
+        This is an automated notification from ${_orgName}. Manage your notification preferences in Settings.
       </div>
     </div>
   `;
@@ -341,4 +350,4 @@ async function createRiderNotification(eventType, data, queryFn) {
   }
 }
 
-module.exports = { dispatchNotification, sendRiderEmail, createRiderNotification, TEMPLATES };
+module.exports = { dispatchNotification, sendRiderEmail, createRiderNotification, setTenantConfig, TEMPLATES };

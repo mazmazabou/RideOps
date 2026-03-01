@@ -501,7 +501,7 @@ async function openAdminDrawer(userId, scrollTo) {
       html += `<div class="drawer-noshows-banner ${severity}">
         <div class="drawer-noshows-count">${missCount}</div>
         <div class="drawer-noshows-label">consecutive no-show${missCount !== 1 ? 's' : ''}</div>
-        ${missCount >= 5 ? '<div class="small-text" style="font-weight:700; color:#c62828;">SERVICE TERMINATED</div>' : ''}
+        ${missCount >= 5 ? '<div class="small-text" style="font-weight:700; color:var(--status-no-show);">SERVICE TERMINATED</div>' : ''}
         ${missCount > 0 ? '<button class="btn secondary small" id="drawer-reset-miss-count" style="margin-left:auto;">Reset</button>' : ''}
       </div>`;
     }
@@ -573,7 +573,7 @@ async function openAdminDrawer(userId, scrollTo) {
     if (!isSelf) {
       html += `<div class="drawer-section">
         <div class="drawer-danger-zone">
-          <div class="drawer-section-title" style="color:#c62828;">Danger Zone</div>
+          <div class="drawer-section-title" style="color:var(--status-no-show);">Danger Zone</div>
           <p class="small-text" style="margin:0 0 12px 0;">Permanently delete this user and all associated data.</p>
           <button class="btn danger small" id="drawer-delete-btn">Delete User</button>
         </div>
@@ -625,7 +625,7 @@ async function openAdminDrawer(userId, scrollTo) {
         name: body.querySelector('#drawer-edit-name').value.trim(),
         email: body.querySelector('#drawer-edit-email').value.trim(),
         phone: body.querySelector('#drawer-edit-phone').value.trim(),
-        uscId: body.querySelector('#drawer-edit-memberid').value.trim(),
+        memberId: body.querySelector('#drawer-edit-memberid').value.trim(),
         role: body.querySelector('#drawer-edit-role').value
       };
       try {
@@ -635,11 +635,11 @@ async function openAdminDrawer(userId, scrollTo) {
           body: JSON.stringify(payload)
         });
         const result = await res.json();
-        if (!res.ok) { msg.textContent = result.error || 'Update failed'; msg.style.color = '#c62828'; return; }
+        if (!res.ok) { msg.textContent = result.error || 'Update failed'; msg.style.color = 'var(--status-no-show)'; return; }
         showToast('User updated successfully', 'success');
         await loadAdminUsers();
         openAdminDrawer(userId);
-      } catch { msg.textContent = 'Network error'; msg.style.color = '#c62828'; }
+      } catch { msg.textContent = 'Network error'; msg.style.color = 'var(--status-no-show)'; }
     };
 
     // Wire password reset
@@ -649,7 +649,7 @@ async function openAdminDrawer(userId, scrollTo) {
       const pw = body.querySelector('#drawer-pw-input').value;
       msg.textContent = '';
       msg.style.color = '';
-      if (!pw || pw.length < 8) { msg.textContent = 'Password must be at least 8 characters.'; msg.style.color = '#c62828'; return; }
+      if (!pw || pw.length < 8) { msg.textContent = 'Password must be at least 8 characters.'; msg.style.color = 'var(--status-no-show)'; return; }
       try {
         const res = await fetch(`/api/admin/users/${userId}/reset-password`, {
           method: 'POST',
@@ -657,14 +657,14 @@ async function openAdminDrawer(userId, scrollTo) {
           body: JSON.stringify({ newPassword: pw })
         });
         const result = await res.json();
-        if (!res.ok) { msg.textContent = result.error || 'Reset failed'; msg.style.color = '#c62828'; return; }
+        if (!res.ok) { msg.textContent = result.error || 'Reset failed'; msg.style.color = 'var(--status-no-show)'; return; }
         if (result.emailSent) {
           showToast('Password reset. Notification email sent.', 'success');
           msg.textContent = 'Password reset successfully. Email sent.';
-          msg.style.color = '#228b22';
+          msg.style.color = 'var(--status-completed)';
         } else {
           msg.textContent = 'Password reset successfully.';
-          msg.style.color = '#228b22';
+          msg.style.color = 'var(--status-completed)';
           const resultDiv = body.querySelector('#drawer-pw-result');
           resultDiv.style.display = 'block';
           body.querySelector('#drawer-pw-display').textContent = pw;
@@ -674,7 +674,7 @@ async function openAdminDrawer(userId, scrollTo) {
           pwResetBtn.style.display = 'none';
           body.querySelector('#drawer-pw-input').parentElement.style.display = 'none';
         }
-      } catch { msg.textContent = 'Network error'; msg.style.color = '#c62828'; }
+      } catch { msg.textContent = 'Network error'; msg.style.color = 'var(--status-no-show)'; }
     };
 
     // Wire delete
@@ -745,7 +745,7 @@ function showEditUserModal(user) {
       name: overlay.querySelector('#edit-user-name').value.trim(),
       email: overlay.querySelector('#edit-user-email').value.trim(),
       phone: overlay.querySelector('#edit-user-phone').value.trim(),
-      uscId: overlay.querySelector('#edit-user-memberid').value.trim(),
+      memberId: overlay.querySelector('#edit-user-memberid').value.trim(),
       role: overlay.querySelector('#edit-user-role').value
     };
     try {
@@ -757,7 +757,7 @@ function showEditUserModal(user) {
       const data = await res.json();
       if (!res.ok) {
         msg.textContent = data.error || 'Update failed';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       showToast('User updated successfully', 'success');
@@ -765,7 +765,7 @@ function showEditUserModal(user) {
       await loadAdminUsers();
     } catch {
       msg.textContent = 'Network error';
-      msg.style.color = '#c62828';
+      msg.style.color = 'var(--status-no-show)';
     }
   };
 }
@@ -807,7 +807,7 @@ function resetUserPassword(userId, userName) {
     msg.style.color = '';
     if (!pw || pw.length < 8) {
       msg.textContent = 'Password must be at least 8 characters.';
-      msg.style.color = '#c62828';
+      msg.style.color = 'var(--status-no-show)';
       return;
     }
     try {
@@ -819,7 +819,7 @@ function resetUserPassword(userId, userName) {
       const data = await res.json();
       if (!res.ok) {
         msg.textContent = data.error || 'Reset failed';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       if (data.emailSent) {
@@ -827,7 +827,7 @@ function resetUserPassword(userId, userName) {
         close();
       } else {
         msg.textContent = 'Password reset successfully.';
-        msg.style.color = '#228b22';
+        msg.style.color = 'var(--status-completed)';
         const resultDiv = overlay.querySelector('#reset-pw-result');
         resultDiv.style.display = 'block';
         overlay.querySelector('#reset-pw-display').textContent = pw;
@@ -839,7 +839,7 @@ function resetUserPassword(userId, userName) {
       }
     } catch {
       msg.textContent = 'Network error';
-      msg.style.color = '#c62828';
+      msg.style.color = 'var(--status-no-show)';
     }
   };
 }
@@ -927,10 +927,10 @@ function showCreateUserModal() {
     const username = document.getElementById('modal-new-username')?.value.trim();
     const email = document.getElementById('modal-new-email')?.value.trim();
     const phone = document.getElementById('modal-new-phone')?.value.trim();
-    const uscId = document.getElementById('modal-new-memberid')?.value.trim();
+    const memberId = document.getElementById('modal-new-memberid')?.value.trim();
     const role = document.getElementById('modal-new-role')?.value;
     const password = document.getElementById('modal-new-password')?.value;
-    if (!name || !username || !email || !uscId || !role || !password) {
+    if (!name || !username || !email || !memberId || !role || !password) {
       showToast('All required fields must be filled', 'error');
       return;
     }
@@ -942,7 +942,7 @@ function showCreateUserModal() {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, username, email, phone, uscId, role, password })
+        body: JSON.stringify({ name, username, email, phone, memberId, role, password })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1149,16 +1149,9 @@ async function refreshCalendarSettings() {
   }
 }
 
-const DRIVER_COLORS = [
-  '#4682B4', // SteelBlue
-  '#2E8B57', // SeaGreen
-  '#8B4513', // SaddleBrown
-  '#6A5ACD', // SlateBlue
-  '#CD853F', // Peru
-  '#20B2AA', // LightSeaTeal
-  '#B8860B', // DarkGoldenrod
-  '#9932CC', // DarkOrchid
-];
+function getDriverColors() {
+  return getCurrentCampusPalette();
+}
 
 function getMondayOfWeek(date) {
   const d = new Date(date);
@@ -1177,7 +1170,8 @@ function mapShiftsToCalEvents(shiftList, viewStart) {
     const emp = employees.find(e => e.id === s.employeeId);
     const name = emp?.name || 'Unknown';
     const employeeIndex = employees.findIndex(e => e.id === s.employeeId);
-    const color = employeeIndex >= 0 ? DRIVER_COLORS[employeeIndex % DRIVER_COLORS.length] : '#94A3B8';
+    const driverColors = getDriverColors();
+    const color = employeeIndex >= 0 ? driverColors[employeeIndex % driverColors.length] : '#94A3B8';
     // Map dayOfWeek (0=Mon) to date
     const eventDate = new Date(monday);
     eventDate.setDate(monday.getDate() + s.dayOfWeek);
@@ -2067,10 +2061,10 @@ async function showEditRideModal(ride, onDone) {
         <textarea id="edit-ride-notes" rows="2">${ride.notes || ''}</textarea>
       </label>
       <hr style="margin:16px 0; border:none; border-top:1px solid var(--border);">
-      <label>Change Notes <span style="color:#c62828;">*</span>
+      <label>Change Notes <span style="color:var(--status-no-show);">*</span>
         <textarea id="edit-ride-change-notes" rows="2" placeholder="Describe what changed and why..."></textarea>
       </label>
-      <label>Initials <span style="color:#c62828;">*</span>
+      <label>Initials <span style="color:var(--status-no-show);">*</span>
         <input type="text" id="edit-ride-initials" maxlength="5" placeholder="Your initials" style="max-width:120px;">
       </label>
       <div id="edit-ride-message" class="small-text" style="margin-top:8px;"></div>
@@ -2095,8 +2089,8 @@ async function showEditRideModal(ride, onDone) {
     msg.textContent = '';
     const changeNotes = overlay.querySelector('#edit-ride-change-notes').value.trim();
     const initials = overlay.querySelector('#edit-ride-initials').value.trim();
-    if (!changeNotes) { msg.textContent = 'Change notes are required'; msg.style.color = '#c62828'; return; }
-    if (!initials) { msg.textContent = 'Initials are required'; msg.style.color = '#c62828'; return; }
+    if (!changeNotes) { msg.textContent = 'Change notes are required'; msg.style.color = 'var(--status-no-show)'; return; }
+    if (!initials) { msg.textContent = 'Initials are required'; msg.style.color = 'var(--status-no-show)'; return; }
 
     const body = {
       pickupLocation: overlay.querySelector('#edit-ride-pickup').value,
@@ -2115,7 +2109,7 @@ async function showEditRideModal(ride, onDone) {
       const data = await res.json();
       if (!res.ok) {
         msg.textContent = data.error || 'Update failed';
-        msg.style.color = '#c62828';
+        msg.style.color = 'var(--status-no-show)';
         return;
       }
       showToast('Ride updated successfully', 'success');
@@ -2123,7 +2117,7 @@ async function showEditRideModal(ride, onDone) {
       if (onDone) await onDone();
     } catch {
       msg.textContent = 'Network error';
-      msg.style.color = '#c62828';
+      msg.style.color = 'var(--status-no-show)';
     }
   };
 }
@@ -2809,7 +2803,8 @@ function buildGraceInfo(ride) {
   }
   const graceStart = new Date(ride.graceStartTime);
   const elapsed = (Date.now() - graceStart.getTime()) / 1000;
-  const remaining = Math.max(0, 300 - elapsed);
+  const graceSec = (tenantConfig && tenantConfig.grace_period_minutes ? Number(tenantConfig.grace_period_minutes) : 5) * 60;
+  const remaining = Math.max(0, graceSec - elapsed);
   const minutes = Math.floor(remaining / 60);
   const seconds = Math.floor(remaining % 60).toString().padStart(2, '0');
   const canNoShow = remaining <= 0;
@@ -3846,7 +3841,7 @@ async function renderTardinessSection(container, data) {
   // 2a. SVG Donut
   html += '<div class="analytics-card"><div class="analytics-card__header"><h4 class="analytics-card__title">Attendance Distribution</h4></div><div class="analytics-card__body">';
   if (distribution && distribution.some(d => d.count > 0)) {
-    const donutColors = ['var(--status-completed)', '#FBBF24', 'var(--status-on-the-way)', '#F97316', 'var(--status-no-show)'];
+    const donutColors = ['var(--status-completed)', 'var(--color-warning)', 'var(--status-on-the-way)', 'var(--color-warning-dark)', 'var(--status-no-show)'];
     const total = distribution.reduce((s, d) => s + d.count, 0);
     const R = 60, CX = 80, CY = 80, SW = 24;
     const circumference = 2 * Math.PI * R;
@@ -4306,11 +4301,11 @@ function renderPeakHoursHeatmap(containerId, data) {
   var opHours = data.operatingHours || { start: 8, end: 19 };
   var dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   var palette = getCurrentCampusPalette();
-  var baseColor = palette[0] || '#4682B4';
+  var baseColor = palette[0] || getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#4682B4';
 
   // Resolve CSS variable to hex if needed
   if (baseColor.indexOf('var(') === 0) {
-    baseColor = '#4682B4'; // fallback
+    baseColor = getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#4682B4';
   }
 
   // Build lookup

@@ -47,6 +47,8 @@
   --status-no-show:       #EF4444;
   --status-denied:        #EF4444;
   --status-cancelled:     #6B7280;
+  --color-warning:        #FBBF24;
+  --color-warning-dark:   #F97316;
 
   /* Layout */
   --sidebar-width:        220px;

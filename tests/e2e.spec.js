@@ -161,7 +161,7 @@ test.describe('API: Auth', () => {
         email: `${unique}@test-e2e.com`,
         phone: '213-555-9999',
         password: 'testpass123',
-        uscId: 'E2E9999901',
+        memberId: 'E2E9999901',
       },
     });
     // Signup may be disabled — skip cleanup if so
@@ -287,7 +287,7 @@ test.describe.serial('API: Admin User Management', () => {
         name: 'E2E Test Driver',
         email: `${unique}@test-e2e.com`,
         phone: '213-555-7777',
-        uscId: 'E2E8888801',
+        memberId: 'E2E8888801',
         role: 'driver',
         password: 'testpass123',
       },

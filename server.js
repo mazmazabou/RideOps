@@ -27,7 +27,7 @@ if (DEMO_MODE) {
   emailModule = require('./email');
 }
 const { isConfigured: emailConfigured, sendWelcomeEmail, sendPasswordResetEmail } = emailModule;
-const { dispatchNotification, sendRiderEmail, createRiderNotification } = require('./notification-service');
+const { dispatchNotification, sendRiderEmail, createRiderNotification, setTenantConfig: setNotifTenantConfig } = require('./notification-service');
 const ExcelJS = require('exceljs');
 
 // ----- Tenant configuration -----
@@ -69,6 +69,7 @@ function loadTenantConfig() {
   }
 }
 const TENANT = loadTenantConfig();
+setNotifTenantConfig(TENANT);
 
 // Locations: tenant file or generic defaults
 let campusLocations;
@@ -92,14 +93,11 @@ const campusConfigs = require('./tenants/campus-configs');
 // ----- Notification event types -----
 const NOTIFICATION_EVENT_TYPES = [
   { key: 'driver_tardy', label: 'Driver Clocked In Late', description: 'A driver clocks in after their scheduled shift start time', defaultThreshold: null, thresholdUnit: null, category: 'staff' },
-  { key: 'driver_no_clock_in', label: 'Driver Missing from Shift', description: 'A driver has not clocked in within X minutes of their shift start', defaultThreshold: 15, thresholdUnit: 'minutes_after_shift_start', category: 'staff' },
   { key: 'rider_no_show', label: 'Rider No-Show', description: 'A rider is marked as a no-show', defaultThreshold: null, thresholdUnit: null, category: 'rides' },
   { key: 'rider_approaching_termination', label: 'Rider Approaching Termination', description: 'A rider reaches N-1 consecutive no-shows', defaultThreshold: null, thresholdUnit: null, category: 'rides' },
   { key: 'rider_terminated', label: 'Rider Terminated', description: 'A rider hits the max no-show strikes and is terminated', defaultThreshold: null, thresholdUnit: null, category: 'rides' },
   { key: 'ride_pending_stale', label: 'Ride Pending Too Long', description: 'A ride request has been pending with no action for X minutes', defaultThreshold: 10, thresholdUnit: 'minutes', category: 'rides' },
-  { key: 'ride_completed', label: 'Ride Completed', description: 'A ride is marked as completed', defaultThreshold: null, thresholdUnit: null, category: 'rides' },
-  { key: 'new_ride_request', label: 'New Ride Request', description: 'A new ride is submitted by a rider', defaultThreshold: null, thresholdUnit: null, category: 'rides' },
-  { key: 'daily_summary', label: 'Daily Summary', description: 'End-of-day summary email with ride stats, tardiness, and issues', defaultThreshold: null, thresholdUnit: null, category: 'reports' }
+  { key: 'new_ride_request', label: 'New Ride Request', description: 'A new ride is submitted by a rider', defaultThreshold: null, thresholdUnit: null, category: 'rides' }
 ];
 
 const app = express();
@@ -413,7 +411,7 @@ async function seedDefaultSettings() {
     { key: 'service_hours_start', value: '08:00', type: 'time', label: 'Service Hours Start', description: 'Earliest time rides can be requested', category: 'operations' },
     { key: 'service_hours_end', value: '19:00', type: 'time', label: 'Service Hours End', description: 'Latest time rides can be requested', category: 'operations' },
     { key: 'operating_days', value: '0,1,2,3,4', type: 'string', label: 'Operating Days', description: 'Days of the week service operates (0=Mon, 1=Tue, ... 6=Sun)', category: 'operations' },
-    { key: 'auto_deny_outside_hours', value: 'true', type: 'boolean', label: 'Auto-Deny Outside Hours', description: 'Automatically reject ride requests outside service hours', category: 'operations' },
+    { key: 'auto_deny_outside_hours', value: DEMO_MODE ? 'false' : 'true', type: 'boolean', label: 'Auto-Deny Outside Hours', description: 'Automatically reject ride requests outside service hours', category: 'operations' },
     { key: 'notify_office_tardy', value: 'true', type: 'boolean', label: 'Notify Office of Tardiness', description: 'Alert office when a driver clocks in late', category: 'notifications' },
     { key: 'notify_rider_no_show', value: 'true', type: 'boolean', label: 'Notify Rider of No-Show', description: 'Send notification to rider when marked no-show', category: 'notifications' },
     { key: 'notify_rider_strike_warning', value: 'true', type: 'boolean', label: 'Notify Rider of Strike Warning', description: 'Warn rider when approaching strike limit', category: 'notifications' },
@@ -1125,8 +1123,8 @@ app.post('/api/auth/signup', signupLimiter, wrapAsync(async (req, res) => {
   if (!SIGNUP_ENABLED) {
     return res.status(403).json({ error: 'Signup is currently disabled' });
   }
-  const { name, email, phone, password, uscId } = req.body;
-  if (!name || !email || !password || !uscId) {
+  const { name, email, phone, password, memberId } = req.body;
+  if (!name || !email || !password || !memberId) {
     return res.status(400).json({ error: `Name, email, password, and ${TENANT.idFieldLabel} are required` });
   }
   if (!isValidEmail(email)) {
@@ -1135,11 +1133,11 @@ app.post('/api/auth/signup', signupLimiter, wrapAsync(async (req, res) => {
   if (password.length < MIN_PASSWORD_LENGTH) {
     return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
   }
-  if (!isValidMemberId(uscId)) {
+  if (!isValidMemberId(memberId)) {
     return res.status(400).json({ error: `Invalid ${TENANT.idFieldLabel}` });
   }
   const uname = email.toLowerCase().split('@')[0];
-  const existing = await query('SELECT 1 FROM users WHERE username = $1 OR email = $2 OR phone = $3 OR member_id = $4', [uname, email.toLowerCase(), phone || null, uscId]);
+  const existing = await query('SELECT 1 FROM users WHERE username = $1 OR email = $2 OR phone = $3 OR member_id = $4', [uname, email.toLowerCase(), phone || null, memberId]);
   if (existing.rowCount) {
     return res.status(400).json({ error: `Username, email, phone, or ${TENANT.idFieldLabel} already exists` });
   }
@@ -1148,7 +1146,7 @@ app.post('/api/auth/signup', signupLimiter, wrapAsync(async (req, res) => {
   await query(
     `INSERT INTO users (id, username, password_hash, name, email, member_id, phone, role, active)
      VALUES ($1, $2, $3, $4, $5, $6, $7, 'rider', FALSE)`,
-    [id, uname, hash, name, email.toLowerCase(), uscId, phone || null]
+    [id, uname, hash, name, email.toLowerCase(), memberId, phone || null]
   );
   const userRes = await query('SELECT * FROM users WHERE id = $1', [id]);
   const user = userRes.rows[0];
@@ -1203,12 +1201,12 @@ app.delete('/api/admin/users/:id', requireOffice, wrapAsync(async (req, res) => 
 }));
 
 app.post('/api/admin/users', requireOffice, wrapAsync(async (req, res) => {
-  const { name, email, phone, uscId, role, password, username: reqUsername } = req.body;
-  if (!name || !email || !uscId || !role || !password) {
+  const { name, email, phone, memberId, role, password, username: reqUsername } = req.body;
+  if (!name || !email || !memberId || !role || !password) {
     return res.status(400).json({ error: `Name, email, ${TENANT.idFieldLabel}, role, and password are required` });
   }
   if (!isValidEmail(email)) return res.status(400).json({ error: 'A valid email is required' });
-  if (!isValidMemberId(uscId)) return res.status(400).json({ error: `Invalid ${TENANT.idFieldLabel}` });
+  if (!isValidMemberId(memberId)) return res.status(400).json({ error: `Invalid ${TENANT.idFieldLabel}` });
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'Invalid phone format' });
   if (!['rider', 'driver', 'office'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
   if (password.length < MIN_PASSWORD_LENGTH) return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
@@ -1217,7 +1215,7 @@ app.post('/api/admin/users', requireOffice, wrapAsync(async (req, res) => {
   if (!/^[a-z0-9_]+$/.test(username)) {
     return res.status(400).json({ error: 'Username may only contain letters, numbers, and underscores' });
   }
-  const existing = await query('SELECT 1 FROM users WHERE username = $1 OR email = $2 OR member_id = $3 OR phone = $4', [username, email.toLowerCase(), uscId, phone || null]);
+  const existing = await query('SELECT 1 FROM users WHERE username = $1 OR email = $2 OR member_id = $3 OR phone = $4', [username, email.toLowerCase(), memberId, phone || null]);
   if (existing.rowCount) {
     return res.status(400).json({ error: `Username, email, phone, or ${TENANT.idFieldLabel} already exists` });
   }
@@ -1227,7 +1225,7 @@ app.post('/api/admin/users', requireOffice, wrapAsync(async (req, res) => {
   await query(
     `INSERT INTO users (id, username, password_hash, name, email, member_id, phone, role, active, must_change_password)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, TRUE)`,
-    [id, username, hash, name, email.toLowerCase(), uscId, phone || null, role]
+    [id, username, hash, name, email.toLowerCase(), memberId, phone || null, role]
   );
 
   // Fire-and-forget welcome email
@@ -1247,11 +1245,11 @@ app.post('/api/admin/users', requireOffice, wrapAsync(async (req, res) => {
 app.put('/api/admin/users/:id', requireOffice, wrapAsync(async (req, res) => {
   const targetId = req.params.id;
   if (targetId === req.session.userId) return res.status(400).json({ error: 'Cannot edit your own office account here' });
-  const { name, phone, email, uscId, role } = req.body;
+  const { name, phone, email, memberId, role } = req.body;
   if (name && name.length > 120) return res.status(400).json({ error: 'Name too long' });
   if (!isValidPhone(phone)) return res.status(400).json({ error: 'Invalid phone format' });
   if (email && !isValidEmail(email)) return res.status(400).json({ error: 'A valid email is required' });
-  if (uscId && !isValidMemberId(uscId)) return res.status(400).json({ error: `Invalid ${TENANT.idFieldLabel}` });
+  if (memberId && !isValidMemberId(memberId)) return res.status(400).json({ error: `Invalid ${TENANT.idFieldLabel}` });
   if (role && !['rider', 'driver', 'office'].includes(role)) return res.status(400).json({ error: 'Invalid role' });
 
   // Uniqueness checks for email and member_id
@@ -1259,8 +1257,8 @@ app.put('/api/admin/users/:id', requireOffice, wrapAsync(async (req, res) => {
     const dup = await query('SELECT id FROM users WHERE email = $1 AND id != $2', [email.toLowerCase(), targetId]);
     if (dup.rowCount) return res.status(400).json({ error: 'Email already in use by another user' });
   }
-  if (uscId) {
-    const dup = await query('SELECT id FROM users WHERE member_id = $1 AND id != $2', [uscId, targetId]);
+  if (memberId) {
+    const dup = await query('SELECT id FROM users WHERE member_id = $1 AND id != $2', [memberId, targetId]);
     if (dup.rowCount) return res.status(400).json({ error: `${TENANT.idFieldLabel} already in use by another user` });
   }
 
@@ -1270,7 +1268,7 @@ app.put('/api/admin/users/:id', requireOffice, wrapAsync(async (req, res) => {
      updated_at = NOW()
      WHERE id = $6
      RETURNING id, username, name, email, member_id, phone, role, active`,
-    [name || null, phone || null, email ? email.toLowerCase() : null, uscId || null, role || null, targetId]
+    [name || null, phone || null, email ? email.toLowerCase() : null, memberId || null, role || null, targetId]
   );
   if (!result.rowCount) return res.status(404).json({ error: 'User not found' });
   res.json(result.rows[0]);
@@ -1833,7 +1831,8 @@ app.post('/api/rides', requireAuth, wrapAsync(async (req, res) => {
   if (!pickupLocation || !dropoffLocation || !requestedTime) {
     return res.status(400).json({ error: 'Pickup, dropoff, and requested time are required' });
   }
-  if (!(await isWithinServiceHours(requestedTime))) {
+  const autoDeny = await getSetting('auto_deny_outside_hours', true);
+  if (autoDeny && !(await isWithinServiceHours(requestedTime))) {
     return res.status(400).json({ error: await getServiceHoursMessage() });
   }
 
@@ -1886,7 +1885,8 @@ app.post('/api/rides/:id/approve', requireOffice, wrapAsync(async (req, res) => 
   if (strikesEnabled && maxStrikes > 0 && missCount >= maxStrikes) {
     return res.status(400).json({ error: `SERVICE TERMINATED: rider has ${maxStrikes} consecutive no-shows` });
   }
-  if (!(await isWithinServiceHours(ride.requested_time))) {
+  const autoDenyApproval = await getSetting('auto_deny_outside_hours', true);
+  if (autoDenyApproval && !(await isWithinServiceHours(ride.requested_time))) {
     return res.status(400).json({ error: await getServiceHoursMessage() });
   }
 
@@ -2105,7 +2105,8 @@ app.put('/api/rides/:id', requireOffice, wrapAsync(async (req, res) => {
   if (terminalStatuses.includes(ride.status)) {
     return res.status(400).json({ error: 'Cannot edit a ride that is completed, no-show, cancelled, or denied' });
   }
-  if (requestedTime && !(await isWithinServiceHours(requestedTime))) {
+  const autoDenyEdit = await getSetting('auto_deny_outside_hours', true);
+  if (requestedTime && autoDenyEdit && !(await isWithinServiceHours(requestedTime))) {
     return res.status(400).json({ error: await getServiceHoursMessage() });
   }
 
@@ -2170,13 +2171,14 @@ app.post('/api/recurring-rides', requireRider, wrapAsync(async (req, res) => {
   );
 
   const dates = generateRecurringDates(start, end, days);
+  const autoDenyRecurring = await getSetting('auto_deny_outside_hours', true);
   let created = 0;
   for (const date of dates) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     const requestedTime = `${y}-${m}-${d}T${hourStr.padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-    if (!(await isWithinServiceHours(requestedTime))) continue;
+    if (autoDenyRecurring && !(await isWithinServiceHours(requestedTime))) continue;
     const rideId = generateId('ride');
     const missCount = await getRiderMissCount(req.session.email);
     await query(
