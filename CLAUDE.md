@@ -147,7 +147,7 @@ Default login credentials (password: `demo123`):
 - `demo-seed.js` — Seeds demo data: 650+ rides, 5 weeks of shifts, clock events, recurring rides, vehicles, notifications
 - `public/favicon.svg` — RideOps favicon (blue circle with RO)
 - `db/schema.sql` — PostgreSQL schema reference
-- `docs/reference/AUDIT_REPORT.md` — Pre-demo platform audit (2026-03-01)
+- `docs/reference/AUDIT_REPORT.md` — Post-analytics-overhaul platform audit (2026-03-02)
 - `docs/reference/SECURITY.md` — Security posture overview for university IT evaluators
 
 ## Project Structure
@@ -535,3 +535,7 @@ All resolved items documented in `docs/reference/AUDIT_REPORT.md`.
 ### Open Issues
 - **No pagination on rides API:** Returns all rides every 5 seconds.
 - **Railway custom domain:** `app.ride-ops.com` CNAME configured in Squarespace DNS pointing to Railway service.
+- **Phone numbers not validated:** `riderPhone` stored without format validation (server-side).
+- **Rate limiting disabled in dev:** Login allows 1000 req/15min in development (10 in production). Intentional.
+- **Default credentials logged in dev:** Startup prints default logins to console when `NODE_ENV !== 'production'`.
+- **`/health` not wrapped in `wrapAsync()`:** Has its own try/catch, functionally safe but inconsistent.
