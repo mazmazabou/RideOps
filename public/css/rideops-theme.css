@@ -1525,7 +1525,7 @@ input[type="checkbox"]:disabled {
 }
 .fc-event .fc-event-title,
 .fc-event .fc-event-time {
-  color: var(--color-secondary, #fff) !important;
+  color: inherit;
   font-weight: 600 !important;
   font-size: 11px !important;
 }

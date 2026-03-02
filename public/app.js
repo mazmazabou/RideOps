@@ -1154,6 +1154,14 @@ function getDriverColors() {
  * same palette slot regardless of the order the API returns employees.
  * @returns {{ [driverId: string]: string }}
  */
+function contrastTextColor(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#222' : '#fff';
+}
+
 function buildDriverColorMap() {
   const palette = getCurrentCampusPalette();
   const driverIds = employees
@@ -1196,6 +1204,7 @@ function mapShiftsToCalEvents(shiftList, viewStart) {
       end: `${dateStr}T${s.endTime}`,
       backgroundColor: color,
       borderColor: color,
+      textColor: contrastTextColor(color),
       extendedProps: { shiftId: s.id, employeeId: s.employeeId, notes: s.notes || '', weekStart: s.weekStart || null }
     });
   });
