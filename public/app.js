@@ -240,12 +240,6 @@ async function loadTenantConfig() {
   const wrappedTitle = document.getElementById('ro-wrapped-title');
   if (wrappedTitle) wrappedTitle.textContent = tenantConfig.orgShortName + ' Wrapped';
 
-  // Update analytics academic period preset label
-  const semesterBtn = document.getElementById('analytics-semester-btn');
-  if (semesterBtn && tenantConfig.academic_period_label) {
-    semesterBtn.textContent = tenantConfig.academic_period_label;
-  }
-
   // Show campus map nav item if mapUrl is configured
   loadMapPanel();
 }
@@ -3148,35 +3142,141 @@ function setAnalyticsQuickRange(preset) {
       fromStr = d30.getFullYear() + '-' + String(d30.getMonth() + 1).padStart(2, '0') + '-' + String(d30.getDate()).padStart(2, '0');
       break;
     }
-    case 'semester': {
-      var month = _today.getMonth(); // 0-indexed
-      var year = _today.getFullYear();
-      var periodLabel = (tenantConfig && tenantConfig.academic_period_label) || 'Semester';
-      if (periodLabel === 'Quarter') {
-        // Quarter: Winter Jan 5, Spring Mar 25, Summer Jun 15, Fall Sep 20
-        if (month <= 2) { fromStr = year + '-01-05'; }       // Winter
-        else if (month <= 5) { fromStr = year + '-03-25'; }  // Spring
-        else if (month <= 8) { fromStr = year + '-06-15'; }  // Summer
-        else { fromStr = year + '-09-20'; }                  // Fall
-      } else if (periodLabel === 'Trimester') {
-        // Trimester: Spring Jan 10, Summer May 5, Fall Aug 25
-        if (month <= 3) { fromStr = year + '-01-10'; }       // Spring
-        else if (month <= 7) { fromStr = year + '-05-05'; }  // Summer
-        else { fromStr = year + '-08-25'; }                  // Fall
-      } else {
-        // Semester (default): Spring Jan 10, Summer May 16, Fall Aug 15
-        if (month <= 4) { fromStr = year + '-01-10'; }       // Spring
-        else if (month <= 6) { fromStr = year + '-05-16'; }  // Summer
-        else { fromStr = year + '-08-15'; }                  // Fall
-      }
-      break;
-    }
   }
   var fromInput = document.getElementById('analytics-from');
   var toInput = document.getElementById('analytics-to');
   if (fromInput) fromInput.value = fromStr;
   if (toInput) toInput.value = toStr;
 }
+
+/* ── Academic Term Quick-Select Buttons ── */
+var _academicTerms = [];
+
+async function loadAnalyticsTermButtons() {
+  try {
+    var res = await fetch('/api/academic-terms');
+    if (!res.ok) return;
+    _academicTerms = await res.json();
+  } catch (e) {
+    _academicTerms = [];
+  }
+  renderTermButtons();
+}
+
+function renderTermButtons() {
+  var container = document.getElementById('analytics-term-buttons');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!_academicTerms.length) return;
+
+  // Determine which terms get inline buttons vs dropdown
+  var inlineTerms, dropdownTerms;
+  if (_academicTerms.length <= 4) {
+    inlineTerms = _academicTerms;
+    dropdownTerms = [];
+  } else {
+    // Sort by proximity to today (most recent start_date first)
+    var today = new Date().toISOString().slice(0, 10);
+    var sorted = _academicTerms.slice().sort(function(a, b) {
+      return Math.abs(new Date(a.start_date) - new Date(today)) - Math.abs(new Date(b.start_date) - new Date(today));
+    });
+    inlineTerms = sorted.slice(0, 3);
+    dropdownTerms = sorted.slice(3);
+  }
+
+  // Render inline term buttons
+  inlineTerms.forEach(function(term) {
+    var btn = document.createElement('button');
+    btn.className = 'ro-btn ro-btn--ghost ro-btn--xs';
+    btn.setAttribute('data-term-id', term.id);
+    btn.setAttribute('data-term-from', term.start_date);
+    btn.setAttribute('data-term-to', term.end_date);
+    btn.textContent = term.name;
+    btn.addEventListener('click', function() { handleTermButtonClick(btn); });
+    container.appendChild(btn);
+  });
+
+  // Render "More" dropdown if needed
+  if (dropdownTerms.length) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'analytics-term-more';
+
+    var moreBtn = document.createElement('button');
+    moreBtn.className = 'ro-btn ro-btn--ghost ro-btn--xs';
+    moreBtn.id = 'analytics-term-more-btn';
+    moreBtn.innerHTML = 'More <i class="ti ti-chevron-down" style="font-size:12px;"></i>';
+    moreBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var dd = document.getElementById('analytics-term-dropdown');
+      if (dd) dd.classList.toggle('open');
+    });
+
+    var dropdown = document.createElement('div');
+    dropdown.className = 'analytics-term-dropdown';
+    dropdown.id = 'analytics-term-dropdown';
+
+    dropdownTerms.forEach(function(term) {
+      var item = document.createElement('button');
+      item.className = 'analytics-term-dropdown-item';
+      item.setAttribute('data-term-id', term.id);
+      item.setAttribute('data-term-from', term.start_date);
+      item.setAttribute('data-term-to', term.end_date);
+      item.textContent = term.name;
+      item.addEventListener('click', function() { handleTermButtonClick(item); });
+      dropdown.appendChild(item);
+    });
+
+    wrapper.appendChild(moreBtn);
+    wrapper.appendChild(dropdown);
+    container.appendChild(wrapper);
+  }
+
+  highlightActiveTermButton();
+}
+
+function handleTermButtonClick(btn) {
+  // Clear active state from all quick-select buttons and term buttons
+  document.querySelectorAll('.analytics-quick-select button[data-range]').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('[data-term-id]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+
+  var fromInput = document.getElementById('analytics-from');
+  var toInput = document.getElementById('analytics-to');
+  if (fromInput) fromInput.value = btn.dataset.termFrom;
+  if (toInput) toInput.value = btn.dataset.termTo;
+
+  // Close dropdown if open
+  var dropdown = document.getElementById('analytics-term-dropdown');
+  if (dropdown) dropdown.classList.remove('open');
+
+  // Invalidate caches and trigger refresh via the refresh button (reloadActiveAnalyticsTab is local to DOMContentLoaded)
+  _tardinessCache.data = null;
+  _hotspotsCache.data = null;
+  var refreshBtn = document.getElementById('analytics-refresh-btn');
+  if (refreshBtn) refreshBtn.click();
+}
+
+function highlightActiveTermButton() {
+  var from = document.getElementById('analytics-from');
+  var to = document.getElementById('analytics-to');
+  if (!from || !to) return;
+  var fromVal = from.value;
+  var toVal = to.value;
+  document.querySelectorAll('[data-term-id]').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.termFrom === fromVal && btn.dataset.termTo === toVal);
+  });
+}
+
+// Close term dropdown on outside click
+document.addEventListener('click', function(e) {
+  var dropdown = document.getElementById('analytics-term-dropdown');
+  if (dropdown && dropdown.classList.contains('open')) {
+    var moreBtn = document.getElementById('analytics-term-more-btn');
+    if (!dropdown.contains(e.target) && e.target !== moreBtn) {
+      dropdown.classList.remove('open');
+    }
+  }
+});
 
 /* ── Chart tooltip helpers ── */
 function getChartTooltip() {
@@ -4349,7 +4449,7 @@ function renderDonutChart(containerId, distribution) {
 
   var items = [
     { label: 'Completed', value: distribution.completed || 0, color: 'var(--status-completed)' },
-    { label: 'No-Shows', value: distribution.noShows || 0, color: 'var(--status-no-show)' },
+    { label: 'No-Shows', value: distribution.noShows || 0, color: 'var(--color-warning)' },
     { label: 'Cancelled', value: distribution.cancelled || 0, color: 'var(--status-cancelled)' },
     { label: 'Denied', value: distribution.denied || 0, color: 'var(--status-denied)' }
   ].filter(function(i) { return i.value > 0; });
@@ -5183,6 +5283,8 @@ async function loadBusinessRules() {
       html += `</div>`;
       html += '<div style="padding:16px; display:flex; flex-direction:column; gap:14px;">';
       for (const s of settings) {
+        // Hide deprecated setting -- replaced by Academic Terms
+        if (s.key === 'academic_period_label') continue;
         if (s.key === 'operating_days') {
           // Render as day pills
           const activeDays = String(s.value).split(',').map(Number);
@@ -5210,16 +5312,6 @@ async function loadBusinessRules() {
         } else if (s.type === 'time') {
           html += `<div class="field-group"><label class="ro-label">${s.label}</label>`;
           html += `<input type="time" id="setting-${s.key}" data-key="${s.key}" data-type="time" value="${s.value}" class="ro-input" style="max-width:150px;">`;
-          if (s.description) html += `<div class="text-xs text-muted" style="margin-top:4px;">${s.description}</div>`;
-          html += '</div>';
-        } else if (s.key === 'academic_period_label') {
-          const aplOptions = ['Semester', 'Quarter', 'Trimester'];
-          html += `<div class="field-group"><label class="ro-label">${s.label}</label>`;
-          html += `<select id="setting-${s.key}" data-key="${s.key}" data-type="select" class="ro-input" style="max-width:200px;">`;
-          for (const opt of aplOptions) {
-            html += `<option value="${opt}"${s.value === opt ? ' selected' : ''}>${opt}</option>`;
-          }
-          html += '</select>';
           if (s.description) html += `<div class="text-xs text-muted" style="margin-top:4px;">${s.description}</div>`;
           html += '</div>';
         } else {
@@ -5326,6 +5418,186 @@ async function saveBusinessRules() {
   } catch (err) {
     showToastNew('Failed to save business rules', 'error');
     console.error('saveBusinessRules error:', err);
+  }
+}
+
+// ----- Academic Terms Settings -----
+
+async function loadAcademicTerms() {
+  var container = document.getElementById('academic-terms-container');
+  if (!container) return;
+  container.innerHTML = '<div class="text-muted text-sm">Loading academic terms...</div>';
+  try {
+    var res = await fetch('/api/academic-terms');
+    if (!res.ok) throw new Error('Failed to fetch');
+    var terms = await res.json();
+
+    var html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">';
+    html += '<div>';
+    html += '<h3 class="ro-section__title" style="margin:0;">Academic Terms</h3>';
+    html += '<div class="text-xs text-muted" style="margin-top:4px;">Define academic terms for quick date-range selection in Analytics. Terms appear as buttons in the analytics date picker.</div>';
+    html += '</div>';
+    html += '<button class="ro-btn ro-btn--primary ro-btn--sm" id="add-term-btn"><i class="ti ti-plus"></i> Add Term</button>';
+    html += '</div>';
+
+    // Add term form (hidden by default)
+    html += '<div id="term-form-row" style="display:none; margin-bottom:16px; padding:16px; border:1px solid var(--color-border-light); border-radius:8px; background:var(--color-surface);">';
+    html += '<div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">';
+    html += '<div><label class="ro-label">Name</label><input type="text" id="term-name" class="ro-input" style="width:200px;" maxlength="50" placeholder="e.g. Spring 2026"></div>';
+    html += '<div><label class="ro-label">Start Date</label><input type="date" id="term-start" class="ro-input" style="width:160px;"></div>';
+    html += '<div><label class="ro-label">End Date</label><input type="date" id="term-end" class="ro-input" style="width:160px;"></div>';
+    html += '<div><label class="ro-label">Sort Order</label><input type="number" id="term-sort" class="ro-input" style="width:80px;" min="0" value="0"></div>';
+    html += '<button class="ro-btn ro-btn--primary ro-btn--sm" id="term-save-btn"><i class="ti ti-device-floppy"></i> Save</button>';
+    html += '<button class="ro-btn ro-btn--ghost ro-btn--sm" id="term-cancel-btn">Cancel</button>';
+    html += '</div>';
+    html += '<input type="hidden" id="term-edit-id" value="">';
+    html += '</div>';
+
+    if (!terms.length) {
+      html += '<div style="text-align:center; padding:40px 16px; color:var(--color-text-muted);">';
+      html += '<i class="ti ti-calendar-off" style="font-size:32px; display:block; margin-bottom:8px;"></i>';
+      html += 'No academic terms defined. Add terms to enable quick date range selection in Analytics.';
+      html += '</div>';
+    } else {
+      html += '<div class="ro-table-wrap">';
+      html += '<table class="ro-table"><thead><tr>';
+      html += '<th>Name</th><th>Start Date</th><th>End Date</th><th>Sort Order</th><th style="width:100px;"></th>';
+      html += '</tr></thead><tbody>';
+      for (var t of terms) {
+        var startFormatted = new Date(t.start_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        var endFormatted = new Date(t.end_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        html += '<tr data-term-id="' + t.id + '">';
+        html += '<td><strong>' + t.name + '</strong></td>';
+        html += '<td>' + startFormatted + '</td>';
+        html += '<td>' + endFormatted + '</td>';
+        html += '<td>' + t.sort_order + '</td>';
+        html += '<td style="text-align:right;">';
+        html += '<button class="ro-btn ro-btn--ghost ro-btn--xs term-edit-btn" data-id="' + t.id + '" data-name="' + t.name.replace(/"/g, '&quot;') + '" data-start="' + t.start_date + '" data-end="' + t.end_date + '" data-sort="' + t.sort_order + '" title="Edit"><i class="ti ti-pencil"></i></button>';
+        html += '<button class="ro-btn ro-btn--ghost ro-btn--xs term-delete-btn" data-id="' + t.id + '" data-name="' + t.name.replace(/"/g, '&quot;') + '" title="Delete" style="color:var(--color-danger);"><i class="ti ti-trash"></i></button>';
+        html += '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div>';
+    }
+
+    container.innerHTML = html;
+
+    // Add Term button
+    document.getElementById('add-term-btn')?.addEventListener('click', function() {
+      document.getElementById('term-edit-id').value = '';
+      document.getElementById('term-name').value = '';
+      document.getElementById('term-start').value = '';
+      document.getElementById('term-end').value = '';
+      document.getElementById('term-sort').value = '0';
+      document.getElementById('term-form-row').style.display = '';
+      document.getElementById('term-name').focus();
+    });
+
+    // Cancel button
+    document.getElementById('term-cancel-btn')?.addEventListener('click', function() {
+      document.getElementById('term-form-row').style.display = 'none';
+    });
+
+    // Save button
+    document.getElementById('term-save-btn')?.addEventListener('click', function() {
+      var editId = document.getElementById('term-edit-id').value;
+      var termData = {
+        name: document.getElementById('term-name').value.trim(),
+        start_date: document.getElementById('term-start').value,
+        end_date: document.getElementById('term-end').value,
+        sort_order: parseInt(document.getElementById('term-sort').value) || 0
+      };
+      saveAcademicTerm(termData, editId || null);
+    });
+
+    // Edit buttons
+    container.querySelectorAll('.term-edit-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.getElementById('term-edit-id').value = btn.dataset.id;
+        document.getElementById('term-name').value = btn.dataset.name;
+        document.getElementById('term-start').value = btn.dataset.start;
+        document.getElementById('term-end').value = btn.dataset.end;
+        document.getElementById('term-sort').value = btn.dataset.sort;
+        document.getElementById('term-form-row').style.display = '';
+        document.getElementById('term-name').focus();
+      });
+    });
+
+    // Delete buttons
+    container.querySelectorAll('.term-delete-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        deleteAcademicTerm(btn.dataset.id, btn.dataset.name);
+      });
+    });
+  } catch (err) {
+    container.innerHTML = '<div class="text-muted text-sm">Failed to load academic terms.</div>';
+    console.error('loadAcademicTerms error:', err);
+  }
+}
+
+async function saveAcademicTerm(termData, termId) {
+  // Client-side validation
+  if (!termData.name || termData.name.length > 50) {
+    showToastNew('Term name is required (max 50 characters)', 'error');
+    return;
+  }
+  if (!termData.start_date) {
+    showToastNew('Start date is required', 'error');
+    return;
+  }
+  if (!termData.end_date) {
+    showToastNew('End date is required', 'error');
+    return;
+  }
+  if (termData.end_date <= termData.start_date) {
+    showToastNew('End date must be after start date', 'error');
+    return;
+  }
+  try {
+    var url = termId ? '/api/academic-terms/' + termId : '/api/academic-terms';
+    var method = termId ? 'PUT' : 'POST';
+    var res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(termData)
+    });
+    if (handleSessionExpiry(res)) return;
+    if (!res.ok) {
+      var data = await res.json().catch(function() { return {}; });
+      showToastNew(data.error || 'Failed to save term', 'error');
+      return;
+    }
+    showToastNew('Term saved', 'success');
+    loadAcademicTerms();
+    loadAnalyticsTermButtons();
+  } catch (err) {
+    showToastNew('Failed to save term', 'error');
+    console.error('saveAcademicTerm error:', err);
+  }
+}
+
+async function deleteAcademicTerm(termId, termName) {
+  var confirmed = await showModalNew({
+    title: 'Delete Academic Term',
+    message: 'Delete term \'' + termName + '\'? This cannot be undone.',
+    confirmLabel: 'Delete',
+    type: 'danger'
+  });
+  if (!confirmed) return;
+  try {
+    var res = await fetch('/api/academic-terms/' + termId, { method: 'DELETE' });
+    if (handleSessionExpiry(res)) return;
+    if (!res.ok) {
+      var data = await res.json().catch(function() { return {}; });
+      showToastNew(data.error || 'Failed to delete term', 'error');
+      return;
+    }
+    showToastNew('Term deleted', 'success');
+    loadAcademicTerms();
+    loadAnalyticsTermButtons();
+  } catch (err) {
+    showToastNew('Failed to delete term', 'error');
+    console.error('deleteAcademicTerm error:', err);
   }
 }
 
@@ -6284,7 +6556,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Analytics: quick-select range buttons
   document.querySelectorAll('.analytics-quick-select button[data-range]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      document.querySelectorAll('.analytics-quick-select button').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelectorAll('.analytics-quick-select button[data-range]').forEach(function(b) { b.classList.remove('active'); });
+      // Also clear term button active states
+      document.querySelectorAll('[data-term-id]').forEach(function(b) { b.classList.remove('active'); });
       btn.classList.add('active');
       setAnalyticsQuickRange(btn.dataset.range);
       // Invalidate caches on date change
@@ -6293,6 +6567,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       reloadActiveAnalyticsTab();
     });
   });
+
+  // Load dynamic academic term buttons for analytics date picker
+  loadAnalyticsTermButtons();
 
   // Analytics: lazy-load sub-tabs on first click
   document.querySelectorAll('#analytics-panel .ro-tab[data-subtarget]').forEach(function(tab) {
@@ -6387,6 +6664,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadRetentionSettings();
       }
     });
+  }
+
+  // Academic Terms: load on each sub-tab click (small dataset, always fresh)
+  const termsTab = document.querySelector('.ro-tab[data-subtarget="admin-terms-view"]');
+  if (termsTab) {
+    termsTab.addEventListener('click', () => { loadAcademicTerms(); });
   }
 
   // Fix FullCalendar day header overlap when Staff panel first becomes visible
