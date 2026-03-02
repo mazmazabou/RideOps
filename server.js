@@ -5097,6 +5097,16 @@ app.put('/api/notifications/read-all', requireAuth, wrapAsync(async (req, res) =
   }
 }));
 
+app.put('/api/notifications/bulk-read', requireAuth, wrapAsync(async (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids array required' });
+  const result = await query(
+    'UPDATE notifications SET read = TRUE WHERE id = ANY($1::text[]) AND user_id = $2 AND read = FALSE',
+    [ids, req.session.userId]
+  );
+  res.json({ updated: result.rowCount });
+}));
+
 app.put('/api/notifications/:id/read', requireAuth, wrapAsync(async (req, res) => {
   try {
     const result = await query(

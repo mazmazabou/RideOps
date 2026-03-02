@@ -477,15 +477,30 @@ function openNotificationDrawer() {
 }
 
 var _notifSelectedIds = new Set();
+var _notifTotalCount = 0;
 
 function _notifUpdateSelectionUI(dw) {
   var count = _notifSelectedIds.size;
-  var deleteBtn = dw.querySelector('#notif-delete-selected');
+  var markBtn = dw.querySelector('#notif-mark-read');
+  var clearBtn = dw.querySelector('#notif-clear');
   var selectAllCb = dw.querySelector('#notif-select-all');
   var allItems = dw.querySelectorAll('.notif-item[data-notif-id]');
-  if (deleteBtn) {
-    deleteBtn.style.display = count > 0 ? 'inline-flex' : 'none';
-    deleteBtn.querySelector('.notif-sel-count').textContent = count;
+  var isSelectAll = selectAllCb && selectAllCb.checked && allItems.length > 0;
+
+  if (markBtn) {
+    markBtn.disabled = count === 0;
+    markBtn.textContent = isSelectAll ? 'Mark All as Read'
+      : count > 0 ? 'Mark as Read (' + count + ')'
+      : 'Mark as Read';
+  }
+  if (clearBtn) {
+    clearBtn.disabled = count === 0;
+    var label = clearBtn.querySelector('.notif-clear-label');
+    if (label) {
+      label.textContent = isSelectAll ? 'Clear All (' + _notifTotalCount + ')'
+        : count > 0 ? 'Clear (' + count + ')'
+        : 'Clear';
+    }
   }
   if (selectAllCb) selectAllCb.checked = allItems.length > 0 && count === allItems.length;
 }
@@ -493,7 +508,7 @@ function _notifUpdateSelectionUI(dw) {
 function renderNotificationDrawer(notifications, unreadCount, totalCount) {
   closeDrawer();
   _notifSelectedIds = new Set();
-  var _notifTotalCount = totalCount || notifications.length;
+  _notifTotalCount = totalCount || notifications.length;
   var ov = document.createElement('div');
   ov.className = 'ro-drawer-overlay open';
   ov.id = 'ro-drawer-overlay';
@@ -505,9 +520,6 @@ function renderNotificationDrawer(notifications, unreadCount, totalCount) {
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">' +
     '<span style="font-size:16px;font-weight:700">Notifications</span>' +
     '<div style="display:flex;gap:8px;align-items:center">';
-  if (unreadCount > 0) {
-    headerHTML += '<button class="ro-btn ro-btn--outline ro-btn--sm" id="notif-mark-all-read">Mark All Read</button>';
-  }
   headerHTML += '<button class="ro-btn ro-btn--outline ro-btn--sm" onclick="closeDrawer()">\u2715</button>';
   headerHTML += '</div></div>';
 
@@ -520,10 +532,10 @@ function renderNotificationDrawer(notifications, unreadCount, totalCount) {
     toolbarHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--color-border,#e5e7eb);">' +
       '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-muted);cursor:pointer;">' +
       '<input type="checkbox" id="notif-select-all" style="cursor:pointer;"> Select All</label>' +
-      '<button class="ro-btn ro-btn--danger ro-btn--sm" id="notif-delete-selected" style="display:none;"><i class="ti ti-trash" style="font-size:14px;"></i> Delete (<span class="notif-sel-count">0</span>)</button>' +
+      '<button class="ro-btn ro-btn--outline ro-btn--sm" id="notif-mark-read" disabled style="font-size:12px;">Mark as Read</button>' +
+      '<button class="ro-btn ro-btn--outline ro-btn--sm" id="notif-clear" disabled style="font-size:12px;"><i class="ti ti-trash" style="font-size:14px;"></i> <span class="notif-clear-label">Clear</span></button>' +
       '<div style="flex:1"></div>' +
       showingLabel +
-      '<button class="ro-btn ro-btn--outline ro-btn--sm" id="notif-clear-all" style="font-size:12px;"><i class="ti ti-trash-x" style="font-size:14px;"></i> Clear All (' + _notifTotalCount + ')</button>' +
       '</div>';
   }
 
@@ -577,38 +589,37 @@ function renderNotificationDrawer(notifications, unreadCount, totalCount) {
     });
   }
 
-  // Delete selected
-  var deleteSelBtn = dw.querySelector('#notif-delete-selected');
-  if (deleteSelBtn) {
-    deleteSelBtn.addEventListener('click', function() {
+  // Clear button — context-aware delete
+  var clearBtn = dw.querySelector('#notif-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
       var ids = Array.from(_notifSelectedIds);
       if (!ids.length) return;
-      var allVisibleSelected = selectAllCb && selectAllCb.checked;
-      var hasMore = _notifTotalCount > notifications.length;
-      // If all visible are selected and there are more beyond the page, delete ALL
-      if (allVisibleSelected && hasMore) {
+      var isSelectAll = selectAllCb && selectAllCb.checked;
+
+      if (isSelectAll) {
         showModalNew({
-          title: 'Delete All Notifications',
+          title: 'Clear All Notifications',
           body: 'Delete all ' + _notifTotalCount + ' notifications? This cannot be undone.',
-          confirmLabel: 'Delete All',
+          confirmLabel: 'Clear All',
           confirmClass: 'ro-btn--danger',
           onConfirm: function() {
             fetch('/api/notifications/all', { method: 'DELETE' })
               .then(function(r) {
                 if (!r.ok) throw new Error('Failed');
-                showToastNew('Deleted all ' + _notifTotalCount + ' notifications', 'success');
+                showToastNew('Cleared all ' + _notifTotalCount + ' notifications', 'success');
                 openNotificationDrawer();
                 pollNotificationCount();
               }).catch(function() {
-                showToastNew('Failed to delete notifications', 'error');
+                showToastNew('Failed to clear notifications', 'error');
               });
           }
         });
       } else {
         showModalNew({
-          title: 'Delete Notifications',
+          title: 'Clear Notifications',
           body: 'Delete ' + ids.length + ' selected notification' + (ids.length !== 1 ? 's' : '') + '?',
-          confirmLabel: 'Delete',
+          confirmLabel: 'Clear',
           confirmClass: 'ro-btn--danger',
           onConfirm: function() {
             fetch('/api/notifications/bulk-delete', {
@@ -617,11 +628,11 @@ function renderNotificationDrawer(notifications, unreadCount, totalCount) {
               body: JSON.stringify({ ids: ids })
             }).then(function(r) {
               if (!r.ok) throw new Error('Failed');
-              showToastNew('Deleted ' + ids.length + ' notification' + (ids.length !== 1 ? 's' : ''), 'success');
+              showToastNew('Cleared ' + ids.length + ' notification' + (ids.length !== 1 ? 's' : ''), 'success');
               openNotificationDrawer();
               pollNotificationCount();
             }).catch(function() {
-              showToastNew('Failed to delete notifications', 'error');
+              showToastNew('Failed to clear notifications', 'error');
             });
           }
         });
@@ -629,44 +640,57 @@ function renderNotificationDrawer(notifications, unreadCount, totalCount) {
     });
   }
 
-  // Clear all
-  var clearAllBtn = dw.querySelector('#notif-clear-all');
-  if (clearAllBtn) {
-    clearAllBtn.addEventListener('click', function() {
-      showModalNew({
-        title: 'Clear All Notifications',
-        body: 'This will permanently delete all your notifications. Continue?',
-        confirmLabel: 'Clear All',
-        confirmClass: 'ro-btn--danger',
-        onConfirm: function() {
-          fetch('/api/notifications/all', { method: 'DELETE' })
-            .then(function(r) {
-              if (!r.ok) throw new Error('Failed');
-              showToastNew('All notifications cleared', 'success');
-              openNotificationDrawer();
-              pollNotificationCount();
-            }).catch(function() {
-              showToastNew('Failed to clear notifications', 'error');
-            });
-        }
-      });
-    });
-  }
+  // Mark as Read button — context-aware
+  var markBtn = dw.querySelector('#notif-mark-read');
+  if (markBtn) {
+    markBtn.addEventListener('click', function() {
+      var ids = Array.from(_notifSelectedIds);
+      if (!ids.length) return;
+      var isSelectAll = selectAllCb && selectAllCb.checked;
 
-  // Mark all read button
-  var markAllBtn = dw.querySelector('#notif-mark-all-read');
-  if (markAllBtn) {
-    markAllBtn.addEventListener('click', function() {
-      fetch('/api/notifications/read-all', { method: 'PUT' })
-        .then(function() {
-          updateBellBadge(0);
-          dw.querySelectorAll('.notif-item--unread').forEach(function(el) {
-            el.classList.remove('notif-item--unread');
-            el.classList.add('notif-item--read');
+      if (isSelectAll) {
+        // Mark ALL read (server-side, covers beyond page)
+        fetch('/api/notifications/read-all', { method: 'PUT' })
+          .then(function(r) {
+            if (!r.ok) throw new Error('Failed');
+            updateBellBadge(0);
+            dw.querySelectorAll('.notif-item--unread').forEach(function(el) {
+              el.classList.remove('notif-item--unread');
+              el.classList.add('notif-item--read');
+            });
+            _notifSelectedIds = new Set();
+            selectAllCb.checked = false;
+            dw.querySelectorAll('.notif-item-cb').forEach(function(cb) { cb.checked = false; });
+            _notifUpdateSelectionUI(dw);
+            showToastNew('All notifications marked as read', 'success');
+          }).catch(function() {
+            showToastNew('Failed to mark notifications as read', 'error');
           });
-          markAllBtn.remove();
-        })
-        .catch(function() {});
+      } else {
+        // Mark selected read via bulk endpoint
+        fetch('/api/notifications/bulk-read', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: ids })
+        }).then(function(r) {
+          if (!r.ok) throw new Error('Failed');
+          // Update items in-place
+          ids.forEach(function(id) {
+            var item = dw.querySelector('.notif-item[data-notif-id="' + id + '"]');
+            if (item && item.classList.contains('notif-item--unread')) {
+              item.classList.remove('notif-item--unread');
+              item.classList.add('notif-item--read');
+            }
+          });
+          _notifSelectedIds = new Set();
+          dw.querySelectorAll('.notif-item-cb').forEach(function(cb) { cb.checked = false; });
+          _notifUpdateSelectionUI(dw);
+          pollNotificationCount();
+          showToastNew('Marked ' + ids.length + ' notification' + (ids.length !== 1 ? 's' : '') + ' as read', 'success');
+        }).catch(function() {
+          showToastNew('Failed to mark notifications as read', 'error');
+        });
+      }
     });
   }
 
