@@ -288,7 +288,7 @@
                 <button class="ro-btn ro-btn--ghost ro-btn--xs" data-range="today">Today</button>
                 <button class="ro-btn ro-btn--ghost ro-btn--xs active" data-range="7d">Week</button>
                 <button class="ro-btn ro-btn--ghost ro-btn--xs" data-range="this-month">Month</button>
-                <button class="ro-btn ro-btn--ghost ro-btn--xs" data-range="semester" id="analytics-semester-btn">Semester</button>
+                <span id="analytics-term-buttons"></span>
               </div>
               <button class="ro-btn ro-btn--outline ro-btn--sm" id="analytics-refresh-btn" type="button"><i class="ti ti-refresh"></i> Refresh</button>
             </div>
@@ -410,6 +410,7 @@
             <button class="ro-tab" data-subtarget="notif-settings">Notifications</button>
             <button class="ro-tab" data-subtarget="admin-guidelines-view">Program Guidelines</button>
             <button class="ro-tab" data-subtarget="admin-data-view">Data Management</button>
+            <button class="ro-tab" data-subtarget="admin-terms-view">Academic Terms</button>
           </div>
 
           <div class="sub-panel active" id="admin-users-view">
@@ -508,6 +509,10 @@
                 <span class="text-sm text-muted" id="purge-result"></span>
               </div>
             </div>
+          </div>
+
+          <div class="sub-panel" id="admin-terms-view">
+            <div id="academic-terms-container" class="p-24"></div>
           </div>
         </section>
 

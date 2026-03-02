@@ -241,7 +241,7 @@ Analytics dashboard uses `#widget-grid` container (not a KPI grid). Date filters
 - **Data Caching:** `_tardinessCache` and `_hotspotsCache` prevent duplicate API calls when multiple widgets on the same tab use the same data source.
 - **Lazy Loading:** Analytics tabs load on first switch, not all at once. `_analyticsTabsLoaded` tracks which tabs have been initialized.
 - **Layout Version:** `WIDGET_LAYOUT_VERSION = 3` — bumped from 2 to force reset of old 4-column layouts to new 12-column GridStack format.
-- **Date Range Picker:** Quick-select buttons (Today, Week, Month, [Academic Period]) + manual from/to inputs. Last preset label driven by `academic_period_label` tenant_setting (Semester/Quarter/Trimester). Date ranges adapt per period type: Semester (Jan/May/Aug), Quarter (Jan/Mar/Jun/Sep), Trimester (Jan/May/Aug).
+- **Date Range Picker:** Quick-select buttons: Today, Week, Month, plus one button per user-defined academic term from `academic_terms` table. If >4 terms, shows 3 most recent + "More" dropdown. Terms managed in Settings > Academic Terms. Deprecated: hardcoded semester/quarter/trimester date calculations via `academic_period_label`.
 - **Default Range:** Last 7 days (set on page load, persists across sub-tab switches within session)
 - **Reports Sub-Tab:** Excel export with report type selector (Full/Rides/Drivers/Riders/Fleet) + semester report + wrapped
 - **Excel Export:** 8-sheet workbook via exceljs: Summary, Daily Volume, Routes, Driver Performance, Rider Analysis, Fleet, Shift Coverage, Peak Hours — all with conditional formatting
@@ -284,6 +284,8 @@ Analytics dashboard uses `#widget-grid` container (not a KPI grid). Date filters
   - Fields: id, user_id, event_type, title, body, metadata (JSONB), read, created_at
 - **program_content** — Editable program rules/guidelines
   - Fields: id, rules_html, updated_at
+- **academic_terms** — User-defined academic calendar terms for analytics date picker
+  - Fields: id, name, start_date (DATE), end_date (DATE), sort_order, created_at, updated_at
 
 ### ID Generation
 IDs follow pattern: `prefix_${random}` (e.g., `ride_abc123`, `shift_xyz789`, `driver_xy12ab`, `rider_ab34cd`, `veh_cart1`, `notif_abc123`)
@@ -295,6 +297,7 @@ The following indexes are created by `runMigrations()`:
 - `idx_shifts_employee_id`
 - `idx_clock_events_employee`, `idx_clock_events_date`, `idx_clock_events_employee_date` (compound)
 - `idx_notifications_user_read` (compound), `idx_notifications_user_id`, `idx_notifications_created_at`
+- `idx_academic_terms_sort` (compound: sort_order, start_date DESC)
 
 ### Configurable Settings (tenant_settings)
 | Key | Default | Type | Category |
@@ -312,7 +315,7 @@ The following indexes are created by `runMigrations()`:
 | notify_rider_strike_warning | true | boolean | notifications |
 | ride_retention_value | 0 | number | data |
 | ride_retention_unit | months | select | data |
-| academic_period_label | Semester | select | operations |
+| academic_period_label | Semester | select | operations | *(deprecated — academic terms now user-defined via academic_terms table)* |
 
 ## Ride Status Flow
 
@@ -417,6 +420,10 @@ Riders can cancel pending/approved rides. Office can cancel any non-terminal rid
 
 ### Program Content
 - `GET /api/program-rules` (public), `PUT /api/program-rules` (requireOffice)
+
+### Academic Terms
+- `GET /api/academic-terms` (requireStaff), `POST /api/academic-terms` (requireOffice)
+- `PUT /api/academic-terms/:id` (requireOffice), `DELETE /api/academic-terms/:id` (requireOffice)
 
 ### Constants & Dev Tools
 - `NOTIFICATION_EVENT_TYPES`: driver_tardy, rider_no_show, rider_approaching_termination, rider_terminated, ride_pending_stale, new_ride_request

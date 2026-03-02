@@ -5467,13 +5467,14 @@ async function loadAcademicTerms() {
         var startFormatted = new Date(t.start_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         var endFormatted = new Date(t.end_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         html += '<tr data-term-id="' + t.id + '">';
-        html += '<td><strong>' + t.name + '</strong></td>';
+        var safeName = escapeHtml(t.name);
+        html += '<td><strong>' + safeName + '</strong></td>';
         html += '<td>' + startFormatted + '</td>';
         html += '<td>' + endFormatted + '</td>';
         html += '<td>' + t.sort_order + '</td>';
         html += '<td style="text-align:right;">';
-        html += '<button class="ro-btn ro-btn--ghost ro-btn--xs term-edit-btn" data-id="' + t.id + '" data-name="' + t.name.replace(/"/g, '&quot;') + '" data-start="' + t.start_date + '" data-end="' + t.end_date + '" data-sort="' + t.sort_order + '" title="Edit"><i class="ti ti-pencil"></i></button>';
-        html += '<button class="ro-btn ro-btn--ghost ro-btn--xs term-delete-btn" data-id="' + t.id + '" data-name="' + t.name.replace(/"/g, '&quot;') + '" title="Delete" style="color:var(--color-danger);"><i class="ti ti-trash"></i></button>';
+        html += '<button class="ro-btn ro-btn--ghost ro-btn--xs term-edit-btn" data-id="' + t.id + '" data-name="' + safeName + '" data-start="' + t.start_date + '" data-end="' + t.end_date + '" data-sort="' + t.sort_order + '" title="Edit"><i class="ti ti-pencil"></i></button>';
+        html += '<button class="ro-btn ro-btn--ghost ro-btn--xs term-delete-btn" data-id="' + t.id + '" data-name="' + safeName + '" title="Delete" style="color:var(--color-danger);"><i class="ti ti-trash"></i></button>';
         html += '</td>';
         html += '</tr>';
       }

@@ -263,6 +263,7 @@ async function initDb() {
   await seedDefaultVehicles();
   await seedDefaultSettings();
   await seedDefaultContent();
+  await seedDefaultTerms();
 }
 
 async function runMigrations() {
@@ -359,6 +360,19 @@ async function runMigrations() {
     `CREATE INDEX IF NOT EXISTS idx_clock_events_employee_date ON clock_events(employee_id, event_date);`,
     `CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);`,
     `CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);`,
+
+    // ----- Academic Terms -----
+    `CREATE TABLE IF NOT EXISTS academic_terms (
+      id TEXT PRIMARY KEY,
+      name VARCHAR(50) NOT NULL,
+      start_date DATE NOT NULL,
+      end_date DATE NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT academic_terms_date_order CHECK (end_date > start_date)
+    );`,
+    `CREATE INDEX IF NOT EXISTS idx_academic_terms_sort ON academic_terms(sort_order, start_date DESC);`,
 
     // ----- Constraints -----
     `DO $$ BEGIN
@@ -462,6 +476,49 @@ async function seedDefaultContent() {
     "INSERT INTO program_content (id, rules_html, updated_at) VALUES ('default', $1, NOW())",
     [defaultHtml]
   );
+}
+
+async function seedDefaultTerms() {
+  const existing = await query('SELECT COUNT(*) FROM academic_terms');
+  if (parseInt(existing.rows[0].count) > 0) return;
+
+  // Read the academic_period_label to determine term structure
+  const labelResult = await query(
+    "SELECT setting_value FROM tenant_settings WHERE setting_key = 'academic_period_label'"
+  );
+  const periodLabel = labelResult.rows[0]?.setting_value || 'Semester';
+  const year = new Date().getFullYear();
+
+  let terms;
+  if (periodLabel === 'Quarter') {
+    terms = [
+      { name: `Winter ${year}`, start: `${year}-01-06`, end: `${year}-03-21`, sort: 0 },
+      { name: `Spring ${year}`, start: `${year}-03-24`, end: `${year}-06-13`, sort: 1 },
+      { name: `Summer ${year}`, start: `${year}-06-16`, end: `${year}-09-12`, sort: 2 },
+      { name: `Fall ${year}`, start: `${year}-09-22`, end: `${year}-12-12`, sort: 3 }
+    ];
+  } else if (periodLabel === 'Trimester') {
+    terms = [
+      { name: `Spring ${year}`, start: `${year}-01-13`, end: `${year}-04-30`, sort: 0 },
+      { name: `Summer ${year}`, start: `${year}-05-05`, end: `${year}-08-15`, sort: 1 },
+      { name: `Fall ${year}`, start: `${year}-08-25`, end: `${year}-12-12`, sort: 2 }
+    ];
+  } else {
+    // Default: Semester
+    terms = [
+      { name: `Spring ${year}`, start: `${year}-01-13`, end: `${year}-05-09`, sort: 0 },
+      { name: `Summer ${year}`, start: `${year}-05-19`, end: `${year}-08-08`, sort: 1 },
+      { name: `Fall ${year}`, start: `${year}-08-18`, end: `${year}-12-12`, sort: 2 }
+    ];
+  }
+
+  for (const t of terms) {
+    await query(
+      `INSERT INTO academic_terms (id, name, start_date, end_date, sort_order)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [generateId('term'), t.name, t.start, t.end, t.sort]
+    );
+  }
 }
 
 async function seedNotificationPreferences(userId) {
@@ -4819,6 +4876,89 @@ app.get('/api/analytics/export-report', requireOffice, wrapAsync(async (req, res
   } catch (err) {
     console.error('analytics export-report error:', err);
     res.status(500).json({ error: 'Failed to generate export report' });
+  }
+}));
+
+// ----- Academic Terms -----
+
+function validateTermInput(body) {
+  const errors = [];
+  const trimmedName = (body.name || '').trim();
+  if (!trimmedName || trimmedName.length > 50) errors.push('Term name is required (max 50 characters)');
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  if (!body.start_date || !dateRe.test(body.start_date)) errors.push('Valid start date is required (YYYY-MM-DD)');
+  if (!body.end_date || !dateRe.test(body.end_date)) errors.push('Valid end date is required (YYYY-MM-DD)');
+  if (body.start_date && body.end_date && body.end_date <= body.start_date) errors.push('End date must be after start date');
+  return { trimmedName, errors };
+}
+
+app.get('/api/academic-terms', requireStaff, wrapAsync(async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT id, name, start_date::text, end_date::text, sort_order FROM academic_terms ORDER BY sort_order ASC, start_date DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('academic-terms list error:', err);
+    res.status(500).json({ error: 'Failed to fetch academic terms' });
+  }
+}));
+
+app.post('/api/academic-terms', requireOffice, wrapAsync(async (req, res) => {
+  try {
+    const { trimmedName, errors } = validateTermInput(req.body);
+    if (errors.length) return res.status(400).json({ error: errors[0] });
+
+    const { start_date, end_date, sort_order } = req.body;
+    const id = generateId('term');
+    const sortVal = Number.isInteger(sort_order) && sort_order >= 0 ? sort_order : 0;
+
+    const result = await query(
+      `INSERT INTO academic_terms (id, name, start_date, end_date, sort_order)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, start_date::text, end_date::text, sort_order`,
+      [id, trimmedName, start_date, end_date, sortVal]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('academic-terms create error:', err);
+    res.status(500).json({ error: 'Failed to create academic term' });
+  }
+}));
+
+app.put('/api/academic-terms/:id', requireOffice, wrapAsync(async (req, res) => {
+  try {
+    const existing = await query('SELECT id FROM academic_terms WHERE id = $1', [req.params.id]);
+    if (!existing.rowCount) return res.status(404).json({ error: 'Academic term not found' });
+
+    const { trimmedName, errors } = validateTermInput(req.body);
+    if (errors.length) return res.status(400).json({ error: errors[0] });
+
+    const { start_date, end_date, sort_order } = req.body;
+    const sortVal = Number.isInteger(sort_order) && sort_order >= 0 ? sort_order : 0;
+
+    const result = await query(
+      `UPDATE academic_terms
+       SET name = $1, start_date = $2, end_date = $3, sort_order = $4, updated_at = NOW()
+       WHERE id = $5
+       RETURNING id, name, start_date::text, end_date::text, sort_order`,
+      [trimmedName, start_date, end_date, sortVal, req.params.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('academic-terms update error:', err);
+    res.status(500).json({ error: 'Failed to update academic term' });
+  }
+}));
+
+app.delete('/api/academic-terms/:id', requireOffice, wrapAsync(async (req, res) => {
+  try {
+    const result = await query('DELETE FROM academic_terms WHERE id = $1 RETURNING id', [req.params.id]);
+    if (!result.rowCount) return res.status(404).json({ error: 'Academic term not found' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('academic-terms delete error:', err);
+    res.status(500).json({ error: 'Failed to delete academic term' });
   }
 }));
 

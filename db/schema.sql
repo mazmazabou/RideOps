@@ -1,7 +1,7 @@
 -- RideOps Database Schema Reference
 -- This file reflects the schema as created by initDb() + runMigrations() in server.js
 -- It is NOT executed directly — the server manages schema creation and migrations
--- Last updated: 2026-03-01
+-- Last updated: 2026-03-02
 
 -- ============================================================
 -- TABLES
@@ -164,6 +164,17 @@ CREATE TABLE IF NOT EXISTS program_content (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS academic_terms (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (end_date > start_date)
+);
+
 -- Note: The 'session' table is auto-created by connect-pg-simple and managed by express-session.
 -- It is NOT defined here.
 
@@ -195,3 +206,4 @@ CREATE INDEX IF NOT EXISTS idx_clock_events_employee_date ON clock_events(employ
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_academic_terms_sort ON academic_terms(sort_order, start_date DESC);
