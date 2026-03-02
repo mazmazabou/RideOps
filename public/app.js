@@ -18,6 +18,27 @@ function getCurrentCampusPalette() {
   return ['var(--color-primary)', 'var(--color-accent)', 'var(--color-primary-light)'];
 }
 
+// ============================================================================
+// CHART.JS INSTANCE REGISTRY
+// ============================================================================
+// Chart.js requires destroying existing instances before re-rendering into the
+// same canvas. This registry tracks instances by container ID.
+var _chartInstances = {};
+
+function destroyChart(containerId) {
+  if (_chartInstances[containerId]) {
+    _chartInstances[containerId].destroy();
+    delete _chartInstances[containerId];
+  }
+}
+
+// Resolve CSS variables to actual hex/rgb values for Chart.js canvas rendering
+function resolveColor(cssVar) {
+  if (!cssVar || !cssVar.startsWith('var(')) return cssVar;
+  var propName = cssVar.replace(/^var\(/, '').replace(/\)$/, '').trim();
+  return getComputedStyle(document.documentElement).getPropertyValue(propName).trim() || cssVar;
+}
+
 // Loading state management
 function showLoader(containerId, message = 'Loading...') {
   const el = document.getElementById(containerId);
@@ -3205,226 +3226,191 @@ function getWidgetSize(containerId) {
 }
 
 function renderColumnChart(containerId, data, options = {}) {
-  const container = document.getElementById(containerId);
+  var container = document.getElementById(containerId);
   if (!container) return;
+  destroyChart(containerId);
+
   if (!data || !data.length) {
-    // Empty state uses developer-defined static content — safe for innerHTML
+    // Empty state — developer-defined static content, safe for innerHTML
     container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-bar-off"></i><div class="ro-empty__title">No data</div><div class="ro-empty__message">No ride data for this period.</div></div>';
     return;
   }
-  var _wSize = getWidgetSize(containerId);
-  var _compact = _wSize === 'xs';
-  const W = _compact ? 300 : 700, H = _compact ? 260 : 180;
-  const pad = { top: 16, right: 16, bottom: 36, left: 40 };
-  const cw = W - pad.left - pad.right;
-  const ch = H - pad.top - pad.bottom;
-  const maxY = Math.max(...data.map(d => parseInt(d.count) || 0), 1);
-  const total = data.reduce((s, d) => s + (parseInt(d.count) || 0), 0);
-  const unit = options.unit || 'rides';
-  const palette = options.palette || null;
-  const fillColor = options.color || 'var(--color-primary)';
 
-  // Y-axis gridlines
-  const yTicks = 4;
-  let gridLines = '';
-  for (let i = 0; i <= yTicks; i++) {
-    const yVal = Math.round(maxY * i / yTicks);
-    const yPos = pad.top + ch - (i / yTicks) * ch;
-    gridLines += `<line x1="${pad.left}" y1="${yPos}" x2="${W - pad.right}" y2="${yPos}" class="grid-line"/>`;
-    gridLines += `<text x="${pad.left - 6}" y="${yPos + 3}" class="axis-label" text-anchor="end">${yVal}</text>`;
+  var total = data.reduce(function(s, d) { return s + (parseInt(d.count) || 0); }, 0);
+  var unit = options.unit || 'rides';
+  var palette = options.palette || null;
+  var fillColor = options.color || 'var(--color-primary)';
+
+  // Build canvas via DOM API
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;width:100%;height:100%;';
+  var canvas = document.createElement('canvas');
+  canvas.id = containerId + '-canvas';
+  wrapper.appendChild(canvas);
+  container.textContent = '';
+  container.appendChild(wrapper);
+
+  var barColors;
+  if (palette) {
+    barColors = data.map(function(d, i) { return resolveColor(palette[i % palette.length]); });
+  } else {
+    var resolved = resolveColor(fillColor);
+    barColors = data.map(function() { return resolved; });
   }
 
-  // Bars
-  const slotW = cw / data.length;
-  const barW = Math.min(slotW * 0.6, 50);
-  let bars = '';
-  let labels = '';
-  let valueLabels = '';
-
-  // X-axis label collision avoidance — skip labels that would overlap
-  const MIN_COL_LABEL_GAP = _compact ? 30 : 50;
-  const colLabelIndices = [];
-  let lastColLabelX = -Infinity;
-  data.forEach((d, i) => {
-    const cx = pad.left + i * slotW + slotW / 2;
-    if (i === 0 || cx - lastColLabelX >= MIN_COL_LABEL_GAP) {
-      colLabelIndices.push(i);
-      lastColLabelX = cx;
+  _chartInstances[containerId] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: data.map(function(d) { return d.label; }),
+      datasets: [{
+        data: data.map(function(d) { return parseInt(d.count) || 0; }),
+        backgroundColor: barColors,
+        borderRadius: 3,
+        borderSkipped: false,
+        maxBarThickness: 50
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              var val = context.parsed.y;
+              var pct = total > 0 ? Math.round(val / total * 100) : 0;
+              return val + ' ' + unit + ' (' + pct + '%)';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            font: { size: 11 },
+            color: resolveColor('var(--color-text-muted)'),
+            maxRotation: 45,
+            autoSkip: true,
+            autoSkipPadding: 8
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: resolveColor('var(--color-border-light)')
+          },
+          ticks: {
+            font: { size: 11 },
+            color: resolveColor('var(--color-text-muted)'),
+            precision: 0
+          }
+        }
+      }
     }
-  });
-  // Force last label
-  const lastColIdx = data.length - 1;
-  if (colLabelIndices[colLabelIndices.length - 1] !== lastColIdx) {
-    const lastCx = pad.left + lastColIdx * slotW + slotW / 2;
-    const prevCx = pad.left + colLabelIndices[colLabelIndices.length - 1] * slotW + slotW / 2;
-    if (lastCx - prevCx < MIN_COL_LABEL_GAP) colLabelIndices.pop();
-    colLabelIndices.push(lastColIdx);
-  }
-  const colLabelSet = new Set(colLabelIndices);
-
-  data.forEach((d, i) => {
-    const val = parseInt(d.count) || 0;
-    const barH = maxY > 0 ? (val / maxY) * ch : 0;
-    const x = pad.left + i * slotW + (slotW - barW) / 2;
-    const y = pad.top + ch - barH;
-    const barColor = palette ? palette[i % palette.length] : fillColor;
-    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${barColor}" class="col-bar" data-idx="${i}"/>`;
-    if (options.showValues !== false && !_compact) {
-      valueLabels += `<text x="${x + barW / 2}" y="${y - 4}" class="axis-label" text-anchor="middle">${val}</text>`;
-    }
-    if (colLabelSet.has(i)) {
-      labels += `<text x="${pad.left + i * slotW + slotW / 2}" y="${H - 6}" class="axis-label" text-anchor="middle">${d.label}</text>`;
-    }
-  });
-
-  container.innerHTML = `<div class="col-chart-wrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${gridLines}${bars}${valueLabels}${labels}</svg></div>`;
-
-  // Tooltips
-  container.querySelectorAll('.col-bar').forEach((bar, idx) => {
-    const d = data[idx];
-    const val = parseInt(d.count) || 0;
-    const pct = total > 0 ? Math.round(val / total * 100) : 0;
-    const text = `${d.label}: ${val} ${unit} (${pct}%)`;
-    bar.addEventListener('mouseenter', (e) => showChartTooltip(e, text));
-    bar.addEventListener('mousemove', (e) => positionChartTooltip(e, getChartTooltip()));
-    bar.addEventListener('mouseleave', hideChartTooltip);
   });
 }
 
 function renderLineChart(containerId, data, options = {}) {
-  const wrap = document.getElementById(containerId);
+  var wrap = document.getElementById(containerId);
   if (!wrap) return;
+  destroyChart(containerId);
+
   if (!data || !data.length) {
     wrap.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-line"></i><div class="ro-empty__title">No data</div><div class="ro-empty__message">No daily trend data for this period.</div></div>';
     return;
   }
 
-  var _wSize = getWidgetSize(containerId);
-  var _compact = _wSize === 'xs';
-  const W = _compact ? 300 : 700, H = _compact ? 280 : 260;
-  const pad = { top: 16, right: 32, bottom: 32, left: 36 };
-  const cw = W - pad.left - pad.right;
-  const ch = H - pad.top - pad.bottom;
-  const maxY = Math.max(...data.map(d => d.value), 1);
-  const stepX = data.length > 1 ? cw / (data.length - 1) : cw;
-  const lineColor = options.color || 'var(--color-primary)';
-  const unit = options.unit || '';
-  const gradientId = containerId + '-gradient';
+  var lineColor = resolveColor(options.color || 'var(--color-primary)');
+  var unit = options.unit || '';
 
-  const points = data.map((d, i) => ({
-    x: pad.left + (data.length > 1 ? i * stepX : cw / 2),
-    y: pad.top + ch - (d.value / maxY) * ch,
-    d
-  }));
+  // Build canvas via DOM API
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;width:100%;height:100%;';
+  var canvas = document.createElement('canvas');
+  canvas.id = containerId + '-canvas';
+  wrapper.appendChild(canvas);
+  wrap.textContent = '';
+  wrap.appendChild(wrapper);
 
-  // Smooth monotone cubic path
-  let linePath = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const cpx = (prev.x + curr.x) / 2;
-    linePath += ` C ${cpx},${prev.y} ${cpx},${curr.y} ${curr.x},${curr.y}`;
-  }
-  const areaPath = linePath + ` L ${points[points.length - 1].x} ${pad.top + ch} L ${points[0].x} ${pad.top + ch} Z`;
+  // Create gradient fill programmatically after chart init
+  var gradientFill = null;
 
-  // SVG gradient definition
-  const gradient = `<defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="${lineColor}" stop-opacity="${options.fillOpacity || 0.15}"/>
-    <stop offset="100%" stop-color="${lineColor}" stop-opacity="0.02"/>
-  </linearGradient></defs>`;
-
-  // Y-axis gridlines
-  const yTicks = 4;
-  let gridLines = '';
-  for (let i = 0; i <= yTicks; i++) {
-    const yVal = Math.round(maxY * i / yTicks);
-    const yPos = pad.top + ch - (i / yTicks) * ch;
-    gridLines += `<line x1="${pad.left}" y1="${yPos}" x2="${W - pad.right}" y2="${yPos}" class="grid-line" style="opacity:0.6"/>`;
-    gridLines += `<text x="${pad.left - 6}" y="${yPos + 3}" class="axis-label" text-anchor="end">${yVal}</text>`;
-  }
-
-  // X-axis labels — pixel-based collision avoidance
-  let xLabels = '';
-  const MIN_LABEL_GAP = _compact ? 35 : 65; // minimum pixels between label centers
-  let lastLabelX = -Infinity;
-
-  // Pass 1: decide which indices get labels
-  const labelIndices = [];
-  data.forEach((d, i) => {
-    const x = pad.left + (data.length > 1 ? i * stepX : cw / 2);
-    if (i === 0 || x - lastLabelX >= MIN_LABEL_GAP) {
-      labelIndices.push(i);
-      lastLabelX = x;
+  _chartInstances[containerId] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: data.map(function(d) { return d.label; }),
+      datasets: [{
+        data: data.map(function(d) { return d.value; }),
+        borderColor: lineColor,
+        borderWidth: 2.5,
+        backgroundColor: function(context) {
+          if (gradientFill) return gradientFill;
+          var chart = context.chart;
+          var ctx = chart.ctx, area = chart.chartArea;
+          if (!area) return lineColor;
+          gradientFill = ctx.createLinearGradient(0, area.top, 0, area.bottom);
+          gradientFill.addColorStop(0, lineColor + '26'); // ~15% opacity
+          gradientFill.addColorStop(1, lineColor + '05'); // ~2% opacity
+          return gradientFill;
+        },
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: lineColor,
+        pointHoverBorderColor: resolveColor('var(--color-surface)'),
+        pointHoverBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              if (options.tooltipFn && data[context.dataIndex] && data[context.dataIndex].raw) {
+                return options.tooltipFn(data[context.dataIndex].raw);
+              }
+              return context.parsed.y + ' ' + unit;
+            },
+            title: function(items) {
+              return items[0] ? items[0].label : '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            font: { size: 11 },
+            color: resolveColor('var(--color-text-muted)'),
+            maxRotation: 45,
+            autoSkip: true,
+            autoSkipPadding: 12
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: resolveColor('var(--color-border-light)')
+          },
+          ticks: {
+            font: { size: 11 },
+            color: resolveColor('var(--color-text-muted)'),
+            precision: 0
+          }
+        }
+      }
     }
-  });
-
-  // Pass 2: if the last data point isn't labeled, force it —
-  // but remove the previous label if it's too close
-  const lastIdx = data.length - 1;
-  if (labelIndices[labelIndices.length - 1] !== lastIdx) {
-    const lastX = pad.left + (data.length > 1 ? lastIdx * stepX : cw / 2);
-    const prevIdx = labelIndices[labelIndices.length - 1];
-    const prevX = pad.left + (data.length > 1 ? prevIdx * stepX : cw / 2);
-    if (lastX - prevX < MIN_LABEL_GAP) {
-      labelIndices.pop(); // drop the second-to-last to make room
-    }
-    labelIndices.push(lastIdx);
-  }
-
-  // Pass 3: render
-  labelIndices.forEach(i => {
-    const x = pad.left + (data.length > 1 ? i * stepX : cw / 2);
-    xLabels += `<text x="${x}" y="${H - 4}" class="axis-label" text-anchor="middle">${data[i].label}</text>`;
-  });
-
-  // Dots hidden by default (r=0), shown on hover
-  const dots = points.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="0" fill="${lineColor}" stroke="var(--color-surface)" stroke-width="2" class="area-dot" data-idx="${i}"/>`).join('');
-  const crosshair = `<line x1="0" y1="${pad.top}" x2="0" y2="${pad.top + ch}" class="crosshair" id="${containerId}-crosshair"/>`;
-
-  wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
-    ${gradient}
-    ${gridLines}
-    <path d="${areaPath}" class="area-fill" fill="url(#${gradientId})"/>
-    <path d="${linePath}" class="area-line" fill="none" stroke="${lineColor}" style="stroke-width:2.5"/>
-    ${dots}
-    ${crosshair}
-    ${xLabels}
-  </svg>`;
-
-  // Hover interactions
-  const svg = wrap.querySelector('svg');
-  const crosshairEl = document.getElementById(`${containerId}-crosshair`);
-  if (!svg) return;
-
-  svg.addEventListener('mousemove', (e) => {
-    const rect = svg.getBoundingClientRect();
-    const scaleX = W / rect.width;
-    const mouseX = (e.clientX - rect.left) * scaleX;
-    let nearest = 0, minDist = Infinity;
-    points.forEach((p, i) => {
-      const dist = Math.abs(p.x - mouseX);
-      if (dist < minDist) { minDist = dist; nearest = i; }
-    });
-    const p = points[nearest];
-    if (crosshairEl) {
-      crosshairEl.setAttribute('x1', p.x);
-      crosshairEl.setAttribute('x2', p.x);
-    }
-    svg.querySelectorAll('.area-dot').forEach((dot, i) => {
-      dot.setAttribute('r', i === nearest ? '5' : '0');
-      dot.setAttribute('opacity', i === nearest ? '1' : '0');
-    });
-    const text = options.tooltipFn ? options.tooltipFn(p.d.raw) : `${p.d.label}: ${p.d.value} ${unit}`;
-    showChartTooltip(e, text);
-  });
-
-  svg.addEventListener('mouseleave', () => {
-    hideChartTooltip();
-    if (crosshairEl) crosshairEl.style.opacity = '0';
-    svg.querySelectorAll('.area-dot').forEach(dot => {
-      dot.setAttribute('r', '0');
-      dot.setAttribute('opacity', '0');
-    });
   });
 }
 
@@ -3464,43 +3450,6 @@ function renderStackedBar(containerId, segments, options = {}) {
     el.addEventListener('mouseenter', (e) => showChartTooltip(e, text));
     el.addEventListener('mousemove', (e) => positionChartTooltip(e, getChartTooltip()));
     el.addEventListener('mouseleave', hideChartTooltip);
-  });
-}
-
-function renderBarChart(containerId, data, options = {}) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  if (!data || !data.length) {
-    container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-bar-off"></i><div class="ro-empty__title">No data</div><div class="ro-empty__message">No ride data for this period.</div></div>';
-    return;
-  }
-  const max = Math.max(...data.map(d => parseInt(d.count) || 0));
-  const colorClass = options.colorClass || '';
-  const chartHtml = '<div class="bar-chart">' + data.map(d => {
-    const val = parseInt(d.count) || 0;
-    const pct = max > 0 ? (val / max * 100) : 0;
-    return `<div class="bar-chart-row">
-      <div class="bar-chart-label">${d.label}</div>
-      <div class="bar-chart-track"><div class="bar-chart-fill ${colorClass}" style="width:${pct}%"></div></div>
-      <div class="bar-chart-count">${val}</div>
-    </div>`;
-  }).join('') + '</div>';
-  if (options.yLabel) {
-    container.innerHTML = `<div style="display:flex;align-items:stretch;"><div class="chart-ylabel">${options.yLabel}</div><div style="flex:1;">${chartHtml}</div></div>`;
-  } else {
-    container.innerHTML = chartHtml;
-  }
-  // Attach hover tooltips
-  const total = data.reduce((s, d) => s + (parseInt(d.count) || 0), 0);
-  const unit = options.unit || 'rides';
-  container.querySelectorAll('.bar-chart-row').forEach((row, idx) => {
-    const d = data[idx];
-    const val = parseInt(d.count) || 0;
-    const pct = total > 0 ? Math.round(val / total * 100) : 0;
-    const text = `${d.label}: ${val} ${unit} (${pct}%)`;
-    row.addEventListener('mouseenter', (e) => showChartTooltip(e, text));
-    row.addEventListener('mousemove', (e) => positionChartTooltip(e, getChartTooltip()));
-    row.addEventListener('mouseleave', hideChartTooltip);
   });
 }
 
@@ -3966,6 +3915,7 @@ function renderAttendanceKPIs(containerId, summary) {
 function renderAttendanceDonut(containerId, distribution) {
   var container = document.getElementById(containerId);
   if (!container) return;
+  destroyChart(containerId);
 
   if (!distribution || !distribution.some(function(d) { return d.count > 0; })) {
     container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-donut-off"></i><div class="ro-empty__title">No data</div><div class="ro-empty__message">No clock-in data available.</div></div>';
@@ -3974,77 +3924,72 @@ function renderAttendanceDonut(containerId, distribution) {
 
   var donutColors = ['var(--status-completed)', 'var(--color-warning)', 'var(--status-on-the-way)', 'var(--color-warning-dark)', 'var(--status-no-show)'];
   var total = distribution.reduce(function(s, d) { return s + d.count; }, 0);
-  var R = 60, CX = 80, CY = 80, SW = 24;
-  var circumference = 2 * Math.PI * R;
-  var offset = circumference / 4;
+  var filtered = distribution.filter(function(d) { return d.count > 0; });
 
-  var circles = '';
-  distribution.forEach(function(d, i) {
-    if (d.count === 0) return;
-    var segLen = (d.count / total) * circumference;
-    circles += '<circle cx="' + CX + '" cy="' + CY + '" r="' + R + '" fill="none" stroke="' + donutColors[i] + '" stroke-width="' + SW + '" stroke-dasharray="' + segLen + ' ' + (circumference - segLen) + '" stroke-dashoffset="' + offset + '" class="donut-seg" data-idx="' + i + '"/>';
-    offset -= segLen;
+  // Build canvas container via DOM API
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;width:100%;height:100%;';
+  var canvas = document.createElement('canvas');
+  canvas.id = containerId + '-canvas';
+  wrapper.appendChild(canvas);
+  container.textContent = '';
+  container.appendChild(wrapper);
+
+  var colors = filtered.map(function(d, i) {
+    var origIdx = distribution.indexOf(d);
+    return resolveColor(donutColors[origIdx]);
   });
 
-  var legendHTML = '';
-  distribution.forEach(function(d, i) {
-    var pct = total > 0 ? Math.round(d.count / total * 100) : 0;
-    legendHTML += '<div class="donut-legend-item" data-idx="' + i + '">' +
-      '<div class="donut-legend-dot" style="background: ' + donutColors[i] + ';"></div>' +
-      '<div class="donut-legend-label">' + d.bucket + '</div>' +
-      '<div class="donut-legend-value">' + d.count + '</div>' +
-      '<div class="donut-legend-pct">' + pct + '%</div>' +
-    '</div>';
+  // Center text plugin
+  var centerTextPlugin = {
+    id: 'centerText_' + containerId,
+    afterDraw: function(chart) {
+      var w = chart.width, h = chart.height, c = chart.ctx;
+      c.save();
+      var fontSize = Math.min(w, h) * 0.1;
+      c.font = '700 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      c.fillStyle = resolveColor('var(--color-text)');
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(total, w / 2, h / 2 - fontSize * 0.3);
+      var subSize = fontSize * 0.45;
+      c.font = '400 ' + subSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      c.fillStyle = resolveColor('var(--color-text-muted)');
+      c.fillText('clock-ins', w / 2, h / 2 + fontSize * 0.5);
+      c.restore();
+    }
+  };
+
+  _chartInstances[containerId] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: filtered.map(function(d) { return d.bucket; }),
+      datasets: [{
+        data: filtered.map(function(d) { return d.count; }),
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: resolveColor('var(--color-surface)'),
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              var pct = total > 0 ? Math.round(context.parsed / total * 100) : 0;
+              return context.label + ': ' + context.parsed + ' clock-ins (' + pct + '% of total)';
+            }
+          }
+        }
+      }
+    },
+    plugins: [centerTextPlugin]
   });
-
-  // Donut data comes from server analytics aggregation — safe for innerHTML
-  var donutId = 'att-donut-svg-' + containerId;
-  var legendId = 'att-donut-legend-' + containerId;
-  container.innerHTML = '<div class="donut-wrap">' +
-    '<div class="donut-svg-wrap" id="' + donutId + '">' +
-      '<svg viewBox="0 0 160 160">' + circles + '</svg>' +
-      '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">' +
-        '<div style="font-size:18px;font-weight:700;color:var(--color-text);line-height:1.1;">' + total + '</div>' +
-        '<div style="font-size:10px;color:var(--color-text-muted);">clock-ins</div>' +
-      '</div>' +
-    '</div>' +
-    '<div class="donut-legend" id="' + legendId + '">' + legendHTML + '</div>' +
-  '</div>';
-
-  // Post-render: tooltips + cross-highlight
-  var donutSvg = document.querySelector('#' + donutId + ' svg');
-  var donutLegend = document.getElementById(legendId);
-  if (donutSvg && donutLegend) {
-    var segs = donutSvg.querySelectorAll('.donut-seg');
-    var legendItems = donutLegend.querySelectorAll('.donut-legend-item');
-
-    var highlight = function(idx, e) {
-      var d = distribution[idx];
-      if (!d) return;
-      var pct = total > 0 ? Math.round(d.count / total * 100) : 0;
-      showChartTooltip(e, d.bucket + ': ' + d.count + ' clock-ins (' + pct + '% of total)');
-      segs.forEach(function(s, i) { s.style.opacity = i === idx ? '1' : '0.4'; });
-      legendItems.forEach(function(l, i) { l.style.opacity = i === idx ? '1' : '0.5'; });
-    };
-    var unhighlight = function() {
-      hideChartTooltip();
-      segs.forEach(function(s) { s.style.opacity = '1'; });
-      legendItems.forEach(function(l) { l.style.opacity = '1'; });
-    };
-
-    segs.forEach(function(seg) {
-      var idx = parseInt(seg.dataset.idx);
-      seg.addEventListener('mouseenter', function(e) { highlight(idx, e); });
-      seg.addEventListener('mousemove', function(e) { positionChartTooltip(e, getChartTooltip()); });
-      seg.addEventListener('mouseleave', unhighlight);
-    });
-    legendItems.forEach(function(item) {
-      var idx = parseInt(item.dataset.idx);
-      item.addEventListener('mouseenter', function(e) { highlight(idx, e); });
-      item.addEventListener('mousemove', function(e) { positionChartTooltip(e, getChartTooltip()); });
-      item.addEventListener('mouseleave', unhighlight);
-    });
-  }
 }
 
 async function renderTardinessDOW(containerId, byDayOfWeek) {
@@ -4057,8 +4002,6 @@ async function renderTardinessDOW(containerId, byDayOfWeek) {
   }
 
   var dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  var chartId = 'tardiness-dow-col-' + containerId;
-  container.innerHTML = '<div id="' + chartId + '"></div>';
 
   var opsConfig2 = typeof getOpsConfig === 'function' ? await getOpsConfig() : null;
   var opDays2 = opsConfig2 && opsConfig2.operating_days
@@ -4069,7 +4012,7 @@ async function renderTardinessDOW(containerId, byDayOfWeek) {
     var found = byDayOfWeek.find(function(r) { return r.dayOfWeek === pgDow; });
     return { label: dayLabels[pgDow], count: found ? found.tardyCount : 0 };
   });
-  renderColumnChart(chartId, tardyDowData, { color: 'var(--status-on-the-way)', unit: 'tardy clock-ins' });
+  renderColumnChart(containerId, tardyDowData, { color: 'var(--status-on-the-way)', unit: 'tardy clock-ins' });
 }
 
 function renderTardinessTrend(containerId, dailyTrend) {
@@ -4081,16 +4024,13 @@ function renderTardinessTrend(containerId, dailyTrend) {
     return;
   }
 
-  var chartId = 'tardiness-area-' + containerId;
-  container.innerHTML = '<div id="' + chartId + '" class="area-chart-wrap"></div>';
-
   var trendData = dailyTrend.map(function(d) {
     return {
       label: new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       value: d.tardyCount, raw: d
     };
   });
-  renderLineChart(chartId, trendData, {
+  renderLineChart(containerId, trendData, {
     color: 'var(--status-on-the-way)', fillOpacity: 0.12, unit: 'tardy',
     tooltipFn: function(raw) {
       var dateStr = new Date(raw.date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
@@ -4377,14 +4317,13 @@ function updateReportPreview(summaryData) {
 // ── New Chart Rendering Functions ──
 
 function renderRideVolumeChart(data) {
-  var container = document.getElementById('chart-ride-volume');
+  var containerId = 'chart-ride-volume';
+  var container = document.getElementById(containerId);
   if (!container) return;
   if (!data.data || !data.data.length) {
     container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-area-line"></i><div class="ro-empty__title">No ride data</div><div class="ro-empty__message">No rides found in this period.</div></div>';
     return;
   }
-  var chartId = 'ride-volume-area-chart';
-  container.innerHTML = '<div id="' + chartId + '" class="area-chart-wrap"></div>';
   var lineData = data.data.map(function(r) {
     return {
       label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -4392,7 +4331,7 @@ function renderRideVolumeChart(data) {
       raw: r
     };
   });
-  renderLineChart(chartId, lineData, {
+  renderLineChart(containerId, lineData, {
     unit: 'rides',
     color: getCurrentCampusPalette()[0],
     tooltipFn: function(raw) {
@@ -4404,6 +4343,8 @@ function renderRideVolumeChart(data) {
 function renderDonutChart(containerId, distribution) {
   var container = document.getElementById(containerId);
   if (!container) return;
+  destroyChart(containerId);
+
   var items = [
     { label: 'Completed', value: distribution.completed || 0, color: 'var(--status-completed)' },
     { label: 'No-Shows', value: distribution.noShows || 0, color: 'var(--status-no-show)' },
@@ -4413,64 +4354,71 @@ function renderDonutChart(containerId, distribution) {
 
   var total = items.reduce(function(s, i) { return s + i.value; }, 0);
   if (total === 0) {
+    // Empty state — static developer-defined content, safe for innerHTML
     container.innerHTML = '<div class="ro-empty"><i class="ti ti-chart-donut-3"></i><div class="ro-empty__title">No outcomes</div><div class="ro-empty__message">No terminal rides in this period.</div></div>';
     return;
   }
 
-  var _wSize = getWidgetSize(containerId);
-  var _compact = _wSize === 'xs';
-  var _hideLegend = _wSize === 'xs' || _wSize === 'sm';
-  var W = _compact ? 260 : 300, H = 260;
-  var cx = _compact ? 130 : 130, cy = 130, r = 95, strokeW = 28;
-  var circumference = 2 * Math.PI * r;
-  var offset = 0;
+  // Build canvas container via DOM API
+  var wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:relative;width:100%;height:100%;';
+  var canvas = document.createElement('canvas');
+  canvas.id = containerId + '-canvas';
+  wrapper.appendChild(canvas);
+  container.textContent = '';
+  container.appendChild(wrapper);
 
-  var arcs = '';
-  items.forEach(function(item, idx) {
-    var pct = item.value / total;
-    var dashLen = pct * circumference;
-    arcs += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + item.color + '" stroke-width="' + strokeW + '" stroke-dasharray="' + dashLen + ' ' + (circumference - dashLen) + '" stroke-dashoffset="' + (-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')" class="donut-seg" data-idx="' + idx + '" />';
-    offset += dashLen;
-  });
+  var colors = items.map(function(i) { return resolveColor(i.color); });
 
-  var legendHTML = '';
-  if (!_hideLegend) {
-    legendHTML = '<div class="donut-legend" style="display:flex;flex-direction:column;gap:6px;">' +
-      items.map(function(i) {
-        var pct = (i.value / total * 100).toFixed(1);
-        return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;"><span style="width:10px;height:10px;border-radius:2px;background:' + i.color + ';flex-shrink:0;"></span>' + i.label + ': ' + i.value + ' (' + pct + '%)</div>';
-      }).join('') +
-    '</div>';
-  }
+  // Center text plugin (inline, per-chart)
+  var centerTextPlugin = {
+    id: 'centerText_' + containerId,
+    afterDraw: function(chart) {
+      var w = chart.width, h = chart.height, c = chart.ctx;
+      c.save();
+      var fontSize = Math.min(w, h) * 0.12;
+      c.font = '700 ' + fontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      c.fillStyle = resolveColor('var(--color-text)');
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(total, w / 2, h / 2 - fontSize * 0.3);
+      var subSize = fontSize * 0.45;
+      c.font = '400 ' + subSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      c.fillStyle = resolveColor('var(--color-text-muted)');
+      c.fillText('total rides', w / 2, h / 2 + fontSize * 0.5);
+      c.restore();
+    }
+  };
 
-  container.innerHTML =
-    '<div class="donut-wrap">' +
-      '<div class="donut-svg-wrap">' +
-        '<svg viewBox="0 0 ' + W + ' ' + H + '">' +
-          arcs +
-          '<text x="' + cx + '" y="' + (cy - 8) + '" text-anchor="middle" style="font-size:28px;font-weight:700;fill:var(--color-text);pointer-events:none;">' + total + '</text>' +
-          '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" style="font-size:12px;fill:var(--color-text-muted);pointer-events:none;">total rides</text>' +
-        '</svg>' +
-      '</div>' +
-      legendHTML +
-    '</div>';
-
-  // Post-render: add hover tooltips to donut segments
-  var segs = container.querySelectorAll('.donut-seg');
-  segs.forEach(function(seg) {
-    var idx = parseInt(seg.dataset.idx);
-    var item = items[idx];
-    if (!item) return;
-    var pct = (item.value / total * 100).toFixed(1);
-    seg.addEventListener('mouseenter', function(e) {
-      showChartTooltip(e, item.label + ': ' + item.value + ' rides (' + pct + '%)');
-      segs.forEach(function(s, i) { s.style.opacity = i === idx ? '1' : '0.4'; });
-    });
-    seg.addEventListener('mousemove', function(e) { positionChartTooltip(e, getChartTooltip()); });
-    seg.addEventListener('mouseleave', function() {
-      hideChartTooltip();
-      segs.forEach(function(s) { s.style.opacity = '1'; });
-    });
+  _chartInstances[containerId] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: items.map(function(i) { return i.label; }),
+      datasets: [{
+        data: items.map(function(i) { return i.value; }),
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: resolveColor('var(--color-surface)'),
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              var pct = (context.parsed / total * 100).toFixed(1);
+              return context.label + ': ' + context.parsed + ' rides (' + pct + '%)';
+            }
+          }
+        }
+      }
+    },
+    plugins: [centerTextPlugin]
   });
 }
 

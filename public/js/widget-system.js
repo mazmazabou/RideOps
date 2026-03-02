@@ -480,6 +480,12 @@ function removeWidget(tabId, widgetId) {
   });
 
   if (el) {
+    // Destroy any Chart.js instances in this widget before removing
+    if (typeof destroyChart === 'function') {
+      var overrides = inst.config.containerOverrides || {};
+      var cid = _resolveContainerId(widgetId, overrides);
+      if (cid) destroyChart(cid);
+    }
     inst.grid.removeWidget(el);
   }
 

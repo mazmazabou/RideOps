@@ -249,7 +249,7 @@ Analytics dashboard uses `#widget-grid` container (not a KPI grid). Date filters
 - **Chart Colors:** All charts use `getCampusPalette()` from `campus-themes.js` for campus-aware theming
 - **Sortable Tables:** Top Routes and Driver Leaderboard tables support click-to-sort on column headers
 - **Calendar View Filters:** Calendar (FullCalendar) respects the same status/date/text filter pills as the table view via `renderRideViews()` helper
-- **Chart Responsiveness:** All charts are SVG-based (not Chart.js). SVGs use `width: 100%; preserveAspectRatio="xMidYMid meet"`. On `resizestop`, if the widget's logical size crosses a threshold, the registered loader re-renders the chart content (e.g., hiding legends at xs, adjusting label density).
+- **Chart.js v4 (Canvas):** Donut, bar, and line/area charts use Chart.js v4 (`<canvas>` via CDN). `responsive: true` + `maintainAspectRatio: false` fills widget cards automatically. Chart instances tracked in `_chartInstances` registry — `destroyChart(containerId)` called before re-render. CSS variables resolved to hex via `resolveColor()` for canvas rendering. Center text on donuts via inline `afterDraw` plugins. HTML-based charts (hotspot bars, stacked bars, tables, heatmaps, KPI cards) remain unchanged.
 
 ## Database Schema
 
@@ -469,6 +469,7 @@ The frontend uses a Tabler-based design system.
 - Tabler Icons: `https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css`
 - FullCalendar: `https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js` (office view only)
 - GridStack.js: `https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack-all.js` + `gridstack.min.css` (analytics widget grid layout, drag-and-drop, resize)
+- Chart.js v4: `https://cdn.jsdelivr.net/npm/chart.js@4` (donut, bar, line/area charts — canvas-based, auto-resize)
 - DiceBear API: `https://api.dicebear.com/9.x` — client-side avatar generation, no API key needed
 
 ### Color System (Three-Layer Theming)

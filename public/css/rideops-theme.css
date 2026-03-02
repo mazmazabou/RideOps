@@ -385,25 +385,11 @@ input[type="checkbox"]:disabled {
 .maint-timeline__notes { font-size: 13px; margin-top: 4px; }
 .maint-timeline__meta { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
 
-/* ── Section 27: Bar chart ── */
-.bar-chart { display: flex; flex-direction: column; gap: 6px; }
-.bar-chart-row { display: flex; align-items: center; gap: 8px; }
-.bar-chart-label { width: 60px; font-size: 11px; color: var(--color-text-secondary); text-align: right; flex-shrink: 0; }
-.bar-chart-track { flex: 1; height: 20px; background: var(--color-border-light); border-radius: var(--radius-sm); overflow: hidden; }
-.bar-chart-fill { height: 100%; background: var(--color-primary); border-radius: var(--radius-sm); transition: width 0.3s ease; }
-.bar-chart-fill.gold { background: var(--color-accent-dark); }
-.bar-chart-fill.green { background: var(--status-completed); }
-.bar-chart-fill.red { background: var(--status-no-show); }
-.bar-chart-fill.orange { background: var(--status-on-the-way); }
-.bar-chart-count { width: 40px; font-size: 11px; font-weight: 700; color: var(--color-text); }
-.bar-chart-row:hover { background: var(--color-surface-hover); border-radius: var(--radius-sm); cursor: default; }
-.chart-ylabel { writing-mode: vertical-lr; transform: rotate(180deg); font-size: 11px; color: var(--color-text-muted); padding-right: 8px; display: flex; align-items: center; }
-
-/* ── Section 28: Hotspot list ── */
+/* ── Section 27: Hotspot list ── */
 .hotspot-list { display: flex; flex-direction: column; gap: 6px; }
 .hotspot-item { display: flex; align-items: center; gap: 8px; }
 .hotspot-rank { width: 28px; font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-align: center; flex-shrink: 0; }
-.hotspot-name { width: 200px; font-size: 12px; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.hotspot-name { min-width: 80px; max-width: 200px; flex: 0 1 200px; font-size: 12px; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hotspot-bar { flex: 1; height: 16px; background: var(--color-border-light); border-radius: var(--radius-sm); overflow: hidden; }
 .hotspot-bar-fill { height: 100%; background: var(--color-primary); border-radius: var(--radius-sm); transition: width 0.3s ease; }
 .hotspot-bar-fill.darkgold { background: var(--color-accent-dark); }
@@ -980,181 +966,18 @@ input[type="checkbox"]:disabled {
   .tardiness-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Donut Chart (CSS conic-gradient) ── */
-.donut-wrap {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 8px 0;
-}
-@media (max-width: 560px) {
-  .donut-wrap { flex-direction: column; align-items: flex-start; }
-}
-.donut-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-.donut-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  cursor: default;
-  transition: background 0.15s;
-}
-.donut-legend-item:hover {
-  background: var(--color-surface-hover);
-}
-.donut-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.donut-legend-label {
-  font-size: 12px;
-  color: var(--color-text);
-  flex: 1;
-}
-.donut-legend-value {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.donut-legend-pct {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  width: 36px;
-  text-align: right;
-}
-
-/* ── SVG Area Chart ── */
-.area-chart-wrap {
-  position: relative;
-  width: 100%;
-  overflow: visible;
-}
-.area-chart-wrap svg {
-  display: block;
-  width: 100%;
-  overflow: visible;
-}
-.area-chart-wrap .area-fill {
-  transition: opacity 0.15s;
-}
-.area-chart-wrap .area-line {
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.area-chart-wrap .area-dot {
-  transition: r 0.15s, opacity 0.15s;
-  cursor: default;
-}
-.area-chart-wrap .grid-line {
-  stroke: var(--color-border-light);
-  stroke-width: 1;
-}
-.area-chart-wrap .axis-label {
-  font-size: 10px;
-  fill: var(--color-text-muted);
-  font-family: inherit;
-}
-.area-chart-wrap .crosshair {
-  stroke: var(--color-text-muted);
-  stroke-width: 1;
-  stroke-dasharray: 3,3;
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-.area-chart-wrap:hover .crosshair {
-  opacity: 1;
-}
-
-/* ── Column Chart ── */
-.col-chart-wrap { position: relative; width: 100%; }
-.col-chart-wrap svg { display: block; width: 100%; }
-.col-bar { transition: opacity 0.15s; cursor: default; }
-.col-bar:hover { opacity: 0.8; }
-
-/* ── Chart scaling inside GridStack widget cards ──
-   Charts fill their widget body and never overflow/scroll.
-   Uses :has() to target only bodies containing charts or donuts. */
-.grid-stack-item-content .widget-card__body:has(.col-chart-wrap),
-.grid-stack-item-content .widget-card__body:has(.area-chart-wrap),
-.grid-stack-item-content .widget-card__body:has(.donut-wrap) {
+/* ── Chart.js Canvas Containers ──
+   Chart.js renders to <canvas> inside widget card bodies.
+   Canvas auto-resizes via Chart.js responsive: true + maintainAspectRatio: false.
+   The widget-card__body just needs to be a flex container so the canvas wrapper fills it. */
+.grid-stack-item-content .widget-card__body:has(canvas) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.widget-card__body:has(.col-chart-wrap) > *,
-.widget-card__body:has(.area-chart-wrap) > * {
+.grid-stack-item-content .widget-card__body:has(canvas) > * {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.grid-stack-item-content .col-chart-wrap,
-.grid-stack-item-content .area-chart-wrap {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-}
-.grid-stack-item-content .col-chart-wrap svg,
-.grid-stack-item-content .area-chart-wrap svg {
-  width: 100%;
-  max-height: 100%;
-}
-/* Cap column chart height for md/lg logical sizes */
-.grid-stack-item[data-logical-size="md"] .col-chart-wrap svg {
-  max-height: 240px;
-}
-.grid-stack-item[data-logical-size="lg"] .col-chart-wrap svg,
-.grid-stack-item[data-logical-size="lg"] .area-chart-wrap svg {
-  max-height: 320px;
-}
-/* Donut charts inside widget cards: flex-fill and responsive sizing */
-.grid-stack-item-content .donut-wrap {
-  flex: 1;
-  min-height: 0;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 0;
-}
-.grid-stack-item-content .donut-svg-wrap {
-  width: auto;
-  height: auto;
-  max-width: 180px;
-  max-height: 180px;
-  aspect-ratio: 1;
-}
-.grid-stack-item-content .donut-svg-wrap svg {
-  width: 100%;
-  height: 100%;
-}
-/* xs donut: fill card body with large centered circle */
-.grid-stack-item[data-logical-size="xs"] .donut-svg-wrap {
-  max-width: unset;
-  max-height: unset;
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-}
-.grid-stack-item[data-logical-size="sm"] .donut-svg-wrap {
-  max-width: unset;
-  max-height: unset;
-  flex: 1;
-  min-height: 0;
-}
-.grid-stack-item[data-logical-size="md"] .donut-svg-wrap,
-.grid-stack-item[data-logical-size="lg"] .donut-svg-wrap {
-  max-width: 200px;
-  max-height: 200px;
 }
 
 /* ── Stacked Bar ── */
@@ -1169,11 +992,6 @@ input[type="checkbox"]:disabled {
 .stacked-bar__legend-value { font-weight: 600; }
 .stacked-bar__legend-pct { font-size: 11px; color: var(--color-text-muted); }
 
-/* ── SVG Donut ── */
-.donut-svg-wrap { position: relative; width: 160px; height: 160px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.donut-svg-wrap svg { width: 100%; height: 100%; }
-.donut-seg { transition: opacity 0.15s; cursor: default; }
-.donut-seg:hover { opacity: 0.7; }
 
 /* ── Delta Badges ── */
 .delta { font-size: 12px; font-weight: 600; margin-left: 6px; }
@@ -1293,11 +1111,6 @@ input[type="checkbox"]:disabled {
 .grid-stack-item[data-logical-size="xs"] .widget-card__body { padding: 6px 10px 10px; overflow-y: auto; flex: 1; min-height: 0; }
 .grid-stack-item[data-logical-size="xs"] .widget-card__title { font-size: 11px; }
 .grid-stack-item[data-logical-size="xs"] .widget-card__title i { font-size: 12px; }
-/* xs donut: hide legend, expand SVG to fill card body */
-.grid-stack-item[data-logical-size="xs"] .donut-wrap { flex-direction: column; align-items: center; gap: 0; justify-content: center; }
-.grid-stack-item[data-logical-size="xs"] .donut-legend,
-.grid-stack-item[data-logical-size="sm"] .donut-legend { display: none; }
-.grid-stack-item[data-logical-size="xs"] .donut-svg-wrap { display: flex; justify-content: center; }
 
 /* sm (Small): slightly compact padding */
 .grid-stack-item[data-logical-size="sm"] .widget-card__header { padding: 8px 12px; font-size: 12px; flex-shrink: 0; }
