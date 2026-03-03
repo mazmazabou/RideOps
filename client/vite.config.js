@@ -23,6 +23,7 @@ export default defineConfig({
       input: {
         rider: resolve(__dirname, 'index.html'),
         driver: resolve(__dirname, 'driver.html'),
+        office: resolve(__dirname, 'office.html'),
       },
     },
   },

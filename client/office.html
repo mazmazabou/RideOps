@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Console</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack.min.css">
+  <link rel="stylesheet" href="/css/rideops-theme.css">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js"></script>
+  <script src="/campus-themes.js"></script>
+  <script>
+    (function() {
+      try {
+        function hexToRgb(hex) {
+          hex = hex.replace('#', '');
+          if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+          var n = parseInt(hex, 16);
+          return ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255);
+        }
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var slug = ['usc','stanford','ucla','uci'].indexOf(parts[0]) !== -1 ? parts[0] : null;
+        window.__RIDEOPS_CAMPUS_SLUG__ = slug;
+        if (slug) {
+          var titles = { usc: 'USC DART', stanford: 'Stanford ATS', ucla: 'UCLA BruinAccess', uci: 'UCI AnteaterExpress' };
+          if (titles[slug]) document.title = titles[slug];
+        }
+        if (slug && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[slug]) {
+          var ct = CAMPUS_THEMES[slug];
+          var root = document.documentElement;
+          root.style.setProperty('--color-primary', ct.primaryColor);
+          root.style.setProperty('--color-primary-rgb', hexToRgb(ct.primaryColor));
+          if (ct.headerBg) root.style.setProperty('--color-header-bg', ct.headerBg);
+          if (ct.sidebarBg) root.style.setProperty('--color-sidebar-bg', ct.sidebarBg);
+          if (ct.sidebarText) root.style.setProperty('--color-sidebar-text', ct.sidebarText);
+          if (ct.sidebarActiveBg) root.style.setProperty('--color-sidebar-active-bg', ct.sidebarActiveBg);
+          if (ct.sidebarHover) root.style.setProperty('--color-sidebar-hover', ct.sidebarHover);
+          if (ct.sidebarBorder) root.style.setProperty('--color-sidebar-border', ct.sidebarBorder);
+          if (ct.primaryColor) root.style.setProperty('--color-sidebar-active', ct.primaryColor);
+          if (ct.secondaryColor) root.style.setProperty('--color-secondary', ct.secondaryColor);
+          if (ct.secondaryColor) root.style.setProperty('--color-accent', ct.secondaryColor);
+        }
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdn.jsdelivr.net/npm/gridstack@12/dist/gridstack-all.js"></script>
+  <script src="/demo-config.js"></script>
+  <script type="module" src="/src/office/main.jsx"></script>
+</body>
+</html>

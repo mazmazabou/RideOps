@@ -13,6 +13,11 @@ const driverBuildPath = path.join(__dirname, '..', 'client', 'dist', 'driver.htm
 const driverLegacyPath = path.join(__dirname, '..', 'public', 'driver-legacy.html');
 const driverHtmlPath = fs.existsSync(driverBuildPath) ? driverBuildPath : driverLegacyPath;
 
+// Resolve office HTML path: prefer React build, fallback to vanilla
+const officeBuildPath = path.join(__dirname, '..', 'client', 'dist', 'office.html');
+const officeLegacyPath = path.join(__dirname, '..', 'public', 'index-legacy.html');
+const officeHtmlPath = fs.existsSync(officeBuildPath) ? officeBuildPath : officeLegacyPath;
+
 module.exports = function(app, ctx) {
   const {
     requireAuth,
@@ -37,7 +42,7 @@ module.exports = function(app, ctx) {
       if (req.session.userId) {
         if (req.session.role === 'driver') return res.redirect('/' + slug + '/driver');
         if (req.session.role === 'rider') return res.redirect('/' + slug + '/rider');
-        return res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+        return res.sendFile(officeHtmlPath);
       }
       res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
     });
@@ -80,7 +85,7 @@ module.exports = function(app, ctx) {
 
   app.get('/', requireAuth, (req, res) => {
     if (req.session.role === 'office') {
-      res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+      res.sendFile(officeHtmlPath);
     } else if (req.session.role === 'driver') {
       res.redirect('/driver');
     } else {
@@ -89,7 +94,7 @@ module.exports = function(app, ctx) {
   });
 
   app.get('/office', requireOffice, (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    res.sendFile(officeHtmlPath);
   });
 
   app.get('/driver', requireStaff, (req, res) => {
