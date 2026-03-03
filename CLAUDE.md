@@ -42,8 +42,8 @@ Defines complete per-campus overrides merged into `/api/tenant-config` response:
 - **Database:** PostgreSQL (via `pg` pool with connection pooling)
 - **Sessions:** `connect-pg-simple` for PostgreSQL-backed session storage (auto-creates `session` table)
 - **Rate Limiting:** `express-rate-limit` on auth endpoints (login 10/15min, signup 5/15min)
-- **Frontend (Rider + Driver):** React 19 + Vite multi-page build, built to `client/dist/`, served via `/app/` static route (backward-compat `/rider-app/` alias). Source in `client/src/rider/` and `client/src/driver/`
-- **Frontend (Office/Driver):** Vanilla HTML/CSS/JS. Multi-page: index.html (office/admin), driver.html, login.html, signup.html
+- **Frontend (Rider + Driver + Office):** React 19 + Vite multi-page build, built to `client/dist/`, served via `/app/` static route (backward-compat `/rider-app/` alias). Source in `client/src/rider/`, `client/src/driver/`, and `client/src/office/`
+- **Frontend (Office — partial migration):** Office shell (layout, sidebar, header) + Map, Profile, Settings panels migrated to React (Phase 3a). Dispatch, Rides, Staff, Fleet, Analytics panels are placeholders pending Phases 3b–3e. Legacy vanilla JS fallback at `public/index-legacy.html`
 - **Auth:** Session-based with async bcrypt password hashing. Default password: `demo123`
 - **Email:** Nodemailer with optional SMTP (falls back to console logging)
 - **Reports:** ExcelJS for multi-sheet .xlsx workbook generation (server-side, npm package)
@@ -54,7 +54,7 @@ Defines complete per-campus overrides merged into `/api/tenant-config` response:
 # Start server (port 3000 by default)
 node server.js
 
-# Build React rider app (required before serving rider page)
+# Build React app (rider + driver + office — required before serving)
 npm run build
 
 # Development: React rider with hot reload (port 5173, proxies API to :3000)
@@ -134,6 +134,9 @@ Default login credentials (password: `demo123`):
 - `client/` — React rider app (Vite + React 19). Source in `client/src/`, builds to `client/dist/`
 - `client/src/rider/App.jsx` — Rider root component: auth/tenant/toast providers, tab state, auto-switch logic
 - `client/src/driver/App.jsx` — Driver root component: clock in/out, ride lifecycle, grace timer, vehicle selection
+- `client/src/office/App.jsx` — Office root component: sidebar nav, panel switching, notification drawer, rules modal
+- `client/src/office/components/layout/` — OfficeLayout, Sidebar, OfficeHeader, MobileWarning
+- `client/src/office/components/settings/` — SettingsPanel + 6 sub-panels (Users, BusinessRules, Notifications, Guidelines, Data, AcademicTerms) + UserDrawer
 - `client/src/api.js` — Shared fetch wrappers for rider + driver API endpoints
 - `client/src/components/booking/` — BookPanel, StepWhere, StepWhen, StepConfirm, DateChips, StepIndicator
 - `client/src/components/rides/` — MyRidesPanel, HeroCard, GraceTimer
@@ -154,7 +157,7 @@ Default login credentials (password: `demo123`):
 - ~~`public/driver.html`~~ — **Migrated to React** (see `client/src/driver/`). Legacy version at `public/driver-legacy.html`
 - `client/src/driver/` — React driver app (Vite + React 19). Components, hooks, driver.css. Builds to `client/dist/driver.html`
 - ~~`public/rider.html`~~ — **Migrated to React** (see `client/`). Legacy version at `public/rider-legacy.html`
-- `public/index.html` — Office/admin console (dispatch, rides, staff, fleet, analytics, settings, users)
+- `public/index-legacy.html` — Legacy vanilla JS office/admin console (fallback when React build not present)
 - `tests/e2e.spec.js` — Comprehensive E2E/API test suite (~97 tests): auth, rides, lifecycle, recurring, vehicles, analytics, settings, UI panels, clock events, authorization
 - `tests/uat.spec.js` — User acceptance tests (4 tests): office login, rider booking flow, office approval, driver clock-in
 - `public/login.html` / `signup.html` — Auth pages with org-scoped URL support. `/login` shows campus selector (no login form); `/:slug/login` shows campus-branded login form
@@ -223,7 +226,15 @@ Default login credentials (password: `demo123`):
   - Driver console: data refresh every 3s, grace timers update every 1s
   - Rider console: rides refresh every 5s
 
-### Office Console Panel IDs (index.html)
+### Office Console (React — client/src/office/)
+- **Built with React 19 + Vite**, served from `client/dist/office.html` via `/app/` static route. Legacy fallback at `public/index-legacy.html`
+- Sidebar navigation with 8 nav items: dispatch, rides, staff, fleet, analytics, map, settings, profile
+- **Migrated panels (Phase 3a):** Map, Profile, Settings (6 sub-tabs: Users, Business Rules, Notifications, Guidelines, Data, Academic Terms)
+- **Placeholder panels (pending):** Dispatch (3d), Rides (3c), Staff & Shifts (3b), Fleet (3b), Analytics (3e)
+- **Contexts:** AuthProvider(expectedRole="office"), TenantProvider(roleLabel="Office")
+- Panel mounting: all panels mount simultaneously, toggle with `.tab-panel.active` CSS class
+
+### Office Console Panel IDs
 Default active tab is `dispatch-panel`. Navigation buttons use `data-target` attribute.
 | Panel ID | Purpose |
 |----------|---------|
@@ -437,7 +448,7 @@ pending, approved, scheduled, driver_on_the_way, driver_arrived_grace, completed
 
 ## What NOT to Do
 
-- **React migration in progress:** Rider and driver pages are React (`client/src/rider/`, `client/src/driver/`). Office page remains vanilla JS — don't add React to it yet
+- **React migration in progress:** Rider, driver, and office shell are React (`client/src/rider/`, `client/src/driver/`, `client/src/office/`). Office dispatch, rides, staff, fleet, and analytics panels are placeholders — migrate in Phases 3b–3e
 - Don't replace Express with another framework
 - Don't change ride status names (referenced across frontend + backend)
 - Don't use ES module syntax (`import/export`) in backend — project uses CommonJS. `client/` uses ES modules (Vite)
