@@ -42,7 +42,7 @@ export default function OfficeLayout({
             <RidesPanel />
           </section>
           <section id="staff-panel" className={`tab-panel${activePanel === 'staff-panel' ? ' active' : ''}`}>
-            <StaffPanel />
+            <StaffPanel isVisible={activePanel === 'staff-panel'} />
           </section>
           <section id="fleet-panel" className={`tab-panel${activePanel === 'fleet-panel' ? ' active' : ''}`}>
             <FleetPanel />

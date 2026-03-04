@@ -4,11 +4,19 @@ import { fetchEmployees, fetchTodayDriverStatus, fetchOpsConfig } from '../../..
 import EmployeeBar from './EmployeeBar';
 import ShiftCalendar from './ShiftCalendar';
 
-export default function StaffPanel() {
+export default function StaffPanel({ isVisible }) {
   const [employees, setEmployees] = useState([]);
   const [todayStatus, setTodayStatus] = useState([]);
   const [opsConfig, setOpsConfig] = useState(null);
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
   const loadedOnce = useRef(false);
+
+  // Defer FullCalendar mount until panel is visible (prevents garbled flash)
+  useEffect(() => {
+    if (isVisible && !hasBeenVisible) {
+      requestAnimationFrame(() => setHasBeenVisible(true));
+    }
+  }, [isVisible, hasBeenVisible]);
 
   // Load opsConfig once
   useEffect(() => {
@@ -69,15 +77,13 @@ export default function StaffPanel() {
             <i className="ti ti-calendar" /> Shift Schedule
           </h3>
         </div>
-        {employees.length > 0 ? (
+        {employees.length > 0 && hasBeenVisible ? (
           <ShiftCalendar
             employees={employees}
             opsConfig={opsConfig}
           />
         ) : (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13 }}>
-            Loading drivers...
-          </div>
+          <div className="calendar-skeleton" style={{ height: 500, borderRadius: 8 }} />
         )}
       </div>
     </div>
