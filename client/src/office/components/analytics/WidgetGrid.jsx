@@ -1,201 +1,252 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useCallback, useMemo, useRef } from 'react';
+import ReactGridLayout, { useContainerWidth, verticalCompactor } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import { WIDGET_REGISTRY, getLogicalSize } from './constants';
 
-function buildWidgetHeader(def) {
-  const headerEl = document.createElement('div');
-  headerEl.className = 'widget-card__header';
+/**
+ * WidgetCard — a single widget rendered inside the grid.
+ * Must forwardRef and render {children} so react-grid-layout can inject resize handles.
+ */
+const WidgetCard = React.forwardRef(function WidgetCard(
+  { widgetId, widgetW, editMode, onRemove, widgetRenderer, style, className, children, ...rest },
+  ref
+) {
+  const def = WIDGET_REGISTRY[widgetId];
+  if (!def) return null;
 
-  const dragHandle = document.createElement('div');
-  dragHandle.className = 'widget-card__drag-handle';
-  const gripIcon = document.createElement('i');
-  gripIcon.className = 'ti ti-grip-vertical';
-  dragHandle.appendChild(gripIcon);
+  const logicalSize = getLogicalSize(widgetW);
+  const isKPI = def.isKPI === true;
 
-  const titleEl = document.createElement('h4');
-  titleEl.className = 'widget-card__title';
-  const titleIcon = document.createElement('i');
-  titleIcon.className = 'ti ' + def.icon;
-  titleEl.appendChild(titleIcon);
-  titleEl.appendChild(document.createTextNode(' ' + def.title));
+  if (isKPI) {
+    return (
+      <div
+        ref={ref}
+        style={style}
+        className={`widget-card widget-card--kpi ${editMode ? 'kpi-widget--draggable' : ''} ${className || ''}`}
+        data-logical-size={logicalSize}
+        data-widget-id={widgetId}
+        {...rest}
+      >
+        <div className="widget-card__body widget-card__body--kpi">
+          {widgetRenderer(widgetId)}
+        </div>
+        {editMode && (
+          <button
+            className="kpi-widget__remove"
+            onClick={(e) => { e.stopPropagation(); onRemove(widgetId); }}
+            title="Remove"
+          >
+            <i className="ti ti-x" />
+          </button>
+        )}
+        {children}
+      </div>
+    );
+  }
 
-  const actionsEl = document.createElement('div');
-  actionsEl.className = 'widget-card__actions';
-  const removeBtn = document.createElement('button');
-  removeBtn.className = 'widget-action widget-action--remove';
-  removeBtn.title = 'Remove';
-  const removeIcon = document.createElement('i');
-  removeIcon.className = 'ti ti-x';
-  removeBtn.appendChild(removeIcon);
-  actionsEl.appendChild(removeBtn);
+  // Non-KPI: existing rendering (unchanged)
+  return (
+    <div
+      ref={ref}
+      style={style}
+      className={`widget-card ${className || ''}`}
+      data-logical-size={logicalSize}
+      data-widget-id={widgetId}
+      {...rest}
+    >
+      <div className="widget-card__header">
+        <div className="widget-card__drag-handle">
+          <i className="ti ti-grip-vertical" />
+        </div>
+        <h4 className="widget-card__title">
+          <i className={`ti ${def.icon}`} /> {def.title}
+        </h4>
+        {editMode && (
+          <div className="widget-card__actions" style={{ display: 'flex' }}>
+            <button
+              className="widget-action widget-action--remove"
+              onClick={(e) => { e.stopPropagation(); onRemove(widgetId); }}
+              title="Remove"
+            >
+              <i className="ti ti-x" />
+            </button>
+          </div>
+        )}
+      </div>
+      <div className={`widget-card__body${def.containerClass ? ' ' + def.containerClass : ''}`}>
+        {widgetRenderer(widgetId)}
+      </div>
+      {children}
+    </div>
+  );
+});
 
-  headerEl.appendChild(dragHandle);
-  headerEl.appendChild(titleEl);
-  headerEl.appendChild(actionsEl);
-  return headerEl;
-}
-
+/**
+ * WidgetGrid — renders a react-grid-layout grid of analytics widgets.
+ *
+ * Props:
+ *   gridId           - DOM id for the container
+ *   layout           - Array<{id, x, y, w, h}> (our domain format)
+ *   editMode         - boolean, enables drag/resize
+ *   onLayoutChange   - (items: Array<{id, x, y, w, h}>) => void
+ *   onRemoveWidget   - (widgetId: string) => void
+ *   widgetRenderer   - (widgetId: string) => ReactNode
+ */
 export default function WidgetGrid({ gridId, layout, editMode, onLayoutChange, onRemoveWidget, widgetRenderer }) {
-  const gridElRef = useRef(null);
-  const gridInstanceRef = useRef(null);
-  const [portalTargets, setPortalTargets] = useState({});
+  const { width, containerRef, mounted } = useContainerWidth();
+  const scrollRef = useRef(null);
+  const interactingRef = useRef(false);
+  const pendingLayoutRef = useRef(null);
 
-  const saveCurrentLayout = useCallback(() => {
-    const grid = gridInstanceRef.current;
-    if (!grid) return;
-    const items = grid.save(false);
-    if (Array.isArray(items)) {
-      const mapped = items.map(item => ({ id: item.id, x: item.x, y: item.y, w: item.w, h: item.h }));
+  // Flush pending layout after resize/drag completes
+  const flushPendingLayout = useCallback(() => {
+    interactingRef.current = false;
+    if (pendingLayoutRef.current) {
+      onLayoutChange(pendingLayoutRef.current);
+      pendingLayoutRef.current = null;
+    }
+  }, [onLayoutChange]);
+
+  // Restore scroll after layout flush + React re-render settles
+  const restoreScroll = useCallback(() => {
+    const saved = scrollRef.current;
+    scrollRef.current = null;
+    if (saved != null) {
+      // Double-rAF waits for React commit + browser paint
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => window.scrollTo(0, saved));
+      });
+    }
+  }, []);
+
+  const handleResizeStart = useCallback(() => {
+    interactingRef.current = true;
+    scrollRef.current = window.scrollY;
+  }, []);
+  const handleResizeStop = useCallback(() => {
+    flushPendingLayout();
+    restoreScroll();
+  }, [flushPendingLayout, restoreScroll]);
+
+  const handleDragStart = useCallback(() => {
+    interactingRef.current = true;
+    scrollRef.current = window.scrollY;
+  }, []);
+  const handleDragStop = useCallback(() => {
+    flushPendingLayout();
+    restoreScroll();
+  }, [flushPendingLayout, restoreScroll]);
+
+  // Convert our domain layout (id) to RGL layout (i), adding constraints from registry
+  const rglLayout = useMemo(() => {
+    if (!layout || layout.length === 0) return [];
+    return layout.map(item => {
+      const def = WIDGET_REGISTRY[item.id];
+      return {
+        i: item.id,
+        x: item.x,
+        y: item.y,
+        w: item.w,
+        h: item.h,
+        minW: def?.minW,
+        maxW: def?.maxW,
+        minH: def?.minH,
+        maxH: def?.maxH,
+        static: def?.noResize || false,
+      };
+    });
+  }, [layout]);
+
+  // Build a width lookup for each widget so WidgetCard can derive logical size
+  const widthMap = useMemo(() => {
+    const map = {};
+    if (layout) {
+      layout.forEach(item => { map[item.id] = item.w; });
+    }
+    return map;
+  }, [layout]);
+
+  // Convert RGL layout back to our domain format
+  // During active resize/drag, stash the layout instead of updating state
+  // to prevent the controlled-component feedback loop from snapping back
+  const handleLayoutChange = useCallback((newLayout) => {
+    const mapped = newLayout.map(item => ({
+      id: item.i,
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+    }));
+    if (interactingRef.current) {
+      pendingLayoutRef.current = mapped;
+    } else {
       onLayoutChange(mapped);
     }
   }, [onLayoutChange]);
 
-  // Build grid when layout changes
-  useEffect(() => {
-    const gridEl = gridElRef.current;
-    if (!gridEl) return;
-    const GridStack = window.GridStack;
-    if (!GridStack) return;
-
-    // Destroy existing
-    if (gridInstanceRef.current) {
-      try { gridInstanceRef.current.destroy(false); } catch (e) { /* ignore */ }
-      gridInstanceRef.current = null;
-    }
-
-    gridEl.textContent = '';
-
-    if (!layout || layout.length === 0) {
-      setPortalTargets({});
-      return;
-    }
-
-    // Build DOM elements
-    const newTargets = {};
-    layout.forEach(w => {
-      const def = WIDGET_REGISTRY[w.id];
-      if (!def) return;
-
-      const itemEl = document.createElement('div');
-      itemEl.className = 'grid-stack-item';
-      itemEl.setAttribute('gs-id', w.id);
-      itemEl.setAttribute('gs-x', w.x);
-      itemEl.setAttribute('gs-y', w.y);
-      itemEl.setAttribute('gs-w', w.w);
-      itemEl.setAttribute('gs-h', w.h);
-      if (def.minW) itemEl.setAttribute('gs-min-w', def.minW);
-      if (def.maxW) itemEl.setAttribute('gs-max-w', def.maxW);
-      if (def.minH) itemEl.setAttribute('gs-min-h', def.minH);
-      if (def.maxH) itemEl.setAttribute('gs-max-h', def.maxH);
-      if (def.noResize) {
-        itemEl.setAttribute('gs-no-resize', 'true');
-        itemEl.setAttribute('gs-no-move', 'true');
-      }
-      itemEl.setAttribute('data-logical-size', getLogicalSize(w.w));
-
-      const contentEl = document.createElement('div');
-      contentEl.className = 'grid-stack-item-content';
-
-      contentEl.appendChild(buildWidgetHeader(def));
-
-      // Body — React will portal into this
-      const bodyEl = document.createElement('div');
-      bodyEl.className = 'widget-card__body' + (def.containerClass ? ' ' + def.containerClass : '');
-      bodyEl.id = 'widget-body-' + w.id;
-
-      contentEl.appendChild(bodyEl);
-      itemEl.appendChild(contentEl);
-      gridEl.appendChild(itemEl);
-
-      newTargets[w.id] = bodyEl;
-    });
-
-    // Init GridStack
-    const grid = GridStack.init({
-      column: 12,
-      cellHeight: 80,
-      margin: 8,
-      animate: true,
-      float: false,
-      staticGrid: !editMode,
-      disableResize: !editMode,
-      draggable: { handle: '.widget-card__drag-handle' },
-      columnOpts: {
-        breakpoints: [
-          { c: 12, w: 1200 },
-          { c: 8, w: 996 },
-          { c: 4, w: 768 },
-          { c: 1, w: 480 },
-        ],
-        layout: 'list',
-      },
-    }, gridEl);
-
-    gridInstanceRef.current = grid;
-
-    // Bind remove buttons
-    gridEl.querySelectorAll('.widget-action--remove').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const gsItem = btn.closest('.grid-stack-item');
-        if (gsItem && gsItem.gridstackNode) {
-          onRemoveWidget(gsItem.gridstackNode.id);
-        }
-      });
-    });
-
-    // Hook events
-    grid.on('resizestop', (event, el) => {
-      if (!el || !el.gridstackNode) return;
-      const newLogical = getLogicalSize(el.gridstackNode.w);
-      el.setAttribute('data-logical-size', newLogical);
-      saveCurrentLayout();
-    });
-
-    grid.on('change', () => {
-      gridEl.querySelectorAll('.grid-stack-item').forEach(el => {
-        if (el.gridstackNode) {
-          el.setAttribute('data-logical-size', getLogicalSize(el.gridstackNode.w));
-        }
-      });
-      saveCurrentLayout();
-    });
-
-    setPortalTargets(newTargets);
-
-    return () => {
-      if (gridInstanceRef.current) {
-        try { gridInstanceRef.current.destroy(false); } catch (e) { /* ignore */ }
-        gridInstanceRef.current = null;
-      }
-    };
-  }, [layout]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Toggle static mode when editMode changes
-  useEffect(() => {
-    const grid = gridInstanceRef.current;
-    if (!grid) return;
-    grid.setStatic(!editMode);
-    const gridEl = gridElRef.current;
-    if (gridEl) gridEl.classList.toggle('gs-editing', editMode);
-  }, [editMode]);
+  // Empty state
+  if (!layout || layout.length === 0) {
+    return (
+      <div ref={containerRef} id={gridId}>
+        <div
+          className="ro-empty"
+          style={{
+            padding: '64px 24px',
+            border: '2px dashed var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            textAlign: 'center',
+          }}
+        >
+          <i className="ti ti-layout-dashboard" />
+          <div className="ro-empty__title">No widgets on this tab</div>
+          <div className="ro-empty__message">Click &quot;Customize&quot; to add widgets.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <div ref={gridElRef} id={gridId} className="grid-stack">
-        {(!layout || layout.length === 0) && (
-          <div className="ro-empty" style={{ padding: '64px 24px', border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
-            <i className="ti ti-layout-dashboard"></i>
-            <div className="ro-empty__title">No widgets on this tab</div>
-            <div className="ro-empty__message">Click &quot;Customize&quot; to add widgets.</div>
-          </div>
-        )}
-      </div>
-      {Object.entries(portalTargets).map(([widgetId, targetEl]) =>
-        targetEl && createPortal(
-          widgetRenderer(widgetId),
-          targetEl
-        )
+    <div ref={containerRef} id={gridId} className={editMode ? 'widget-grid--editing' : ''}>
+      {mounted && (
+        <ReactGridLayout
+          width={width}
+          layout={rglLayout}
+          gridConfig={{
+            cols: 12,
+            rowHeight: 80,
+            margin: [8, 8],
+            containerPadding: [0, 0],
+          }}
+          dragConfig={{
+            enabled: editMode,
+            handle: '.widget-card__drag-handle, .kpi-widget--draggable',
+          }}
+          resizeConfig={{
+            enabled: editMode,
+            handles: ['se'],
+          }}
+          compactor={verticalCompactor}
+          onLayoutChange={handleLayoutChange}
+          onDragStart={handleDragStart}
+          onDragStop={handleDragStop}
+          onResizeStart={handleResizeStart}
+          onResizeStop={handleResizeStop}
+          autoSize={true}
+          className="widget-grid"
+        >
+          {rglLayout.map(item => (
+            <WidgetCard
+              key={item.i}
+              widgetId={item.i}
+              widgetW={widthMap[item.i] || item.w}
+              editMode={editMode}
+              onRemove={onRemoveWidget}
+              widgetRenderer={widgetRenderer}
+            />
+          ))}
+        </ReactGridLayout>
       )}
-    </>
+    </div>
   );
 }

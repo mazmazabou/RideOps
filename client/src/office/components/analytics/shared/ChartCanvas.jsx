@@ -1,48 +1,26 @@
-import React, { useRef, useEffect } from 'react';
-
-// Chart.js is loaded from CDN and available on the global scope.
-const Chart = window.Chart;
+import React from 'react';
+import { Doughnut, Line, Bar } from 'react-chartjs-2';
 
 /**
- * ChartCanvas — lifecycle wrapper for Chart.js.
+ * ChartCanvas — declarative wrapper using react-chartjs-2.
  *
  * The parent widget is responsible for pre-resolving CSS custom-property
  * colors via `resolveColor()` before building the chartConfig object.
  *
- * @param {object}  chartConfig - Full Chart.js configuration object
+ * @param {object}  chartConfig - Chart.js configuration with { type, data, options }
  * @param {Array}   [plugins]   - Optional array of Chart.js plugins
  */
 export default function ChartCanvas({ chartConfig, plugins }) {
-  const canvasRef = useRef(null);
-  const chartRef = useRef(null);
+  if (!chartConfig) return null;
 
-  useEffect(() => {
-    if (!canvasRef.current || !chartConfig) return;
-
-    // Destroy any previous instance
-    if (chartRef.current) {
-      chartRef.current.destroy();
-      chartRef.current = null;
-    }
-
-    const config = { ...chartConfig };
-    if (plugins && plugins.length) {
-      config.plugins = [...(config.plugins || []), ...plugins];
-    }
-
-    chartRef.current = new Chart(canvasRef.current, config);
-
-    return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
-    };
-  }, [chartConfig, plugins]);
+  const { type, data, options } = chartConfig;
+  const chartProps = { data, options, plugins: plugins || [] };
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <canvas ref={canvasRef} />
+      {type === 'doughnut' && <Doughnut {...chartProps} />}
+      {type === 'line' && <Line {...chartProps} />}
+      {type === 'bar' && <Bar {...chartProps} />}
     </div>
   );
 }

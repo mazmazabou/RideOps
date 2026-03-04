@@ -1,27 +1,15 @@
-import React, { useRef, useEffect } from 'react';
-import { resolveColor } from '../constants';
+import React, { useMemo } from 'react';
+import { Line } from 'react-chartjs-2';
 import { getCampusPalette, getCampusSlug, hexToRgb } from '../../../../utils/campus';
 
-const Chart = window.Chart;
-
 export default function RideVolumeWidget({ data }) {
-  const canvasRef = useRef(null);
-  const chartRef = useRef(null);
-
-  useEffect(() => {
-    if (chartRef.current) {
-      chartRef.current.destroy();
-      chartRef.current = null;
-    }
-
+  const { chartData, chartOptions, palette } = useMemo(() => {
     const items = data?.data;
-    if (!items || items.length === 0 || !canvasRef.current || !Chart) return;
+    if (!items || items.length === 0) return { chartData: null, chartOptions: null, palette: null };
 
-    const palette = getCampusPalette(getCampusSlug());
-    const primaryColor = palette[0] || '#4682B4';
+    const p = getCampusPalette(getCampusSlug());
+    const primaryColor = p[0] || '#4682B4';
     const rgbStr = hexToRgb(primaryColor);
-
-    const ctx = canvasRef.current.getContext('2d');
 
     const labels = items.map((d) => {
       const dt = new Date(d.date);
@@ -29,31 +17,30 @@ export default function RideVolumeWidget({ data }) {
     });
     const totals = items.map((d) => d.total || 0);
 
-    chartRef.current = new Chart(ctx, {
-      type: 'line',
-      data: {
+    return {
+      chartData: {
         labels,
-        datasets: [
-          {
-            label: 'Rides',
-            data: totals,
-            borderColor: primaryColor,
-            backgroundColor: (context) => {
-              const chartCtx = context.chart.ctx;
-              const gradient = chartCtx.createLinearGradient(0, 0, 0, context.chart.height);
-              gradient.addColorStop(0, 'rgba(' + rgbStr + ', 0.35)');
-              gradient.addColorStop(1, 'rgba(' + rgbStr + ', 0.02)');
-              return gradient;
-            },
-            fill: true,
-            tension: 0.3,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            borderWidth: 2,
+        datasets: [{
+          label: 'Rides',
+          data: totals,
+          borderColor: primaryColor,
+          backgroundColor: (context) => {
+            const chart = context.chart;
+            const { ctx, chartArea } = chart;
+            if (!chartArea) return 'rgba(' + rgbStr + ', 0.15)';
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(' + rgbStr + ', 0.35)');
+            gradient.addColorStop(1, 'rgba(' + rgbStr + ', 0.02)');
+            return gradient;
           },
-        ],
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+        }],
       },
-      options: {
+      chartOptions: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -85,13 +72,7 @@ export default function RideVolumeWidget({ data }) {
           },
         },
       },
-    });
-
-    return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
+      palette: p,
     };
   }, [data]);
 
@@ -107,7 +88,7 @@ export default function RideVolumeWidget({ data }) {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <canvas ref={canvasRef} />
+      <Line data={chartData} options={chartOptions} />
     </div>
   );
 }

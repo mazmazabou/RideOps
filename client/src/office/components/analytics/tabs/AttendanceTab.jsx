@@ -5,10 +5,13 @@ import WidgetGrid from '../WidgetGrid';
 import WidgetToolbar from '../WidgetToolbar';
 import WidgetLibraryDrawer from '../WidgetLibraryDrawer';
 import { useWidgetLayout } from '../hooks/useWidgetLayout';
-import { TAB_CONFIGS, WIDGET_REGISTRY } from '../constants';
+import {
+  TAB_CONFIGS, WIDGET_REGISTRY, findNextPosition,
+  getPunctualityClass, getTardyClass, getMissedShiftsClass, getAvgTardinessClass,
+} from '../constants';
 import SkeletonLoader from '../shared/SkeletonLoader';
 
-import AttendanceKPIsWidget from '../widgets/AttendanceKPIsWidget';
+import KPISingleWidget from '../widgets/KPISingleWidget';
 import AttendanceDonutWidget from '../widgets/AttendanceDonutWidget';
 import TardinessByDOWWidget from '../widgets/TardinessByDOWWidget';
 import TardinessTrendWidget from '../widgets/TardinessTrendWidget';
@@ -74,10 +77,14 @@ export default function AttendanceTab({ dateRange, userId }) {
     const defaultItem = TAB_CONFIGS.attendance.defaultLayout.find(d => d.id === widgetId);
     const w = defaultItem ? defaultItem.w : 6;
     const h = defaultItem ? defaultItem.h : 4;
-    const newLayout = [...layout, { id: widgetId, x: 0, y: 999, w, h }];
-    setLayout(newLayout);
-    saveLayout(newLayout);
-    setLibraryOpen(false);
+    const pos = findNextPosition(layout, w, h);
+    saveLayout([...layout, { id: widgetId, x: pos.x, y: pos.y, w, h }]);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-widget-id="${widgetId}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
   }
 
   function handleRemoveWidget(widgetId) {
@@ -88,9 +95,25 @@ export default function AttendanceTab({ dateRange, userId }) {
 
   function renderWidget(widgetId) {
     if (loading) return <SkeletonLoader type={WIDGET_REGISTRY[widgetId]?.skeletonType || 'chart'} />;
+    const summary = data?.summary || {};
+
     switch (widgetId) {
-      case 'attendance-kpis':
-        return <AttendanceKPIsWidget summary={data?.summary} />;
+      case 'kpi-total-clock-ins':
+        return <KPISingleWidget value={String(summary.totalClockIns || 0)} label="Total Clock-Ins" icon="ti ti-clock" colorClass="kpi-card--primary" />;
+      case 'kpi-on-time-rate': {
+        const total = summary.totalClockIns || 0;
+        const onTime = summary.onTimeCount || 0;
+        const rate = total > 0 ? (onTime / total * 100) : 0;
+        return <KPISingleWidget value={rate.toFixed(1) + '%'} label="On-Time Rate" icon="ti ti-circle-check" colorClass={getPunctualityClass(rate)} />;
+      }
+      case 'kpi-tardy-count':
+        return <KPISingleWidget value={String(summary.tardyCount || 0)} label="Tardy Count" icon="ti ti-clock-exclamation" colorClass={getTardyClass(summary.tardyCount || 0)} />;
+      case 'kpi-avg-tardiness':
+        return <KPISingleWidget value={(summary.avgTardinessMinutes || 0).toFixed(1) + 'm'} label="Avg Tardiness" icon="ti ti-hourglass" colorClass={getAvgTardinessClass(summary.avgTardinessMinutes || 0)} />;
+      case 'kpi-missed-shifts':
+        return <KPISingleWidget value={String(summary.totalMissedShifts || 0)} label="Missed Shifts" icon="ti ti-calendar-off" colorClass={getMissedShiftsClass(summary.totalMissedShifts || 0)} />;
+
+      // -- Existing chart widgets (unchanged) --
       case 'attendance-donut':
         return <AttendanceDonutWidget distribution={data?.distribution} />;
       case 'tardiness-by-dow':

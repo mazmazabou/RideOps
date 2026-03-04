@@ -5,7 +5,7 @@ import WidgetGrid from '../WidgetGrid';
 import WidgetToolbar from '../WidgetToolbar';
 import WidgetLibraryDrawer from '../WidgetLibraryDrawer';
 import { useWidgetLayout } from '../hooks/useWidgetLayout';
-import { TAB_CONFIGS, WIDGET_REGISTRY } from '../constants';
+import { TAB_CONFIGS, WIDGET_REGISTRY, findNextPosition } from '../constants';
 import SkeletonLoader from '../shared/SkeletonLoader';
 
 import DriverMilestonesWidget from '../widgets/DriverMilestonesWidget';
@@ -45,10 +45,14 @@ export default function MilestonesTab({ userId }) {
     const defaultItem = TAB_CONFIGS.milestones.defaultLayout.find(d => d.id === widgetId);
     const w = defaultItem ? defaultItem.w : 6;
     const h = defaultItem ? defaultItem.h : 4;
-    const newLayout = [...layout, { id: widgetId, x: 0, y: 999, w, h }];
-    setLayout(newLayout);
-    saveLayout(newLayout);
-    setLibraryOpen(false);
+    const pos = findNextPosition(layout, w, h);
+    saveLayout([...layout, { id: widgetId, x: pos.x, y: pos.y, w, h }]);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-widget-id="${widgetId}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
   }
 
   function handleRemoveWidget(widgetId) {

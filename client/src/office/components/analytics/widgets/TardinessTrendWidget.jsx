@@ -78,7 +78,7 @@ export default function TardinessTrendWidget({ data }) {
             beginAtZero: true,
             ticks: { precision: 0 },
             grid: {
-              color: resolveColor('var(--border-color)') || '#e9ecef',
+              color: resolveColor('var(--color-border)') || '#e9ecef',
             },
           },
         },

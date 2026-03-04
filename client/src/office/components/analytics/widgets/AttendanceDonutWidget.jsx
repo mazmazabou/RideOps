@@ -3,8 +3,6 @@ import ChartCanvas from '../shared/ChartCanvas.jsx';
 import EmptyState from '../shared/EmptyState.jsx';
 import { resolveColor } from '../constants';
 
-const Chart = window.Chart;
-
 const DONUT_COLORS = [
   'var(--status-completed)',
   'var(--color-warning)',
@@ -79,8 +77,10 @@ export default function AttendanceDonutWidget({ distribution }) {
           {
             data,
             backgroundColor: resolvedColors,
-            borderWidth: 2,
-            borderColor: resolveColor('var(--card-bg)') || '#fff',
+            borderWidth: 1,
+            borderColor: '#fff',
+            hoverOffset: 6,
+            hoverBorderWidth: 3,
           },
         ],
       },
@@ -89,15 +89,7 @@ export default function AttendanceDonutWidget({ distribution }) {
         maintainAspectRatio: false,
         cutout: '65%',
         plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              padding: 12,
-              usePointStyle: true,
-              pointStyleWidth: 10,
-              font: { size: 12 },
-            },
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label(ctx) {

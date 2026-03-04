@@ -1433,9 +1433,6 @@ input[type="checkbox"]:disabled {
     gap: 4px;
     padding: 10px;
   }
-  .kpi-single__value {
-    font-size: 1.5rem;
-  }
   .kpi-single__label {
     font-size: 0.6875rem;
     gap: 4px;
@@ -1459,9 +1456,6 @@ input[type="checkbox"]:disabled {
   .kpi-single {
     gap: 6px;
     padding: 12px;
-  }
-  .kpi-single__value {
-    font-size: 1.75rem;
   }
   .kpi-single__label {
     font-size: 0.75rem;

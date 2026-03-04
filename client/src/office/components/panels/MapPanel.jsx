@@ -20,14 +20,13 @@ export default function MapPanel({ isVisible }) {
 
   return (
     <div style={{
-      padding: 16, display: 'flex', flexDirection: 'column', gap: 16,
-      height: 'calc(100vh - 128px)', boxSizing: 'border-box',
+      display: 'flex', flexDirection: 'column',
+      height: 'calc(100vh - 80px)', marginTop: -24,
     }}>
       {embeddable ? (
         <>
           <div style={{
-            borderRadius: 12, overflow: 'hidden',
-            border: '1px solid var(--color-border)', flex: 1, minHeight: 200,
+            overflow: 'hidden', flex: 1, minHeight: 200,
           }}>
             {isVisible && (
               <iframe
@@ -40,9 +39,6 @@ export default function MapPanel({ isVisible }) {
                 title="Campus Map"
               />
             )}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', marginTop: -4, flexShrink: 0 }}>
-            Campus map — use pinch/zoom to navigate
           </div>
         </>
       ) : (

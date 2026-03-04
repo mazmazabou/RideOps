@@ -85,6 +85,33 @@ export default function SkeletonLoader({ type }) {
     );
   }
 
+  if (type === 'kpi-single') {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        gap: '6px',
+        opacity: 0.5,
+      }}>
+        <div style={{
+          background: 'var(--color-border)',
+          width: 48,
+          height: 24,
+          borderRadius: 4,
+        }} />
+        <div style={{
+          background: 'var(--color-border)',
+          width: 72,
+          height: 10,
+          borderRadius: 4,
+        }} />
+      </div>
+    );
+  }
+
   if (type === 'heatmap') {
     const cells = Array.from({ length: 66 });
     return (

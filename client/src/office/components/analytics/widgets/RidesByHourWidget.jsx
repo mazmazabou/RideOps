@@ -1,42 +1,28 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
+import { Bar } from 'react-chartjs-2';
 import { getCampusPalette, getCampusSlug } from '../../../../utils/campus';
 
-const Chart = window.Chart;
-
 export default function RidesByHourWidget({ data }) {
-  const canvasRef = useRef(null);
-  const chartRef = useRef(null);
-
-  useEffect(() => {
-    if (chartRef.current) {
-      chartRef.current.destroy();
-      chartRef.current = null;
-    }
-
-    if (!data || data.length === 0 || !canvasRef.current || !Chart) return;
+  const { chartData, chartOptions } = useMemo(() => {
+    if (!data || data.length === 0) return { chartData: null, chartOptions: null };
 
     const palette = getCampusPalette(getCampusSlug());
-    const ctx = canvasRef.current.getContext('2d');
-
     const labels = data.map((d) => d.label);
     const counts = data.map((d) => d.count || 0);
     const colors = data.map((_, i) => palette[i % palette.length]);
 
-    chartRef.current = new Chart(ctx, {
-      type: 'bar',
-      data: {
+    return {
+      chartData: {
         labels,
-        datasets: [
-          {
-            label: 'Rides',
-            data: counts,
-            backgroundColor: colors,
-            borderRadius: 4,
-            borderSkipped: false,
-          },
-        ],
+        datasets: [{
+          label: 'Rides',
+          data: counts,
+          backgroundColor: colors,
+          borderRadius: 4,
+          borderSkipped: false,
+        }],
       },
-      options: {
+      chartOptions: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -48,23 +34,10 @@ export default function RidesByHourWidget({ data }) {
           },
         },
         scales: {
-          x: {
-            grid: { display: false },
-            ticks: { maxRotation: 45 },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0 },
-          },
+          x: { grid: { display: false }, ticks: { maxRotation: 45 } },
+          y: { beginAtZero: true, ticks: { precision: 0 } },
         },
       },
-    });
-
-    return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
     };
   }, [data]);
 
@@ -79,7 +52,7 @@ export default function RidesByHourWidget({ data }) {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <canvas ref={canvasRef} />
+      <Bar data={chartData} options={chartOptions} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // Widget Registry — defines all available analytics widgets (ported from widget-registry.js)
 
-export const WIDGET_LAYOUT_VERSION = 3;
+export const WIDGET_LAYOUT_VERSION = 7;
 
 export const WIDGET_CATEGORIES = {
   overview: 'Overview',
@@ -14,12 +14,54 @@ export const WIDGET_CATEGORIES = {
 };
 
 export const WIDGET_REGISTRY = {
-  'kpi-grid': {
-    title: 'Key Metrics',
-    icon: 'ti-dashboard',
+  // -- Dashboard KPI widgets (6) --
+  'kpi-total-rides': {
+    title: 'Total Rides',
+    icon: 'ti-car',
     category: 'overview',
-    skeletonType: 'kpi',
-    minW: 12, maxW: 12, minH: 2, maxH: 3, noResize: true,
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-completion-rate': {
+    title: 'Completion Rate',
+    icon: 'ti-circle-check',
+    category: 'overview',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-no-show-rate': {
+    title: 'No-Show Rate',
+    icon: 'ti-user-x',
+    category: 'overview',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-active-riders': {
+    title: 'Active Riders',
+    icon: 'ti-users',
+    category: 'overview',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-driver-punctuality': {
+    title: 'Driver Punctuality',
+    icon: 'ti-clock-check',
+    category: 'overview',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-fleet-available': {
+    title: 'Fleet Available',
+    icon: 'ti-bus',
+    category: 'overview',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
   },
   'ride-volume': {
     title: 'Ride Volume',
@@ -40,7 +82,7 @@ export const WIDGET_REGISTRY = {
     icon: 'ti-flame',
     category: 'rides',
     skeletonType: 'heatmap',
-    minW: 6, maxW: 12, minH: 4, maxH: 7,
+    minW: 4, maxW: 12, minH: 3, maxH: 7,
   },
   'rides-by-dow': {
     title: 'Rides by Day of Week',
@@ -61,21 +103,21 @@ export const WIDGET_REGISTRY = {
     icon: 'ti-route',
     category: 'rides',
     skeletonType: 'table',
-    minW: 6, maxW: 12, minH: 3, maxH: 7,
+    minW: 3, maxW: 12, minH: 3, maxH: 7,
   },
   'driver-leaderboard': {
     title: 'Driver Leaderboard',
     icon: 'ti-steering-wheel',
     category: 'drivers',
     skeletonType: 'table',
-    minW: 6, maxW: 12, minH: 3, maxH: 7,
+    minW: 3, maxW: 12, minH: 3, maxH: 7,
   },
   'shift-coverage': {
     title: 'Shift Coverage',
     icon: 'ti-calendar-stats',
     category: 'drivers',
     skeletonType: 'table',
-    minW: 6, maxW: 12, minH: 4, maxH: 8,
+    minW: 3, maxW: 12, minH: 3, maxH: 8,
   },
   'fleet-utilization': {
     title: 'Fleet Utilization',
@@ -110,14 +152,14 @@ export const WIDGET_REGISTRY = {
     icon: 'ti-grid-dots',
     category: 'locations',
     skeletonType: 'heatmap',
-    minW: 6, maxW: 12, minH: 4, maxH: 7,
+    minW: 4, maxW: 12, minH: 3, maxH: 7,
   },
   'hotspot-top-routes': {
     title: 'Top Routes (Hotspots)',
     icon: 'ti-route',
     category: 'locations',
     skeletonType: 'table',
-    minW: 6, maxW: 12, minH: 3, maxH: 6,
+    minW: 3, maxW: 12, minH: 3, maxH: 6,
   },
   'driver-milestones': {
     title: 'Driver Milestones',
@@ -133,12 +175,46 @@ export const WIDGET_REGISTRY = {
     skeletonType: 'chart',
     minW: 3, maxW: 12, minH: 3, maxH: 8,
   },
-  'attendance-kpis': {
-    title: 'Attendance KPIs',
-    icon: 'ti-chart-bar',
+  // -- Attendance KPI widgets (5) --
+  'kpi-total-clock-ins': {
+    title: 'Total Clock-Ins',
+    icon: 'ti-clock',
     category: 'attendance',
-    skeletonType: 'kpi',
-    minW: 12, maxW: 12, minH: 2, maxH: 3, noResize: true,
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-on-time-rate': {
+    title: 'On-Time Rate',
+    icon: 'ti-circle-check',
+    category: 'attendance',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-tardy-count': {
+    title: 'Tardy Count',
+    icon: 'ti-clock-exclamation',
+    category: 'attendance',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-avg-tardiness': {
+    title: 'Avg Tardiness',
+    icon: 'ti-hourglass',
+    category: 'attendance',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
+  },
+  'kpi-missed-shifts': {
+    title: 'Missed Shifts',
+    icon: 'ti-calendar-off',
+    category: 'attendance',
+    skeletonType: 'kpi-single',
+    isKPI: true,
+    minW: 2, maxW: 4, minH: 1, maxH: 2,
   },
   'attendance-donut': {
     title: 'Attendance Distribution',
@@ -159,29 +235,36 @@ export const WIDGET_REGISTRY = {
     icon: 'ti-trending-up',
     category: 'attendance',
     skeletonType: 'chart',
-    minW: 6, maxW: 12, minH: 3, maxH: 6,
+    minW: 3, maxW: 12, minH: 3, maxH: 6,
   },
   'punctuality-table': {
     title: 'Punctuality by Driver',
     icon: 'ti-table',
     category: 'attendance',
     skeletonType: 'table',
-    minW: 6, maxW: 12, minH: 4, maxH: 8,
+    minW: 3, maxW: 12, minH: 3, maxH: 8,
   },
 };
 
 export const DEFAULT_WIDGET_LAYOUT = [
-  { id: 'kpi-grid',            x: 0,  y: 0,  w: 12, h: 2 },
-  { id: 'ride-volume',         x: 0,  y: 2,  w: 6,  h: 4 },
-  { id: 'ride-outcomes',       x: 6,  y: 2,  w: 6,  h: 4 },
-  { id: 'peak-hours',          x: 0,  y: 6,  w: 12, h: 5 },
-  { id: 'rides-by-dow',        x: 0,  y: 11, w: 6,  h: 4 },
-  { id: 'rides-by-hour',       x: 6,  y: 11, w: 6,  h: 4 },
-  { id: 'top-routes',          x: 0,  y: 15, w: 6,  h: 4 },
-  { id: 'driver-leaderboard',  x: 6,  y: 15, w: 6,  h: 4 },
-  { id: 'shift-coverage',      x: 0,  y: 19, w: 12, h: 5 },
-  { id: 'fleet-utilization',   x: 0,  y: 24, w: 6,  h: 4 },
-  { id: 'rider-cohorts',       x: 6,  y: 24, w: 6,  h: 4 },
+  // Row 0: 6 KPI widgets (h: 1 each, total row height = 80px)
+  { id: 'kpi-total-rides',       x: 0,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-completion-rate',   x: 2,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-no-show-rate',      x: 4,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-active-riders',     x: 6,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-driver-punctuality',x: 8,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-fleet-available',   x: 10, y: 0, w: 2, h: 1 },
+  // Row 1: charts begin
+  { id: 'ride-volume',           x: 0,  y: 1, w: 8,  h: 4 },
+  { id: 'ride-outcomes',         x: 8,  y: 1, w: 4,  h: 4 },
+  { id: 'peak-hours',            x: 0,  y: 5, w: 12, h: 5 },
+  { id: 'rides-by-dow',          x: 0,  y: 10, w: 4,  h: 4 },
+  { id: 'rides-by-hour',         x: 4,  y: 10, w: 4,  h: 4 },
+  { id: 'top-routes',            x: 8,  y: 10, w: 4,  h: 4 },
+  { id: 'driver-leaderboard',    x: 0,  y: 14, w: 6,  h: 4 },
+  { id: 'shift-coverage',        x: 6,  y: 14, w: 6,  h: 5 },
+  { id: 'fleet-utilization',     x: 0,  y: 19, w: 6,  h: 4 },
+  { id: 'rider-cohorts',         x: 6,  y: 19, w: 6,  h: 4 },
 ];
 
 export const DEFAULT_HOTSPOTS_LAYOUT = [
@@ -197,11 +280,17 @@ export const DEFAULT_MILESTONES_LAYOUT = [
 ];
 
 export const DEFAULT_ATTENDANCE_LAYOUT = [
-  { id: 'attendance-kpis',    x: 0,  y: 0,  w: 12, h: 2 },
-  { id: 'attendance-donut',   x: 0,  y: 2,  w: 6,  h: 4 },
-  { id: 'tardiness-by-dow',   x: 6,  y: 2,  w: 6,  h: 4 },
-  { id: 'tardiness-trend',    x: 0,  y: 6,  w: 6,  h: 4 },
-  { id: 'punctuality-table',  x: 0,  y: 10, w: 12, h: 5 },
+  // Row 0: 5 KPI widgets (2+3+2+2+3 = 12 columns)
+  { id: 'kpi-total-clock-ins',   x: 0,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-on-time-rate',      x: 2,  y: 0, w: 3, h: 1 },
+  { id: 'kpi-tardy-count',       x: 5,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-avg-tardiness',     x: 7,  y: 0, w: 2, h: 1 },
+  { id: 'kpi-missed-shifts',     x: 9,  y: 0, w: 3, h: 1 },
+  // Row 1: charts
+  { id: 'attendance-donut',      x: 0,  y: 1, w: 4,  h: 4 },
+  { id: 'tardiness-by-dow',      x: 4,  y: 1, w: 4,  h: 4 },
+  { id: 'tardiness-trend',       x: 8,  y: 1, w: 4,  h: 4 },
+  { id: 'punctuality-table',     x: 0,  y: 5, w: 12, h: 5 },
 ];
 
 // Tab configs used by WidgetGrid
@@ -209,7 +298,13 @@ export const TAB_CONFIGS = {
   dashboard: {
     storagePrefix: 'dashboard',
     defaultLayout: DEFAULT_WIDGET_LAYOUT,
-    allowedWidgets: null, // all widgets allowed
+    allowedWidgets: [
+      'kpi-total-rides', 'kpi-completion-rate', 'kpi-no-show-rate',
+      'kpi-active-riders', 'kpi-driver-punctuality', 'kpi-fleet-available',
+      'ride-volume', 'ride-outcomes', 'peak-hours',
+      'rides-by-dow', 'rides-by-hour', 'top-routes',
+      'driver-leaderboard', 'shift-coverage', 'fleet-utilization', 'rider-cohorts',
+    ],
   },
   hotspots: {
     storagePrefix: 'hotspots',
@@ -224,7 +319,11 @@ export const TAB_CONFIGS = {
   attendance: {
     storagePrefix: 'attendance',
     defaultLayout: DEFAULT_ATTENDANCE_LAYOUT,
-    allowedWidgets: ['attendance-kpis', 'attendance-donut', 'tardiness-by-dow', 'tardiness-trend', 'punctuality-table'],
+    allowedWidgets: [
+      'kpi-total-clock-ins', 'kpi-on-time-rate', 'kpi-tardy-count',
+      'kpi-avg-tardiness', 'kpi-missed-shifts',
+      'attendance-donut', 'tardiness-by-dow', 'tardiness-trend', 'punctuality-table',
+    ],
   },
 };
 
@@ -280,11 +379,65 @@ export const REPORT_SHEETS = {
   },
 };
 
+// -- KPI color class helpers --
+
+export function getCompletionClass(rate) {
+  if (rate >= 85) return 'kpi-card--good';
+  if (rate >= 70) return 'kpi-card--warning';
+  return 'kpi-card--danger';
+}
+
+export function getNoShowClass(rate) {
+  if (rate <= 5) return 'kpi-card--good';
+  if (rate <= 15) return 'kpi-card--warning';
+  return 'kpi-card--danger';
+}
+
+export function getPunctualityClass(rate) {
+  if (rate >= 90) return 'kpi-card--good';
+  if (rate >= 80) return 'kpi-card--warning';
+  return 'kpi-card--danger';
+}
+
+export function getTardyClass(count) {
+  return count === 0 ? 'kpi-card--good' : 'kpi-card--danger';
+}
+
+export function getMissedShiftsClass(count) {
+  if (count === 0) return 'kpi-card--good';
+  if (count <= 3) return 'kpi-card--warning';
+  return 'kpi-card--danger';
+}
+
+export function getAvgTardinessClass(minutes) {
+  if (minutes <= 0) return 'kpi-card--good';
+  if (minutes <= 10) return 'kpi-card--warning';
+  return 'kpi-card--danger';
+}
+
 export function getLogicalSize(gridStackW) {
   if (gridStackW <= 3) return 'xs';
   if (gridStackW <= 6) return 'sm';
   if (gridStackW <= 9) return 'md';
   return 'lg';
+}
+
+export function findNextPosition(layout, w, h, cols = 12) {
+  if (!layout || layout.length === 0) return { x: 0, y: 0 };
+  const colHeights = new Array(cols).fill(0);
+  for (const item of layout) {
+    const bottom = item.y + item.h;
+    for (let c = item.x; c < item.x + item.w && c < cols; c++) {
+      colHeights[c] = Math.max(colHeights[c], bottom);
+    }
+  }
+  let bestX = 0, bestY = Infinity;
+  for (let x = 0; x <= cols - w; x++) {
+    let maxH = 0;
+    for (let c = x; c < x + w; c++) maxH = Math.max(maxH, colHeights[c]);
+    if (maxH < bestY) { bestY = maxH; bestX = x; }
+  }
+  return { x: bestX, y: bestY };
 }
 
 export function resolveColor(cssVar) {

@@ -1,60 +1,49 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useMemo } from 'react';
+import { Doughnut } from 'react-chartjs-2';
 import { resolveColor } from '../constants';
 
-const Chart = window.Chart;
-
-// Center text plugin for doughnut chart
+// Center text plugin for doughnut chart — uses chartArea for correct centering
 const centerTextPlugin = {
   id: 'rideOutcomesCenterText',
   afterDraw(chart) {
     const meta = chart.getDatasetMeta(0);
     if (!meta || !meta.data || meta.data.length === 0) return;
 
-    const { ctx, width, height } = chart;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
     const total = chart.config.options.plugins.centerText?.total;
     if (total == null) return;
 
-    ctx.save();
-    const centerX = width / 2;
-    const centerY = height / 2;
+    const cx = (chartArea.left + chartArea.right) / 2;
+    const cy = (chartArea.top + chartArea.bottom) / 2;
 
+    ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     ctx.font = 'bold 1.5rem system-ui, -apple-system, sans-serif';
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text').trim() || '#1f2937';
-    ctx.fillText(total.toLocaleString(), centerX, centerY - 8);
+    ctx.fillText(total.toLocaleString(), cx, cy - 8);
 
     ctx.font = '0.7rem system-ui, -apple-system, sans-serif';
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim() || '#6b7280';
-    ctx.fillText('total rides', centerX, centerY + 14);
+    ctx.fillText('total rides', cx, cy + 14);
 
     ctx.restore();
   },
 };
 
 export default function RideOutcomesWidget({ data }) {
-  const canvasRef = useRef(null);
-  const chartRef = useRef(null);
-
-  useEffect(() => {
-    if (chartRef.current) {
-      chartRef.current.destroy();
-      chartRef.current = null;
-    }
-
+  const { chartData, chartOptions, total } = useMemo(() => {
     const dist = data?.distribution;
-    if (!dist || !canvasRef.current || !Chart) return;
+    if (!dist) return { chartData: null, chartOptions: null, total: 0 };
 
     const completed = dist.completed || 0;
     const noShows = dist.noShows || 0;
     const cancelled = dist.cancelled || 0;
     const denied = dist.denied || 0;
-    const total = completed + noShows + cancelled + denied;
-
-    if (total === 0) return;
-
-    const ctx = canvasRef.current.getContext('2d');
+    const t = completed + noShows + cancelled + denied;
+    if (t === 0) return { chartData: null, chartOptions: null, total: 0 };
 
     const colors = [
       resolveColor('var(--status-completed)') || '#2fb344',
@@ -63,58 +52,41 @@ export default function RideOutcomesWidget({ data }) {
       resolveColor('var(--status-denied)') || '#d63939',
     ];
 
-    chartRef.current = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
+    return {
+      chartData: {
         labels: ['Completed', 'No-Shows', 'Cancelled', 'Denied'],
-        datasets: [
-          {
-            data: [completed, noShows, cancelled, denied],
-            backgroundColor: colors,
-            borderWidth: 2,
-            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-card-bg').trim() || '#fff',
-          },
-        ],
+        datasets: [{
+          data: [completed, noShows, cancelled, denied],
+          backgroundColor: colors,
+          borderWidth: 2,
+          borderColor: getComputedStyle(document.documentElement).getPropertyValue('--color-card-bg').trim() || '#fff',
+          hoverOffset: 6,
+          hoverBorderWidth: 3,
+        }],
       },
-      options: {
+      chartOptions: {
         responsive: true,
         maintainAspectRatio: false,
         cutout: '65%',
         plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              padding: 12,
-              usePointStyle: true,
-              pointStyleWidth: 8,
-            },
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: (tipItem) => {
                 const val = tipItem.raw;
-                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+                const pct = t > 0 ? ((val / t) * 100).toFixed(1) : '0.0';
                 return tipItem.label + ': ' + val + ' (' + pct + '%)';
               },
             },
           },
-          centerText: { total },
+          centerText: { total: t },
         },
       },
-      plugins: [centerTextPlugin],
-    });
-
-    return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
+      total: t,
     };
   }, [data]);
 
   const dist = data?.distribution;
-  const total = dist ? (dist.completed || 0) + (dist.noShows || 0) + (dist.cancelled || 0) + (dist.denied || 0) : 0;
-
   if (!dist || total === 0) {
     return (
       <div className="ro-empty" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted, #6b7280)' }}>
@@ -126,7 +98,7 @@ export default function RideOutcomesWidget({ data }) {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <canvas ref={canvasRef} />
+      <Doughnut data={chartData} options={chartOptions} plugins={[centerTextPlugin]} />
     </div>
   );
 }
