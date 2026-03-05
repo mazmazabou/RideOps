@@ -10,9 +10,10 @@ export function useDriverData() {
 
   const loadData = useCallback(async () => {
     try {
+      const today = new Date().toISOString().slice(0, 10);
       const [emp, rds, veh] = await Promise.all([
         fetchEmployees(),
-        fetchAllRides(),
+        fetchAllRides({ from: today, to: today }),
         fetchVehicles(),
       ]);
       setEmployees(emp);

@@ -44,8 +44,9 @@ export default function DispatchPanel() {
   // 5s polling for rides + today driver status
   const pollData = useCallback(async () => {
     try {
+      const today = new Date().toISOString().slice(0, 10);
       const [ridesData, statusData] = await Promise.all([
-        fetchAllRides(),
+        fetchAllRides({ from: today, to: today }),
         fetchTodayDriverStatus(),
       ]);
       setRides(ridesData);
@@ -60,8 +61,9 @@ export default function DispatchPanel() {
   // Refresh handler — called after actions
   const refresh = useCallback(async () => {
     try {
+      const today = new Date().toISOString().slice(0, 10);
       const [ridesData, statusData] = await Promise.all([
-        fetchAllRides(),
+        fetchAllRides({ from: today, to: today }),
         fetchTodayDriverStatus(),
       ]);
       setRides(ridesData);

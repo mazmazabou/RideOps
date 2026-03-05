@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchAllRides, fetchEmployees, fetchLocations, fetchOpsConfig, bulkDeleteRides, approveRide } from '../../../api';
+import { fetchRidesPaginated, fetchEmployees, fetchLocations, fetchOpsConfig, bulkDeleteRides, approveRide } from '../../../api';
 import { useToast } from '../../../contexts/ToastContext';
 import { useModal } from '../../../components/ui/Modal';
 import { usePolling } from '../../../hooks/usePolling';
@@ -11,21 +11,22 @@ import RideDrawer from './RideDrawer';
 import RideEditModal from './RideEditModal';
 
 const IN_PROGRESS_STATUSES = ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'];
+const PAGE_LIMIT = 50;
+const SCHEDULE_LIMIT = 200;
 
-function getDateKey(iso) {
-  if (!iso) return '';
-  return iso.slice(0, 10);
-}
-
-function rideMatchesFilter(ride, filterText) {
-  if (!filterText) return true;
-  const q = filterText.toLowerCase();
-  return (ride.riderName || '').toLowerCase().includes(q)
-    || (ride.pickupLocation || '').toLowerCase().includes(q)
-    || (ride.dropoffLocation || '').toLowerCase().includes(q)
-    || (ride.status || '').toLowerCase().includes(q)
-    || (ride.id || '').toLowerCase().includes(q)
-    || (ride.notes || '').toLowerCase().includes(q);
+function buildStatusParam(statusFilter) {
+  if (statusFilter.has('all')) return '';
+  const statuses = [...statusFilter];
+  // Expand 'in_progress' to its constituent statuses
+  const expanded = [];
+  for (const s of statuses) {
+    if (s === 'in_progress') {
+      expanded.push(...IN_PROGRESS_STATUSES);
+    } else {
+      expanded.push(s);
+    }
+  }
+  return [...new Set(expanded)].join(',');
 }
 
 export default function RidesPanel() {
@@ -38,11 +39,18 @@ export default function RidesPanel() {
   const [locations, setLocations] = useState([]);
   const [opsConfig, setOpsConfig] = useState(null);
 
+  // Pagination state
+  const [nextCursor, setNextCursor] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+
   // Filter state
   const [statusFilter, setStatusFilter] = useState(() => new Set(['all']));
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [searchText, setSearchText] = useState('');
+  const searchDebounceRef = useRef(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // View state
   const [viewMode, setViewMode] = useState('table');
@@ -55,15 +63,33 @@ export default function RidesPanel() {
   const [drawerRide, setDrawerRide] = useState(null);
   const [editModalRide, setEditModalRide] = useState(null);
 
-  // Load rides (called by polling)
+  // Debounce search text
+  const handleSearchChange = useCallback((text) => {
+    setSearchText(text);
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => setDebouncedSearch(text), 300);
+  }, []);
+
+  // Load rides (called by polling) — always fetches page 1
   const loadRides = useCallback(async () => {
     try {
-      const data = await fetchAllRides();
-      setRides(Array.isArray(data) ? data : []);
+      const statusParam = buildStatusParam(statusFilter);
+      const limit = viewMode === 'calendar' ? SCHEDULE_LIMIT : PAGE_LIMIT;
+      const data = await fetchRidesPaginated({
+        limit,
+        status: statusParam || undefined,
+        from: dateFrom || undefined,
+        to: dateTo || undefined,
+        search: debouncedSearch || undefined,
+      });
+      setRides(data.rides);
+      setNextCursor(data.nextCursor);
+      setTotalCount(data.totalCount);
+      setHasMore(data.hasMore);
     } catch {
       // Silently fail on polling errors
     }
-  }, []);
+  }, [statusFilter, dateFrom, dateTo, debouncedSearch, viewMode]);
 
   usePolling(loadRides, 5000);
 
@@ -74,42 +100,39 @@ export default function RidesPanel() {
     fetchOpsConfig().then(d => setOpsConfig(d)).catch(() => {});
   }, []);
 
-  // Filtered rides
-  const filteredRides = useMemo(() => {
-    let filtered = rides;
-
-    // Status filter
-    if (!statusFilter.has('all')) {
-      filtered = filtered.filter(r => {
-        if (statusFilter.has('in_progress')) {
-          if (IN_PROGRESS_STATUSES.includes(r.status)) return true;
-        }
-        return statusFilter.has(r.status);
+  // Load more (append next page)
+  const handleLoadMore = useCallback(async () => {
+    if (!nextCursor) return;
+    try {
+      const statusParam = buildStatusParam(statusFilter);
+      const data = await fetchRidesPaginated({
+        limit: PAGE_LIMIT,
+        cursor: nextCursor,
+        status: statusParam || undefined,
+        from: dateFrom || undefined,
+        to: dateTo || undefined,
+        search: debouncedSearch || undefined,
       });
+      setRides(prev => [...prev, ...data.rides]);
+      setNextCursor(data.nextCursor);
+      setHasMore(data.hasMore);
+    } catch (e) {
+      showToast(e.message || 'Failed to load more rides', 'error');
     }
+  }, [nextCursor, statusFilter, dateFrom, dateTo, debouncedSearch, showToast]);
 
-    // Date range
-    if (dateFrom) {
-      filtered = filtered.filter(r => r.requestedTime && getDateKey(r.requestedTime) >= dateFrom);
-    }
-    if (dateTo) {
-      filtered = filtered.filter(r => r.requestedTime && getDateKey(r.requestedTime) <= dateTo);
-    }
-
-    // Text search
-    if (searchText) {
-      filtered = filtered.filter(r => rideMatchesFilter(r, searchText));
-    }
-
-    // Sort by requestedTime descending
-    filtered.sort((a, b) => {
+  // Filtered rides — sorting only (filtering is server-side now)
+  const filteredRides = useMemo(() => {
+    // Server already sorts by requested_time DESC, id DESC
+    // Keep client-side sort for consistency
+    const sorted = [...rides];
+    sorted.sort((a, b) => {
       const da = a.requestedTime ? new Date(a.requestedTime).getTime() : 0;
       const db = b.requestedTime ? new Date(b.requestedTime).getTime() : 0;
       return db - da;
     });
-
-    return filtered;
-  }, [rides, statusFilter, dateFrom, dateTo, searchText]);
+    return sorted;
+  }, [rides]);
 
   // Prune selection when filtered rides change
   useEffect(() => {
@@ -219,11 +242,12 @@ export default function RidesPanel() {
         dateTo={dateTo}
         onDateFromChange={setDateFrom}
         onDateToChange={setDateTo}
-        onSearchChange={setSearchText}
+        onSearchChange={handleSearchChange}
       />
 
       <Toolbar
         filteredCount={filteredRides.length}
+        totalCount={totalCount}
         selectedCount={selectedCount}
         onBulkDelete={handleBulkDelete}
         onExportCsv={handleExportCsv}
@@ -240,6 +264,8 @@ export default function RidesPanel() {
           onToggleSelectAll={toggleSelectAll}
           onRowClick={handleRowClick}
           onApprove={handleApprove}
+          hasMore={hasMore}
+          onLoadMore={handleLoadMore}
         />
       ) : (
         <ScheduleGrid

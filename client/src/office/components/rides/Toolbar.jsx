@@ -1,12 +1,15 @@
 export default function Toolbar({
-  filteredCount, selectedCount,
+  filteredCount, totalCount, selectedCount,
   onBulkDelete, onExportCsv,
   viewMode, onViewChange,
 }) {
+  const showTotal = totalCount > 0 && filteredCount < totalCount;
   return (
     <div className="filter-bar" style={{ paddingTop: 0, gap: '12px', alignItems: 'center' }}>
       <span className="text-sm text-muted" id="ride-filter-count">
-        {filteredCount} ride{filteredCount !== 1 ? 's' : ''}
+        {showTotal
+          ? `Showing ${filteredCount} of ${totalCount} rides`
+          : `${filteredCount} ride${filteredCount !== 1 ? 's' : ''}`}
       </span>
       <div style={{ flex: 1 }} />
       {selectedCount > 0 && (

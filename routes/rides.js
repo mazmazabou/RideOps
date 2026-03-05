@@ -28,21 +28,110 @@ module.exports = function(app, ctx) {
 
   // ----- Ride endpoints -----
   app.get('/api/rides', requireStaff, wrapAsync(async (req, res) => {
-    const { status } = req.query;
-    const baseSql = `
-      SELECT r.id, r.rider_id, r.rider_name, r.rider_email, r.rider_phone, r.pickup_location, r.dropoff_location, r.notes,
-             r.requested_time, r.status, r.assigned_driver_id, r.grace_start_time, r.consecutive_misses, r.recurring_id, r.cancelled_by, r.vehicle_id,
-             d.name AS driver_name, d.phone AS driver_phone,
-             ru.preferred_name AS rider_preferred_name, ru.avatar_url AS rider_avatar_url, ru.major AS rider_major, ru.graduation_year AS rider_graduation_year, ru.bio AS rider_bio,
-             d.preferred_name AS driver_preferred_name, d.avatar_url AS driver_avatar_url, d.bio AS driver_bio
+    const { status, from, to, search, limit: limitParam, cursor } = req.query;
+    const baseCols = `
+      r.id, r.rider_id, r.rider_name, r.rider_email, r.rider_phone, r.pickup_location, r.dropoff_location, r.notes,
+      r.requested_time, r.status, r.assigned_driver_id, r.grace_start_time, r.consecutive_misses, r.recurring_id, r.cancelled_by, r.vehicle_id,
+      d.name AS driver_name, d.phone AS driver_phone,
+      ru.preferred_name AS rider_preferred_name, ru.avatar_url AS rider_avatar_url, ru.major AS rider_major, ru.graduation_year AS rider_graduation_year, ru.bio AS rider_bio,
+      d.preferred_name AS driver_preferred_name, d.avatar_url AS driver_avatar_url, d.bio AS driver_bio`;
+    const baseFrom = `
       FROM rides r
       LEFT JOIN users d ON r.assigned_driver_id = d.id
-      LEFT JOIN users ru ON r.rider_id = ru.id
-    `;
-    const result = status
-      ? await query(`${baseSql} WHERE r.status = $1 ORDER BY r.requested_time`, [status])
-      : await query(`${baseSql} ORDER BY r.requested_time`);
-    res.json(result.rows.map(mapRide));
+      LEFT JOIN users ru ON r.rider_id = ru.id`;
+
+    // Build WHERE conditions for server-side filtering
+    const conditions = [];
+    const params = [];
+
+    // Multi-status filter (comma-separated)
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        params.push(statuses[0]);
+        conditions.push(`r.status = $${params.length}`);
+      } else if (statuses.length > 1) {
+        params.push(statuses);
+        conditions.push(`r.status = ANY($${params.length})`);
+      }
+    }
+
+    // Date range on requested_time
+    if (from) {
+      params.push(from);
+      conditions.push(`r.requested_time >= $${params.length}::date`);
+    }
+    if (to) {
+      params.push(to + 'T23:59:59.999Z');
+      conditions.push(`r.requested_time <= $${params.length}::timestamptz`);
+    }
+
+    // Text search
+    if (search) {
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern);
+      const si = params.length;
+      conditions.push(`(r.rider_name ILIKE $${si} OR r.pickup_location ILIKE $${si} OR r.dropoff_location ILIKE $${si} OR r.status ILIKE $${si} OR r.id ILIKE $${si} OR r.notes ILIKE $${si})`);
+    }
+
+    const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    // If no limit param, return legacy flat array
+    if (!limitParam) {
+      const result = await query(
+        `SELECT ${baseCols} ${baseFrom} ${whereClause} ORDER BY r.requested_time DESC, r.id DESC`,
+        params
+      );
+      return res.json(result.rows.map(mapRide));
+    }
+
+    // Paginated mode
+    const limit = Math.min(Math.max(parseInt(limitParam) || 50, 1), 200);
+    const cursorConditions = [...conditions];
+    const cursorParams = [...params];
+
+    if (cursor) {
+      try {
+        const decoded = JSON.parse(Buffer.from(cursor, 'base64').toString('utf-8'));
+        cursorParams.push(decoded.t);
+        cursorParams.push(decoded.i);
+        cursorConditions.push(`(r.requested_time, r.id) < ($${cursorParams.length - 1}::timestamptz, $${cursorParams.length})`);
+      } catch {
+        return res.status(400).json({ error: 'Invalid cursor' });
+      }
+    }
+
+    const cursorWhere = cursorConditions.length > 0 ? 'WHERE ' + cursorConditions.join(' AND ') : '';
+
+    // Fetch limit+1 to detect hasMore
+    cursorParams.push(limit + 1);
+    const [dataResult, countResult] = await Promise.all([
+      query(
+        `SELECT ${baseCols} ${baseFrom} ${cursorWhere} ORDER BY r.requested_time DESC, r.id DESC LIMIT $${cursorParams.length}`,
+        cursorParams
+      ),
+      query(
+        `SELECT COUNT(*) AS total ${baseFrom} ${whereClause}`,
+        params
+      ),
+    ]);
+
+    const rows = dataResult.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) rows.pop();
+
+    let nextCursor = null;
+    if (hasMore && rows.length > 0) {
+      const last = rows[rows.length - 1];
+      nextCursor = Buffer.from(JSON.stringify({ t: last.requested_time, i: last.id })).toString('base64');
+    }
+
+    res.json({
+      rides: rows.map(mapRide),
+      nextCursor,
+      totalCount: parseInt(countResult.rows[0].total),
+      hasMore,
+    });
   }));
 
   app.post('/api/rides', requireAuth, wrapAsync(async (req, res) => {
@@ -314,7 +403,7 @@ module.exports = function(app, ctx) {
       return res.status(400).json({ error: 'Can only reassign rides that are scheduled, on the way, or in grace period' });
     }
 
-    const driverRes = await query(`SELECT id, active FROM users WHERE id = $1 AND role = 'driver'`, [driverId]);
+    const driverRes = await query(`SELECT id, active FROM users WHERE id = $1 AND role = 'driver' AND deleted_at IS NULL`, [driverId]);
     const driver = driverRes.rows[0];
     if (!driver) return res.status(400).json({ error: 'Driver not found' });
     if (!driver.active) return res.status(400).json({ error: 'Driver must be clocked in to be assigned rides' });

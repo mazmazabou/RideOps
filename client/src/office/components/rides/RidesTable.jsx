@@ -3,6 +3,7 @@ import RideRow from './RideRow';
 export default function RidesTable({
   filteredRides, selectedIds, employees,
   onToggleSelect, onToggleSelectAll, onRowClick, onApprove,
+  hasMore, onLoadMore,
 }) {
   const allSelected = filteredRides.length > 0 && filteredRides.every(r => selectedIds.has(r.id));
 
@@ -47,6 +48,15 @@ export default function RidesTable({
                   onApprove={onApprove}
                 />
               ))
+            )}
+            {hasMore && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '12px' }}>
+                  <button className="ro-btn ro-btn--outline ro-btn--sm" onClick={onLoadMore}>
+                    <i className="ti ti-chevrons-down"></i> Load More
+                  </button>
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

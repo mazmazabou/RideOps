@@ -332,14 +332,39 @@ test.describe.serial('API: Admin User Management', () => {
     expect(body.success).toBeTruthy();
   });
 
-  test('DELETE /api/admin/users/:id deletes test user', async () => {
+  test('DELETE /api/admin/users/:id soft-deletes test user', async () => {
     const res = await officeCtx.delete(`/api/admin/users/${testUserId}`);
-    // Deletion is disabled in DEMO_MODE
-    if (res.status() === 403) { test.skip(); return; }
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body.success).toBeTruthy();
-    testUserId = null; // prevent afterAll double-delete
+
+    // User should not appear in default list
+    const listRes = await officeCtx.get('/api/admin/users');
+    const users = await listRes.json();
+    expect(users.find(u => u.id === testUserId)).toBeUndefined();
+
+    // User should appear with include_deleted
+    const listDeleted = await officeCtx.get('/api/admin/users?include_deleted=true');
+    const allUsers = await listDeleted.json();
+    const deleted = allUsers.find(u => u.id === testUserId);
+    expect(deleted).toBeTruthy();
+    expect(deleted.deleted_at).toBeTruthy();
+  });
+
+  test('POST /api/admin/users/:id/restore restores soft-deleted user', async () => {
+    const res = await officeCtx.post(`/api/admin/users/${testUserId}/restore`);
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.success).toBeTruthy();
+
+    // User should now appear in default list
+    const listRes = await officeCtx.get('/api/admin/users');
+    const users = await listRes.json();
+    expect(users.find(u => u.id === testUserId)).toBeTruthy();
+
+    // Clean up: soft-delete again
+    await officeCtx.delete(`/api/admin/users/${testUserId}`).catch(() => {});
+    testUserId = null;
   });
 });
 
@@ -516,6 +541,43 @@ test.describe.serial('API: Ride Lifecycle', () => {
     const rides = await res.json();
     for (const r of rides) {
       expect(r.status).toBe('pending');
+    }
+  });
+
+  test('GET /api/rides?limit=5 returns paginated envelope', async () => {
+    const res = await officeCtx.get('/api/rides?limit=5');
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body).toHaveProperty('rides');
+    expect(body).toHaveProperty('totalCount');
+    expect(body).toHaveProperty('hasMore');
+    expect(Array.isArray(body.rides)).toBeTruthy();
+    expect(body.rides.length).toBeLessThanOrEqual(5);
+    expect(typeof body.totalCount).toBe('number');
+  });
+
+  test('GET /api/rides?limit=5 cursor pagination works', async () => {
+    const res1 = await officeCtx.get('/api/rides?limit=2');
+    const page1 = await res1.json();
+    if (!page1.hasMore) { test.skip(); return; }
+    expect(page1.nextCursor).toBeTruthy();
+
+    const res2 = await officeCtx.get(`/api/rides?limit=2&cursor=${page1.nextCursor}`);
+    const page2 = await res2.json();
+    expect(page2.rides.length).toBeGreaterThan(0);
+    // Pages should not overlap
+    const ids1 = new Set(page1.rides.map(r => r.id));
+    for (const r of page2.rides) {
+      expect(ids1.has(r.id)).toBeFalsy();
+    }
+  });
+
+  test('GET /api/rides?limit=50&status=pending,approved multi-status filter', async () => {
+    const res = await officeCtx.get('/api/rides?limit=50&status=pending,approved');
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    for (const r of body.rides) {
+      expect(['pending', 'approved']).toContain(r.status);
     }
   });
 
