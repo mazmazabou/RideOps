@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rider Console</title>
+  <title>RideOps</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.2.0/dist/css/tabler.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.37.1/dist/tabler-icons.min.css">
+  <link rel="stylesheet" href="/vendor/tabler/tabler.min.css">
+  <link rel="stylesheet" href="/vendor/tabler-icons/tabler-icons.min.css">
   <link rel="stylesheet" href="/css/rideops-theme.css">
   <script src="/campus-themes.js"></script>
   <script>
@@ -21,10 +21,9 @@
       var parts = window.location.pathname.split('/').filter(Boolean);
       var slug = ['usc','stanford','ucla','uci'].indexOf(parts[0]) !== -1 ? parts[0] : null;
       window.__RIDEOPS_CAMPUS_SLUG__ = slug;
-      if (slug) {
-        var titles = { usc: 'USC DART', stanford: 'Stanford ATS', ucla: 'UCLA BruinAccess', uci: 'UCI AnteaterExpress' };
-        if (titles[slug]) document.title = titles[slug] + ' Rider';
-      }
+      var titles = { usc: 'USC DART', stanford: 'Stanford ATS', ucla: 'UCLA BruinAccess', uci: 'UCI AnteaterExpress' };
+      var campusName = (slug && titles[slug]) ? titles[slug] : 'RideOps';
+      document.title = campusName + ' \u00b7 Rider';
       if (slug && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[slug]) {
         var ct = CAMPUS_THEMES[slug];
         var root = document.documentElement;
