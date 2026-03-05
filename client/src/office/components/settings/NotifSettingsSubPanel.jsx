@@ -84,34 +84,40 @@ export default function NotifSettingsSubPanel() {
         Configure which notifications are sent via email and in-app channels.
       </div>
 
-      {prefs && Object.entries(prefs.preferences).map(([eventType, pref]) => (
-        <div key={eventType} style={{
-          marginBottom: '16px',
-          padding: '12px',
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-sm)',
-        }}>
-          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>{pref.label}</div>
-          <div className="text-xs text-muted" style={{ marginBottom: '8px' }}>{pref.description}</div>
-          <div className="flex gap-16">
-            {Object.entries(pref.channels).map(([channel, ch]) => (
-              <label
-                key={channel}
-                className="flex items-center gap-4"
-                style={{ fontSize: '13px', cursor: 'pointer' }}
-              >
-                <input
-                  type="checkbox"
-                  checked={ch.enabled}
-                  onChange={() => toggleChannel(eventType, channel)}
-                />
-                {channel === 'email' ? 'Email' : 'In-App'}
-              </label>
-            ))}
+      {prefs && (() => {
+        const entries = Object.entries(prefs.preferences);
+        return entries.map(([eventType, pref], idx) => (
+          <div key={eventType} style={{
+            padding: '12px 0',
+            borderBottom: idx < entries.length - 1 ? '1px solid var(--color-border)' : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>{pref.label}</div>
+              <div className="text-xs text-muted">{pref.description}</div>
+            </div>
+            <div className="flex gap-16" style={{ flexShrink: 0 }}>
+              {Object.entries(pref.channels).map(([channel, ch]) => (
+                <label
+                  key={channel}
+                  className="flex items-center gap-4"
+                  style={{ fontSize: '13px', cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={ch.enabled}
+                    onChange={() => toggleChannel(eventType, channel)}
+                  />
+                  {channel === 'email' ? 'Email' : 'In-App'}
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ));
+      })()}
 
       <button
         className="ro-btn ro-btn--primary"
