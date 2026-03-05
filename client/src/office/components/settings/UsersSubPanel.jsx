@@ -4,6 +4,22 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useModal } from '../../../components/ui/Modal';
 import UserDrawer from './UserDrawer';
 
+const USER_COLUMNS = [
+  { key: 'name', label: 'Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'username', label: 'Username' },
+  { key: 'role', label: 'Role' },
+  { key: 'member_id', label: 'Member ID' },
+  { key: 'phone', label: 'Phone' },
+];
+
+function SortIcon({ col, sortCol, sortDir }) {
+  if (col !== sortCol) return <i className="ti ti-arrows-sort" style={{ opacity: 0.3, marginLeft: 4, fontSize: 12 }} />;
+  return sortDir === 'asc'
+    ? <i className="ti ti-sort-ascending" style={{ marginLeft: 4, fontSize: 12 }} />
+    : <i className="ti ti-sort-descending" style={{ marginLeft: 4, fontSize: 12 }} />;
+}
+
 export default function UsersSubPanel() {
   const { showToast } = useToast();
   const { showModal } = useModal();
@@ -14,6 +30,8 @@ export default function UsersSubPanel() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [drawerUserId, setDrawerUserId] = useState(null);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [sortCol, setSortCol] = useState('name');
+  const [sortDir, setSortDir] = useState('asc');
   const filterTimer = useRef(null);
 
   const loadUsers = useCallback(async () => {
@@ -43,8 +61,27 @@ export default function UsersSubPanel() {
         (u.username || '').toLowerCase().includes(q)
       );
     }
+    const dir = sortDir === 'asc' ? 1 : -1;
+    result = [...result].sort((a, b) => {
+      const av = (a[sortCol] || '').toLowerCase();
+      const bv = (b[sortCol] || '').toLowerCase();
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
     return result;
-  }, [users, filterText, roleFilter]);
+  }, [users, filterText, roleFilter, sortCol, sortDir]);
+
+  const handleSort = useCallback((col) => {
+    setSortCol(prev => {
+      if (prev === col) {
+        setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        return col;
+      }
+      setSortDir('asc');
+      return col;
+    });
+  }, []);
 
   const handleFilterChange = (e) => {
     clearTimeout(filterTimer.current);
@@ -246,12 +283,16 @@ export default function UsersSubPanel() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Member ID</th>
-                <th>Phone</th>
+                {USER_COLUMNS.map(col => (
+                  <th
+                    key={col.key}
+                    onClick={() => handleSort(col.key)}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    {col.label}
+                    <SortIcon col={col.key} sortCol={sortCol} sortDir={sortDir} />
+                  </th>
+                ))}
                 <th></th>
               </tr>
             </thead>
