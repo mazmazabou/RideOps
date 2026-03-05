@@ -3,6 +3,7 @@ import { fetchAdminUsers, createAdminUser, deleteAdminUser, restoreAdminUser, re
 import { useToast } from '../../../contexts/ToastContext';
 import { useModal } from '../../../components/ui/Modal';
 import UserDrawer from './UserDrawer';
+import Pagination from '../rides/Pagination';
 
 const USER_COLUMNS = [
   { key: 'name', label: 'Name' },
@@ -32,6 +33,8 @@ export default function UsersSubPanel() {
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [sortCol, setSortCol] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const filterTimer = useRef(null);
 
   const loadUsers = useCallback(async () => {
@@ -72,6 +75,15 @@ export default function UsersSubPanel() {
     return result;
   }, [users, filterText, roleFilter, sortCol, sortDir]);
 
+  // Reset to page 1 when filters or sort change
+  useEffect(() => { setPage(1); }, [filterText, roleFilter, sortCol, sortDir]);
+
+  const totalCount = filteredUsers.length;
+  const pagedUsers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, page, pageSize]);
+
   const handleSort = useCallback((col) => {
     setSortCol(prev => {
       if (prev === col) {
@@ -81,6 +93,11 @@ export default function UsersSubPanel() {
       setSortDir('asc');
       return col;
     });
+  }, []);
+
+  const handlePageSizeChange = useCallback((newSize) => {
+    setPageSize(newSize);
+    setPage(1);
   }, []);
 
   const handleFilterChange = (e) => {
@@ -132,30 +149,32 @@ export default function UsersSubPanel() {
   };
 
   const handleAddUser = async () => {
+    const formData = { username: '', name: '', email: '', phone: '', memberId: '', role: 'rider', password: '' };
     const ok = await showModal({
       title: 'Create New User',
-      body: `
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <div><label class="ro-label">Username</label><input class="ro-input" id="modal-new-username" placeholder="Username" /></div>
-          <div><label class="ro-label">Full Name</label><input class="ro-input" id="modal-new-name" placeholder="Full name" /></div>
-          <div><label class="ro-label">Email</label><input class="ro-input" id="modal-new-email" type="email" placeholder="Email" /></div>
-          <div><label class="ro-label">Phone</label><input class="ro-input" id="modal-new-phone" placeholder="Phone (optional)" /></div>
-          <div><label class="ro-label">Member ID</label><input class="ro-input" id="modal-new-memberid" placeholder="Member ID (optional)" /></div>
-          <div><label class="ro-label">Role</label><select class="ro-input" id="modal-new-role"><option value="rider">Rider</option><option value="driver">Driver</option><option value="office">Office</option></select></div>
-          <div><label class="ro-label">Password</label><input class="ro-input" id="modal-new-password" type="password" placeholder="Min 8 characters" /></div>
+      body: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div><label className="ro-label">Username</label><input className="ro-input" placeholder="Username" onChange={e => { formData.username = e.target.value; }} /></div>
+          <div><label className="ro-label">Full Name</label><input className="ro-input" placeholder="Full name" onChange={e => { formData.name = e.target.value; }} /></div>
+          <div><label className="ro-label">Email</label><input className="ro-input" type="email" placeholder="Email" onChange={e => { formData.email = e.target.value; }} /></div>
+          <div><label className="ro-label">Phone</label><input className="ro-input" placeholder="Phone (optional)" onChange={e => { formData.phone = e.target.value; }} /></div>
+          <div><label className="ro-label">Member ID</label><input className="ro-input" placeholder="Member ID (optional)" onChange={e => { formData.memberId = e.target.value; }} /></div>
+          <div>
+            <label className="ro-label">Role</label>
+            <select className="ro-input" defaultValue="rider" onChange={e => { formData.role = e.target.value; }}>
+              <option value="rider">Rider</option>
+              <option value="driver">Driver</option>
+              <option value="office">Office</option>
+            </select>
+          </div>
+          <div><label className="ro-label">Password</label><input className="ro-input" type="password" placeholder="Min 8 characters" onChange={e => { formData.password = e.target.value; }} /></div>
         </div>
-      `,
+      ),
       confirmLabel: 'Create User',
     });
     if (!ok) return;
-    const username = document.getElementById('modal-new-username')?.value?.trim();
-    const name = document.getElementById('modal-new-name')?.value?.trim();
-    const email = document.getElementById('modal-new-email')?.value?.trim();
-    const phone = document.getElementById('modal-new-phone')?.value?.trim();
-    const memberId = document.getElementById('modal-new-memberid')?.value?.trim();
-    const role = document.getElementById('modal-new-role')?.value;
-    const password = document.getElementById('modal-new-password')?.value;
-    if (!username || !name || !password) {
+    const { username, name, email, phone, memberId, role, password } = formData;
+    if (!username.trim() || !name.trim() || !password) {
       showToast('Username, name, and password are required.', 'error');
       return;
     }
@@ -164,7 +183,7 @@ export default function UsersSubPanel() {
       return;
     }
     try {
-      await createAdminUser({ username, name, email, phone, memberId, role, password });
+      await createAdminUser({ username: username.trim(), name: name.trim(), email: email.trim(), phone: phone.trim(), memberId: memberId.trim(), role, password });
       showToast('User created successfully.', 'success');
       loadUsers();
     } catch (e) {
@@ -297,7 +316,7 @@ export default function UsersSubPanel() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map(u => {
+              {pagedUsers.map(u => {
                 const isDeleted = !!u.deleted_at;
                 return (
                   <tr key={u.id} style={{ cursor: 'pointer', opacity: isDeleted ? 0.5 : 1 }} onClick={() => setDrawerUserId(u.id)}>
@@ -330,14 +349,21 @@ export default function UsersSubPanel() {
                   </tr>
                 );
               })}
-              {filteredUsers.length === 0 && (
+              {pagedUsers.length === 0 && (
                 <tr><td colSpan={8} className="text-center text-muted" style={{ padding: '24px' }}>No users found.</td></tr>
               )}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
           <div className="table-toolbar">
             <span className="table-toolbar__count" id="admin-user-filter-count">
-              {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}
+              {totalCount} user{totalCount !== 1 ? 's' : ''}
             </span>
             <button
               className="ro-btn ro-btn--danger ro-btn--sm"
