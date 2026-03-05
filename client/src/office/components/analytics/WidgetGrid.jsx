@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef } from 'react';
-import ReactGridLayout, { useContainerWidth, getCompactor } from 'react-grid-layout';
+import ReactGridLayout, { useContainerWidth, verticalCompactor } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { WIDGET_REGISTRY, getLogicalSize } from './constants';
@@ -93,15 +93,11 @@ const WidgetCard = React.forwardRef(function WidgetCard(
  *   onRemoveWidget   - (widgetId: string) => void
  *   widgetRenderer   - (widgetId: string) => ReactNode
  */
-// Vertical compaction + allowOverlap so items can be dragged on top of each other for swapping
-const swapCompactor = getCompactor('vertical', true, false);
-
 export default function WidgetGrid({ gridId, layout, editMode, onLayoutChange, onRemoveWidget, widgetRenderer }) {
   const { width, containerRef, mounted } = useContainerWidth();
   const scrollRef = useRef(null);
   const interactingRef = useRef(false);
   const pendingLayoutRef = useRef(null);
-  const dragOldItemRef = useRef(null);
 
   // Flush pending layout after resize/drag completes
   const flushPendingLayout = useCallback(() => {
@@ -133,40 +129,14 @@ export default function WidgetGrid({ gridId, layout, editMode, onLayoutChange, o
     restoreScroll();
   }, [flushPendingLayout, restoreScroll]);
 
-  const handleDragStart = useCallback((_layout, oldItem) => {
+  const handleDragStart = useCallback(() => {
     interactingRef.current = true;
     scrollRef.current = window.scrollY;
-    dragOldItemRef.current = oldItem ? { ...oldItem } : null;
   }, []);
-  const handleDragStop = useCallback((rglLayout, _oldItem, newItem) => {
-    const oldPos = dragOldItemRef.current;
-    dragOldItemRef.current = null;
-
-    // Find widget that overlaps the drop position (AABB collision)
-    if (oldPos && newItem) {
-      const swapTarget = rglLayout.find(item =>
-        item.i !== newItem.i &&
-        item.x < newItem.x + newItem.w &&
-        item.x + item.w > newItem.x &&
-        item.y < newItem.y + newItem.h &&
-        item.y + item.h > newItem.y
-      );
-      if (swapTarget) {
-        // Move swap target to where the dragged item started
-        const idx = rglLayout.findIndex(item => item.i === swapTarget.i);
-        rglLayout[idx] = { ...rglLayout[idx], x: oldPos.x, y: oldPos.y };
-      }
-    }
-
-    // Flush the swapped layout directly (bypass pending buffer)
-    const mapped = rglLayout.map(item => ({
-      id: item.i, x: item.x, y: item.y, w: item.w, h: item.h,
-    }));
-    interactingRef.current = false;
-    pendingLayoutRef.current = null;
-    onLayoutChange(mapped);
+  const handleDragStop = useCallback(() => {
+    flushPendingLayout();
     restoreScroll();
-  }, [onLayoutChange, restoreScroll]);
+  }, [flushPendingLayout, restoreScroll]);
 
   // Convert our domain layout (id) to RGL layout (i), adding constraints from registry
   const rglLayout = useMemo(() => {
@@ -256,7 +226,7 @@ export default function WidgetGrid({ gridId, layout, editMode, onLayoutChange, o
             enabled: editMode,
             handles: ['se'],
           }}
-          compactor={swapCompactor}
+          compactor={verticalCompactor}
           onLayoutChange={handleLayoutChange}
           onDragStart={handleDragStart}
           onDragStop={handleDragStop}
