@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import AvatarPicker from './AvatarPicker';
 
-export default function ProfileForm({ idPrefix = 'drawer-', placeholderWho = 'drivers' }) {
+export default function ProfileForm({ idPrefix = 'drawer-', placeholderWho = 'drivers', variant = 'drawer', onProfileLoaded }) {
   const { updateUser } = useAuth();
   const { showToast } = useToast();
   const [profile, setProfile] = useState(null);
@@ -26,6 +26,7 @@ export default function ProfileForm({ idPrefix = 'drawer-', placeholderWho = 'dr
       setGradYear(p.graduation_year || '');
       setBio(p.bio || '');
       setAvatarUrl(p.avatar_url || null);
+      if (onProfileLoaded) onProfileLoaded(p);
     }).catch(() => {});
   }, []);
 
@@ -53,49 +54,69 @@ export default function ProfileForm({ idPrefix = 'drawer-', placeholderWho = 'dr
 
   if (!profile) return null;
 
+  const isPanel = variant === 'panel';
+
+  const fieldGrid = isPanel
+    ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }
+    : undefined;
+
   return (
-    <div className="drawer-section">
-      <div className="drawer-section-title">Profile</div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label" id={idPrefix + 'memberid-label'}>Member ID</label>
-        <input type="text" className="ro-input" id={idPrefix + 'memberid'} value={profile.member_id || ''} readOnly />
+    <div className={isPanel ? undefined : 'drawer-section'}>
+      {!isPanel && <div className="drawer-section-title">Profile</div>}
+      {!isPanel && (
+        <div style={{ marginBottom: 8 }}>
+          <label className="ro-label" id={idPrefix + 'memberid-label'}>Member ID</label>
+          <input type="text" className="ro-input" id={idPrefix + 'memberid'} value={profile.member_id || ''} readOnly />
+        </div>
+      )}
+      {!isPanel && (
+        <div style={{ marginBottom: 8 }}>
+          <label className="ro-label">Email</label>
+          <input type="text" className="ro-input" id={idPrefix + 'email'} value={profile.email || ''} readOnly />
+        </div>
+      )}
+      <div style={fieldGrid}>
+        <div style={{ marginBottom: isPanel ? 0 : 8 }}>
+          <label className="ro-label">Full Name</label>
+          <input type="text" className="ro-input" id={idPrefix + 'name'} value={name} onChange={e => setName(e.target.value)} />
+        </div>
+        <div style={{ marginBottom: isPanel ? 0 : 8 }}>
+          <label className="ro-label">Preferred Name</label>
+          <input type="text" className="ro-input" id={idPrefix + 'preferred-name'} value={preferredName} onChange={e => setPreferredName(e.target.value)} placeholder={`What should ${placeholderWho} call you?`} maxLength={50} />
+        </div>
+        <div style={{ marginBottom: isPanel ? 0 : 8 }}>
+          <label className="ro-label">Phone</label>
+          <input type="tel" className="ro-input" id={idPrefix + 'phone'} value={phone} onChange={e => setPhone(e.target.value)} />
+        </div>
+        <div style={{ marginBottom: isPanel ? 0 : 8 }}>
+          <label className="ro-label">Major</label>
+          <input type="text" className="ro-input" id={idPrefix + 'major'} value={major} onChange={e => setMajor(e.target.value)} placeholder="e.g. Computer Science" maxLength={100} />
+        </div>
+        <div style={{ marginBottom: isPanel ? 0 : 8 }}>
+          <label className="ro-label">Graduation Year</label>
+          <select className="ro-input" id={idPrefix + 'grad-year'} value={gradYear} onChange={e => setGradYear(e.target.value)}>
+            <option value="">{'\u2014'}</option>
+            {years.map(yr => <option key={yr} value={yr}>{yr}</option>)}
+          </select>
+        </div>
+        {isPanel && (
+          <div>
+            <label className="ro-label" style={{ color: 'var(--color-muted)' }}>Member ID</label>
+            <div style={{ padding: '6px 0', fontSize: '14px', color: 'var(--color-text)' }}>{profile.member_id || '\u2014'}</div>
+          </div>
+        )}
+        <div style={{ marginBottom: isPanel ? 0 : 8, ...(isPanel ? { gridColumn: '1 / -1' } : {}) }}>
+          <label className="ro-label">Bio</label>
+          <input type="text" className="ro-input" id={idPrefix + 'bio'} value={bio} onChange={e => setBio(e.target.value)} placeholder={`Quick note for your ${placeholderWho === 'drivers' ? 'driver' : 'riders'} (120 chars)`} maxLength={120} />
+        </div>
       </div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label">Email</label>
-        <input type="text" className="ro-input" id={idPrefix + 'email'} value={profile.email || ''} readOnly />
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label">Full Name</label>
-        <input type="text" className="ro-input" id={idPrefix + 'name'} value={name} onChange={e => setName(e.target.value)} />
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label">Phone</label>
-        <input type="tel" className="ro-input" id={idPrefix + 'phone'} value={phone} onChange={e => setPhone(e.target.value)} />
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label">Preferred Name</label>
-        <input type="text" className="ro-input" id={idPrefix + 'preferred-name'} value={preferredName} onChange={e => setPreferredName(e.target.value)} placeholder={`What should ${placeholderWho} call you?`} maxLength={50} />
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label">Major</label>
-        <input type="text" className="ro-input" id={idPrefix + 'major'} value={major} onChange={e => setMajor(e.target.value)} placeholder="e.g. Computer Science" maxLength={100} />
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label">Graduation Year</label>
-        <select className="ro-input" id={idPrefix + 'grad-year'} value={gradYear} onChange={e => setGradYear(e.target.value)}>
-          <option value="">{'\u2014'}</option>
-          {years.map(yr => <option key={yr} value={yr}>{yr}</option>)}
-        </select>
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label className="ro-label">Bio</label>
-        <input type="text" className="ro-input" id={idPrefix + 'bio'} value={bio} onChange={e => setBio(e.target.value)} placeholder={`Quick note for your ${placeholderWho === 'drivers' ? 'driver' : 'riders'} (120 chars)`} maxLength={120} />
-      </div>
-      <div style={{ marginBottom: 12 }}>
-        <label className="ro-label">Avatar</label>
-        <AvatarPicker currentUrl={avatarUrl} userId={profile.id} onSelect={setAvatarUrl} />
-      </div>
-      <button className="ro-btn ro-btn--primary ro-btn--sm" id={idPrefix + 'save-btn'} onClick={handleSave}>Save</button>
+      {!isPanel && (
+        <div style={{ marginBottom: 12 }}>
+          <label className="ro-label">Avatar</label>
+          <AvatarPicker currentUrl={avatarUrl} userId={profile.id} onSelect={setAvatarUrl} />
+        </div>
+      )}
+      <button className="ro-btn ro-btn--primary ro-btn--sm" id={idPrefix + 'save-btn'} onClick={handleSave} style={isPanel ? { marginTop: 16 } : undefined}>{isPanel ? 'Save Changes' : 'Save'}</button>
     </div>
   );
 }

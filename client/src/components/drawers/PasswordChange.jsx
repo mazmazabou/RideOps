@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { changePassword } from '../../api';
 import { useToast } from '../../contexts/ToastContext';
 
-export default function PasswordChange() {
+export default function PasswordChange({ variant = 'drawer' }) {
   const { showToast } = useToast();
   const [current, setCurrent] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -33,8 +33,8 @@ export default function PasswordChange() {
   };
 
   return (
-    <div className="drawer-section">
-      <div className="drawer-section-title">Change Password</div>
+    <div className={variant === 'drawer' ? 'drawer-section' : undefined}>
+      {variant === 'drawer' && <div className="drawer-section-title">Change Password</div>}
       <div style={{ marginBottom: 8 }}>
         <label className="ro-label">Current Password</label>
         <input type="password" className="ro-input" id="drawer-pw-current" value={current} onChange={e => setCurrent(e.target.value)} />
