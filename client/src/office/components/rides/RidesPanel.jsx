@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { fetchRidesPaginated, fetchEmployees, fetchLocations, fetchOpsConfig, bulkDeleteRides, approveRide } from '../../../api';
+import { fetchRidesPaginated, fetchEmployees, fetchLocations, fetchOpsConfig, bulkDeleteRides, approveRide, submitRide } from '../../../api';
 import { useToast } from '../../../contexts/ToastContext';
 import { useModal } from '../../../components/ui/Modal';
 import { usePolling } from '../../../hooks/usePolling';
@@ -255,6 +255,71 @@ export default function RidesPanel() {
     a.click();
   }, [filteredRides, employees]);
 
+  // Create ride
+  const handleCreateRide = useCallback(async () => {
+    const locationOptions = (locations || []).map(loc => {
+      const label = typeof loc === 'string' ? loc : (loc.label || loc.value);
+      return label;
+    }).filter(Boolean);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const formData = { riderName: '', riderEmail: '', riderPhone: '', pickup: '', dropoff: '', date: today, time: '', notes: '' };
+
+    const ok = await showModal({
+      title: 'Create Ride',
+      body: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div><label className="ro-label">Rider Name *</label><input className="ro-input" placeholder="Full name" onChange={e => { formData.riderName = e.target.value; }} /></div>
+          <div><label className="ro-label">Rider Email *</label><input className="ro-input" type="email" placeholder="Email" onChange={e => { formData.riderEmail = e.target.value; }} /></div>
+          <div><label className="ro-label">Rider Phone</label><input className="ro-input" placeholder="Phone (optional)" onChange={e => { formData.riderPhone = e.target.value; }} /></div>
+          <div>
+            <label className="ro-label">Pickup Location *</label>
+            <select className="ro-input" defaultValue="" onChange={e => { formData.pickup = e.target.value; }}>
+              <option value="" disabled>Select pickup</option>
+              {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="ro-label">Dropoff Location *</label>
+            <select className="ro-input" defaultValue="" onChange={e => { formData.dropoff = e.target.value; }}>
+              <option value="" disabled>Select dropoff</option>
+              {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ flex: 1 }}><label className="ro-label">Date *</label><input className="ro-input" type="date" defaultValue={today} onChange={e => { formData.date = e.target.value; }} /></div>
+            <div style={{ flex: 1 }}><label className="ro-label">Time *</label><input className="ro-input" type="time" onChange={e => { formData.time = e.target.value; }} /></div>
+          </div>
+          <div><label className="ro-label">Notes</label><input className="ro-input" placeholder="Notes (optional)" onChange={e => { formData.notes = e.target.value; }} /></div>
+        </div>
+      ),
+      confirmLabel: 'Create Ride',
+    });
+    if (!ok) return;
+
+    const { riderName, riderEmail, riderPhone, pickup, dropoff, date, time, notes } = formData;
+    if (!riderName.trim() || !riderEmail.trim() || !pickup || !dropoff || !date || !time) {
+      showToast('Name, email, pickup, dropoff, date, and time are required.', 'error');
+      return;
+    }
+    const requestedTime = new Date(`${date}T${time}`).toISOString();
+    try {
+      await submitRide({
+        riderName: riderName.trim(),
+        riderEmail: riderEmail.trim(),
+        riderPhone: riderPhone.trim() || undefined,
+        pickupLocation: pickup,
+        dropoffLocation: dropoff,
+        requestedTime,
+        notes: notes.trim() || undefined,
+      });
+      showToast('Ride created successfully.', 'success');
+      loadRides();
+    } catch (e) {
+      showToast(e.message || 'Failed to create ride', 'error');
+    }
+  }, [locations, showModal, showToast, loadRides]);
+
   // Drawer handlers
   const handleRowClick = useCallback((ride) => setDrawerRide(ride), []);
   const handleDrawerClose = useCallback(() => {
@@ -288,6 +353,7 @@ export default function RidesPanel() {
         selectedCount={selectedCount}
         onBulkDelete={handleBulkDelete}
         onExportCsv={handleExportCsv}
+        onCreateRide={handleCreateRide}
         viewMode={viewMode}
         onViewChange={setViewMode}
       />

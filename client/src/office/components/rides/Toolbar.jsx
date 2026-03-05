@@ -1,6 +1,6 @@
 export default function Toolbar({
   filteredCount, totalCount, selectedCount,
-  onBulkDelete, onExportCsv,
+  onBulkDelete, onExportCsv, onCreateRide,
   viewMode, onViewChange,
 }) {
   return (
@@ -27,6 +27,14 @@ export default function Toolbar({
         onClick={onExportCsv}
       >
         <i className="ti ti-download"></i> CSV
+      </button>
+      <button
+        className="ro-btn ro-btn--outline ro-btn--sm"
+        title="Create ride"
+        onClick={onCreateRide}
+        style={{ color: 'var(--color-primary)' }}
+      >
+        <i className="ti ti-plus"></i> New Ride
       </button>
       <div className="ro-view-toggle" style={{ display: 'inline-flex', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
         <button
