@@ -98,11 +98,21 @@ node scripts/prep-screenshot-data.js
 node scripts/take-screenshots.js
 # Output: screenshots/{campus}-{view}-{detail}.png
 
-# 4. If grace timer shots were skipped (server restart resets driver_arrived_grace → scheduled):
+# 4. Fix known visual issues (always run after take-screenshots.js)
+node scripts/retake-issues.js
+# Fixes: driver-home online state, rider-driver-otw, analytics-attendance (this-month),
+#        milestones E2E ghost row hiding, DB cleanup of test notes
+
+# 5. If grace timer shots were skipped (server restart resets driver_arrived_grace → scheduled):
 node scripts/retake-grace-timer.js
 ```
 
-**Key gotcha:** Server startup recovery (`recoverStuckRides`) reverts `driver_arrived_grace` and `driver_on_the_way` rides to `scheduled`. The `retake-grace-timer.js` script handles this by advancing a scheduled ride via the driver API right before capturing the screenshot.
+**Key gotchas:**
+- Server startup recovery (`recoverStuckRides`) reverts `driver_arrived_grace` and `driver_on_the_way` rides to `scheduled`. `retake-grace-timer.js` handles this.
+- Analytics attendance uses "today" by default (no clock data). `retake-issues.js` switches to "this-month".
+- Old demo-seeded active rides for Casey sort before the OTW ride as hero (`activeRides` sorted ASC by requestedTime). `retake-issues.js` cancels all Casey's active rides first, then creates a single fresh OTW ride, and waits for `.pulse-dot.on-the-way` DOM indicator.
+- E2E test users are soft-deleted but still appear in analytics joins (by design). `retake-issues.js` hides their rows via DOM manipulation before the milestones screenshot.
+- Office-created rides via `POST /api/rides` set `rider_id = req.session.userId` (the office user's ID), but `/api/my-rides` filters by `rider_email` — so Casey's app CAN see office-created rides as long as `riderEmail` matches her session email.
 
 ## Deployment
 
