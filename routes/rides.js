@@ -22,6 +22,7 @@ module.exports = function(app, ctx) {
     dispatchNotification,
     sendRiderEmail,
     createRiderNotification,
+    sendUserNotification,
     campusLocations,
     allCampusLocations
   } = ctx;
@@ -257,6 +258,14 @@ module.exports = function(app, ctx) {
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location
       }, query).catch(() => {});
+
+      // Preference-aware rider email notification
+      sendUserNotification(ride.rider_id, 'rider_ride_approved', {
+        riderName: ride.rider_name,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location,
+        requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone })
+      }, query).catch(() => {});
     }
   }));
 
@@ -279,6 +288,13 @@ module.exports = function(app, ctx) {
         riderId: ride.rider_id,
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location
+      }, query).catch(() => {});
+
+      // Preference-aware rider email notification
+      sendUserNotification(ride.rider_id, 'rider_ride_denied', {
+        riderName: ride.rider_name,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location,
       }, query).catch(() => {});
     }
   }));
@@ -355,6 +371,27 @@ module.exports = function(app, ctx) {
         riderId: ride.rider_id,
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location
+      }, query).catch(() => {});
+    }
+
+    // Notify assigned driver about cancellation
+    if (ride.assigned_driver_id) {
+      const driverNameRes = await query('SELECT name FROM users WHERE id = $1', [ride.assigned_driver_id]);
+      sendUserNotification(ride.assigned_driver_id, 'driver_ride_cancelled', {
+        driverName: driverNameRes.rows[0]?.name || 'Driver',
+        riderName: ride.rider_name,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location,
+        time: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone, hour: 'numeric', minute: '2-digit' })
+      }, query).catch(() => {});
+    }
+
+    // Preference-aware rider cancellation notification
+    if (ride.rider_id) {
+      sendUserNotification(ride.rider_id, 'rider_ride_cancelled', {
+        riderName: ride.rider_name,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location,
       }, query).catch(() => {});
     }
   }));

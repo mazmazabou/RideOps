@@ -19,10 +19,11 @@ module.exports = function(app, ctx) {
   } = ctx;
 
   // ── Notification Preferences ──
-  app.get('/api/notification-preferences', requireOffice, wrapAsync(async (req, res) => {
+  app.get('/api/notification-preferences', requireAuth, wrapAsync(async (req, res) => {
     try {
       // Seed any missing preference rows (idempotent via ON CONFLICT DO NOTHING)
-      await seedNotificationPreferences(req.session.userId);
+      const userRole = req.session.role;
+      await seedNotificationPreferences(req.session.userId, userRole);
 
       const result = await query(
         'SELECT * FROM notification_preferences WHERE user_id = $1 ORDER BY event_type, channel',
@@ -30,12 +31,13 @@ module.exports = function(app, ctx) {
       );
 
       // Group by event_type for easier frontend rendering (skip orphaned types not in NOTIFICATION_EVENT_TYPES)
-      const knownKeys = new Set(NOTIFICATION_EVENT_TYPES.map(e => e.key));
+      const roleTypes = NOTIFICATION_EVENT_TYPES.filter(e => e.targetRole === userRole);
+      const knownKeys = new Set(roleTypes.map(e => e.key));
       const grouped = {};
       for (const row of result.rows) {
         if (!knownKeys.has(row.event_type)) continue;
         if (!grouped[row.event_type]) {
-          const def = NOTIFICATION_EVENT_TYPES.find(e => e.key === row.event_type);
+          const def = roleTypes.find(e => e.key === row.event_type);
           grouped[row.event_type] = {
             key: row.event_type,
             label: def.label,
@@ -51,14 +53,14 @@ module.exports = function(app, ctx) {
         };
       }
 
-      res.json({ eventTypes: NOTIFICATION_EVENT_TYPES, preferences: grouped });
+      res.json({ eventTypes: roleTypes, preferences: grouped });
     } catch (err) {
       console.error('GET notification-preferences error:', err);
       res.status(500).json({ error: 'Failed to load notification preferences' });
     }
   }));
 
-  app.put('/api/notification-preferences', requireOffice, wrapAsync(async (req, res) => {
+  app.put('/api/notification-preferences', requireAuth, wrapAsync(async (req, res) => {
     try {
       const { preferences } = req.body;
       if (!Array.isArray(preferences)) return res.status(400).json({ error: 'preferences must be an array' });

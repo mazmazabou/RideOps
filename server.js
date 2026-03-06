@@ -35,7 +35,7 @@ if (DEMO_MODE) {
   emailModule = require('./email');
 }
 const { isConfigured: emailConfigured, sendWelcomeEmail, sendPasswordResetEmail } = emailModule;
-const { dispatchNotification, sendRiderEmail, createRiderNotification, setTenantConfig: setNotifTenantConfig } = require('./notification-service');
+const { dispatchNotification, sendRiderEmail, createRiderNotification, sendUserNotification, setTenantConfig: setNotifTenantConfig } = require('./notification-service');
 
 // ----- Tenant configuration -----
 const TENANT = loadTenantConfig();
@@ -155,7 +155,7 @@ const ctx = {
   // External modules
   bcrypt, ExcelJS,
   emailConfigured, sendWelcomeEmail, sendPasswordResetEmail,
-  dispatchNotification, sendRiderEmail, createRiderNotification
+  dispatchNotification, sendRiderEmail, createRiderNotification, sendUserNotification
 };
 
 // ----- Health check (unauthenticated) -----
@@ -326,6 +326,89 @@ let server;
       console.error('[Notifications] Missed ride check error:', err.message);
     }
   }, 5 * 60 * 1000);
+
+  // Check for upcoming rides and missed shifts every 60 seconds
+  setInterval(async () => {
+    // -- Upcoming ride reminders (15 min before) --
+    try {
+      const now = new Date();
+      const fifteenMinFromNow = new Date(Date.now() + 15 * 60000);
+
+      const upcomingRides = await query(`
+        SELECT r.id, r.assigned_driver_id, r.rider_name, r.pickup_location, r.dropoff_location, r.requested_time,
+               d.name AS driver_name
+        FROM rides r
+        JOIN users d ON d.id = r.assigned_driver_id
+        WHERE r.status = 'scheduled'
+          AND r.assigned_driver_id IS NOT NULL
+          AND r.requested_time BETWEEN $1 AND $2
+          AND r.ride_upcoming_notified_at IS NULL
+      `, [now.toISOString(), fifteenMinFromNow.toISOString()]);
+
+      for (const ride of upcomingRides.rows) {
+        await query('UPDATE rides SET ride_upcoming_notified_at = NOW() WHERE id = $1', [ride.id]);
+        sendUserNotification(ride.assigned_driver_id, 'driver_upcoming_ride', {
+          driverName: ride.driver_name,
+          riderName: ride.rider_name,
+          pickup: ride.pickup_location,
+          dropoff: ride.dropoff_location,
+          time: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone, hour: 'numeric', minute: '2-digit' })
+        }, query).catch(() => {});
+      }
+    } catch (err) {
+      console.error('[Notifications] Upcoming ride check error:', err.message);
+    }
+
+    // -- Missed shift check --
+    try {
+      const now = new Date();
+      const local = new Date(now.toLocaleString('en-US', { timeZone: TENANT.timezone }));
+      const todayDow = (local.getDay() + 6) % 7;
+      const nowHH = String(local.getHours()).padStart(2, '0');
+      const nowMM = String(local.getMinutes()).padStart(2, '0');
+      const nowTime = `${nowHH}:${nowMM}`;
+      const todayDate = helpers.formatLocalDate(now);
+      const monday = new Date(local);
+      monday.setDate(local.getDate() - todayDow);
+      const weekStart = helpers.formatLocalDate(monday);
+
+      // Shifts that ended within last 30 min where driver never clocked in today
+      const thirtyMinAgo = local.getHours() * 60 + local.getMinutes() - 30;
+      const cutoffHH = String(Math.floor(Math.max(0, thirtyMinAgo) / 60)).padStart(2, '0');
+      const cutoffMM = String(Math.max(0, thirtyMinAgo) % 60).padStart(2, '0');
+      const cutoffTime = `${cutoffHH}:${cutoffMM}`;
+
+      const missedShifts = await query(`
+        SELECT s.id AS shift_id, s.employee_id, s.start_time, s.end_time, u.name AS driver_name
+        FROM shifts s
+        JOIN users u ON u.id = s.employee_id AND u.deleted_at IS NULL
+        WHERE s.day_of_week = $1
+          AND (s.week_start IS NULL OR s.week_start = $2)
+          AND s.end_time <= $3
+          AND s.end_time > $4
+          AND NOT EXISTS (
+            SELECT 1 FROM clock_events ce
+            WHERE ce.employee_id = s.employee_id AND ce.event_date = $5
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM notifications n
+            WHERE n.user_id = s.employee_id AND n.event_type = 'driver_missed_shift'
+              AND n.created_at::date = CURRENT_DATE
+          )
+      `, [todayDow, weekStart, nowTime, cutoffTime, todayDate]);
+
+      for (const shift of missedShifts.rows) {
+        sendUserNotification(shift.employee_id, 'driver_missed_shift', {
+          driverName: shift.driver_name,
+          shiftStart: shift.start_time,
+          shiftEnd: shift.end_time,
+          date: todayDate
+        }, query).catch(() => {});
+      }
+    } catch (err) {
+      console.error('[Notifications] Missed shift check error:', err.message);
+    }
+  }, 60 * 1000);
 })().catch((err) => {
   console.error('Failed to initialize database', err);
   process.exit(1);

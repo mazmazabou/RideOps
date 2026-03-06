@@ -12,7 +12,8 @@ module.exports = function(app, ctx) {
     getSetting,
     formatLocalDate,
     TENANT,
-    dispatchNotification
+    dispatchNotification,
+    sendUserNotification
   } = ctx;
 
   // ----- Employee endpoints -----
@@ -72,6 +73,14 @@ module.exports = function(app, ctx) {
         scheduledStart: clockEvent.scheduled_start || 'N/A',
         clockInTime: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: TENANT.timezone }),
         thresholdCheck: clockEvent.tardiness_minutes
+      }, query).catch(() => {});
+
+      // Notify the driver themselves (preference-aware)
+      sendUserNotification(employeeId, 'driver_late_clock_in', {
+        driverName: result.rows[0].name,
+        tardyMinutes: clockEvent.tardiness_minutes,
+        scheduledStart: clockEvent.scheduled_start || 'N/A',
+        clockInTime: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: TENANT.timezone }),
       }, query).catch(() => {});
     }
   }));

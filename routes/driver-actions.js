@@ -18,7 +18,8 @@ module.exports = function(app, ctx) {
     TENANT,
     dispatchNotification,
     sendRiderEmail,
-    createRiderNotification
+    createRiderNotification,
+    sendUserNotification
   } = ctx;
 
   app.post('/api/rides/:id/claim', requireAuth, wrapAsync(async (req, res) => {
@@ -74,6 +75,15 @@ module.exports = function(app, ctx) {
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location
       }, query).catch(() => {});
+
+      // Notify the driver about their new assignment
+      sendUserNotification(driverId, 'driver_new_assignment', {
+        driverName: driverNameRes.rows[0]?.name || 'Driver',
+        riderName: ride.rider_name,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location,
+        time: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone, hour: 'numeric', minute: '2-digit' })
+      }, query).catch(() => {});
     }
   }));
 
@@ -113,6 +123,14 @@ module.exports = function(app, ctx) {
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location
       }, query).catch(() => {});
+
+      // Preference-aware rider notification
+      sendUserNotification(ride.rider_id, 'rider_driver_on_way', {
+        riderName: ride.rider_name,
+        driverName,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location
+      }, query).catch(() => {});
     }
   }));
 
@@ -137,6 +155,14 @@ module.exports = function(app, ctx) {
       const driverName = driverNameRes.rows[0]?.name || 'Your driver';
       createRiderNotification('ride_driver_arrived', {
         riderId: ride.rider_id,
+        driverName,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location
+      }, query).catch(() => {});
+
+      // Preference-aware rider notification
+      sendUserNotification(ride.rider_id, 'rider_driver_arrived', {
+        riderName: ride.rider_name,
         driverName,
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location
@@ -183,6 +209,13 @@ module.exports = function(app, ctx) {
     if (ride.rider_id) {
       createRiderNotification('ride_completed_rider', {
         riderId: ride.rider_id,
+        pickup: ride.pickup_location,
+        dropoff: ride.dropoff_location
+      }, query).catch(() => {});
+
+      // Preference-aware rider notification
+      sendUserNotification(ride.rider_id, 'rider_ride_completed', {
+        riderName: ride.rider_name,
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location
       }, query).catch(() => {});
@@ -294,6 +327,32 @@ module.exports = function(app, ctx) {
             dropoff: ride.dropoff_location,
             consecutiveMisses: newCount
           }, query);
+
+          // Preference-aware rider notifications
+          sendUserNotification(ride.rider_id, 'rider_no_show_notice', {
+            riderName: ride.rider_name,
+            pickup: ride.pickup_location,
+            dropoff: ride.dropoff_location,
+            requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone }),
+            consecutiveMisses: newCount,
+            maxStrikes,
+            missesRemaining: maxStrikes - newCount
+          }, query);
+
+          if (strikesEnabled && newCount >= maxStrikes) {
+            sendUserNotification(ride.rider_id, 'rider_terminated_notice', {
+              riderName: ride.rider_name,
+              consecutiveMisses: newCount,
+              maxStrikes
+            }, query);
+          } else if (strikesEnabled && newCount >= maxStrikes - 2) {
+            sendUserNotification(ride.rider_id, 'rider_strike_warning', {
+              riderName: ride.rider_name,
+              consecutiveMisses: newCount,
+              maxStrikes,
+              missesRemaining: maxStrikes - newCount
+            }, query);
+          }
         }
       } catch (err) {
         console.error('[Notifications] no-show dispatch error:', err.message);
