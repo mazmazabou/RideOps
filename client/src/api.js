@@ -7,6 +7,10 @@ function campusParam() {
 
 async function request(url, opts = {}) {
   const res = await fetch(url, opts);
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    throw new Error(res.ok ? 'Server returned an unexpected response' : `Request failed (${res.status})`);
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
@@ -453,6 +457,11 @@ export function duplicateShift(data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
+}
+
+export function checkShiftConflict({ employeeId, dayOfWeek, weekStart, startTime, endTime }) {
+  const params = new URLSearchParams({ employeeId, dayOfWeek, weekStart, startTime, endTime });
+  return request('/api/shifts/check-conflict?' + params);
 }
 
 export function deleteShift(id) {

@@ -70,6 +70,23 @@ module.exports = function(app, ctx) {
     res.json(shift);
   }));
 
+  // ----- Check for shift conflicts (proactive, lightweight) -----
+  app.get('/api/shifts/check-conflict', requireOffice, wrapAsync(async (req, res) => {
+    const { employeeId, dayOfWeek, weekStart, startTime, endTime } = req.query;
+    if (!employeeId || dayOfWeek === undefined || !startTime || !endTime) {
+      return res.status(400).json({ error: 'Missing required query params' });
+    }
+    const overlaps = await query(
+      `SELECT id, start_time AS "startTime", end_time AS "endTime"
+       FROM shifts
+       WHERE employee_id = $1 AND day_of_week = $2
+       AND (week_start IS NOT DISTINCT FROM $3)
+       AND start_time < $4 AND end_time > $5`,
+      [employeeId, Number(dayOfWeek), weekStart || null, endTime, startTime]
+    );
+    res.json({ conflicts: overlaps.rows });
+  }));
+
   // ----- Duplicate a shift with conflict detection -----
   app.post('/api/shifts/duplicate', requireOffice, wrapAsync(async (req, res) => {
     const { sourceShiftId, targetDayOfWeek, targetWeekStart, startTime, endTime, replaceConflicts } = req.body;
@@ -117,6 +134,7 @@ module.exports = function(app, ctx) {
     // Delete conflicting shifts if replacing
     if (overlaps.rows.length > 0 && replaceConflicts) {
       for (const ov of overlaps.rows) {
+        await query('DELETE FROM clock_events WHERE shift_id = $1', [ov.id]);
         await query('DELETE FROM shifts WHERE id = $1', [ov.id]);
       }
     }

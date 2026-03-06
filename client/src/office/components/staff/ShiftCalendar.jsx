@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useToast } from '../../../contexts/ToastContext';
 import { useModal } from '../../../components/ui/Modal';
 import {
-  fetchShiftsForWeek, createShift, updateShift, deleteShift, duplicateShift,
+  fetchShiftsForWeek, createShift, updateShift, deleteShift, duplicateShift, checkShiftConflict,
 } from '../../../api';
 import { getCampusPalette, getCampusSlug } from '../../../utils/campus';
 import {
@@ -555,7 +555,10 @@ function ShiftContextMenu({ data, onDuplicate, onEdit, onDelete, onClose }) {
 // -- Duplicate Shift Modal --
 function DuplicateShiftModal({ data, opsConfig, onSuccess, onCancel, showToast }) {
   const cfg = opsConfig || {};
-  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+  const opDays = useMemo(
+    () => String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number),
+    [cfg.operating_days]
+  );
 
   // Compute the source shift's actual date for default target calculation
   const srcMonday = data.weekStart ? new Date(data.weekStart + 'T00:00:00') : getMondayOfWeek(new Date());
@@ -587,10 +590,35 @@ function DuplicateShiftModal({ data, opsConfig, onSuccess, onCancel, showToast }
     return { dayOfWeek, weekStart };
   }
 
+  // Proactive conflict check when target date or times change
+  useEffect(() => {
+    if (!targetDate || !startTime || !endTime) return;
+    const d = new Date(targetDate + 'T00:00:00');
+    if (isNaN(d.getTime())) return;
+    const dayOfWeek = d.getDay() === 0 ? 6 : d.getDay() - 1;
+    if (!opDays.includes(dayOfWeek)) { setConflict(null); return; }
+    const weekStart = formatDateLocal(getMondayOfWeek(d));
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await checkShiftConflict({
+          employeeId: data.employeeId,
+          dayOfWeek: String(dayOfWeek),
+          weekStart,
+          startTime,
+          endTime,
+        });
+        setConflict(res.conflicts && res.conflicts.length > 0 ? res.conflicts : null);
+      } catch {
+        setConflict(null);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [targetDate, startTime, endTime, data.employeeId, opDays]);
+
   async function handleSubmit(replace) {
     const { dayOfWeek, weekStart } = targetFields();
     setLoading(true);
-    setConflict(null);
     try {
       const result = await duplicateShift({
         sourceShiftId: data.shiftId,
@@ -644,11 +672,16 @@ function DuplicateShiftModal({ data, opsConfig, onSuccess, onCancel, showToast }
               type="date"
               className="dup-modal__input"
               value={targetDate}
-              onChange={e => { setTargetDate(e.target.value); setConflict(null); }}
+              onChange={e => setTargetDate(e.target.value)}
             />
             {!isOpDay && targetDate && (
               <div className="dup-modal__warning">
                 <i className="ti ti-alert-triangle" /> This is not an operating day.
+              </div>
+            )}
+            {isOpDay && conflict && (
+              <div className="dup-modal__warning">
+                <i className="ti ti-alert-triangle" /> {data.empName} already scheduled this day{conflict.length === 1 ? ` at ${formatTimeAmPm(conflict[0].startTime)}\u2013${formatTimeAmPm(conflict[0].endTime)}` : ` (${conflict.length} shifts)`}.
               </div>
             )}
           </div>
@@ -661,39 +694,24 @@ function DuplicateShiftModal({ data, opsConfig, onSuccess, onCancel, showToast }
                 type="time"
                 className="dup-modal__input"
                 value={startTime}
-                onChange={e => { setStartTime(e.target.value); setConflict(null); }}
+                onChange={e => setStartTime(e.target.value)}
               />
               <span className="dup-modal__time-sep">{'\u2013'}</span>
               <input
                 type="time"
                 className="dup-modal__input"
                 value={endTime}
-                onChange={e => { setEndTime(e.target.value); setConflict(null); }}
+                onChange={e => setEndTime(e.target.value)}
               />
             </div>
           </div>
-
-          {/* Conflict warning */}
-          {conflict && (
-            <div className="dup-modal__conflict">
-              <i className="ti ti-alert-circle" />
-              <div>
-                <strong>{data.empName}</strong> already has {conflict.length > 1 ? conflict.length + ' shifts' : 'a shift'} overlapping on this day:
-                <ul className="dup-modal__conflict-list">
-                  {conflict.map(c => (
-                    <li key={c.id}>{formatTimeAmPm(c.startTime)} {'\u2013'} {formatTimeAmPm(c.endTime)}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="ro-modal__actions" style={{ marginTop: 16 }}>
           <button className="ro-btn ro-btn--outline" onClick={onCancel} disabled={loading}>Cancel</button>
           {conflict ? (
             <button className="ro-btn ro-btn--danger" onClick={() => handleSubmit(true)} disabled={loading}>
-              {loading ? 'Replacing\u2026' : 'Replace existing shift'}
+              {loading ? 'Replacing\u2026' : 'Replace & Duplicate'}
             </button>
           ) : (
             <button className="ro-btn ro-btn--primary" onClick={() => handleSubmit(false)} disabled={loading || !isOpDay}>
