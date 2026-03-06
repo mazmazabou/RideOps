@@ -22,7 +22,7 @@ export default function DriverRow({
         return rideHour === h;
       });
       cells.push(
-        <div key={h} style={{ position: 'relative', borderRight: '1px solid var(--color-border-light)' }}>
+        <div key={h} className="relative" style={{ borderRight: '1px solid var(--color-border-light)' }}>
           {ridesInHour.map(r => (
             <RideStrip key={r.id} ride={r} driverColor={paletteColor} onClick={onRideClick} />
           ))}

@@ -53,16 +53,16 @@ export default function PendingQueue({ rides, onRideClick, onRefresh }) {
         const terminated = ride.consecutiveMisses >= 5;
         return (
           <div key={ride.id} className="strip-row" onClick={() => onRideClick(ride)}>
-            <div style={{ flex: 1 }}>
+            <div className="flex-1">
               <div>
                 <span className="status-badge status-badge--pending">Pending</span>{' '}
-                <span style={{ fontWeight: 600 }}>{ride.riderName}</span>
+                <span className="fw-600">{ride.riderName}</span>
               </div>
-              <div className="text-sm text-muted" style={{ marginTop: 2 }}>
+              <div className="text-sm text-muted mt-2">
                 {ride.pickupLocation} &rarr; {ride.dropoffLocation} &middot; {formatDateTime(ride.requestedTime)}
               </div>
               {terminated && (
-                <div className="alert" style={{ marginTop: 4 }}>
+                <div className="alert mt-4">
                   SERVICE TERMINATED — 5 consecutive no-shows
                 </div>
               )}

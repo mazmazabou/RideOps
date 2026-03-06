@@ -8,32 +8,28 @@ export default function MapPanel({ isVisible }) {
 
   if (!campusMapUrl) {
     return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        height: '60vh', gap: 16, color: 'var(--color-text-muted)', textAlign: 'center', padding: 24,
+      <div className="flex-col items-center justify-center gap-16 text-muted text-center p-24" style={{
+        height: '60vh',
       }}>
         <i className="ti ti-map-off" style={{ fontSize: 48, opacity: 0.3 }} />
-        <div style={{ fontSize: 15, fontWeight: 500 }}>No campus map configured</div>
+        <div className="fw-500" style={{ fontSize: 15 }}>No campus map configured</div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column',
+    <div className="flex-col" style={{
       height: 'calc(100vh - 80px)', marginTop: -24,
     }}>
       {embeddable ? (
         <>
-          <div style={{
-            overflow: 'hidden', flex: 1, minHeight: 200,
-          }}>
+          <div className="overflow-hidden flex-1" style={{ minHeight: 200 }}>
             {isVisible && (
               <iframe
                 src={campusMapUrl}
                 width="100%"
                 height="100%"
-                style={{ border: 0, display: 'block' }}
+                className="border-none" style={{ display: 'block' }}
                 allowFullScreen
                 loading="lazy"
                 title="Campus Map"
@@ -46,14 +42,15 @@ export default function MapPanel({ isVisible }) {
           href={campusMapUrl}
           target="_blank"
           rel="noopener noreferrer"
+          className="flex items-center justify-center p-16 fw-700 text-16"
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            background: 'var(--color-primary)', color: 'white', padding: 16, borderRadius: 12,
-            textDecoration: 'none', fontWeight: 700, fontSize: 16, letterSpacing: 0.3,
+            gap: 10,
+            background: 'var(--color-primary)', color: 'white', borderRadius: 12,
+            textDecoration: 'none', letterSpacing: 0.3,
             flexShrink: 0, boxShadow: '0 4px 12px rgba(var(--color-primary-rgb),0.35)',
           }}
         >
-          <i className="ti ti-map-2" style={{ fontSize: 20 }} /> Open Campus Map
+          <i className="ti ti-map-2 text-20" /> Open Campus Map
         </a>
       )}
     </div>

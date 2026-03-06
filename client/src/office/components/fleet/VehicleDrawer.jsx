@@ -56,51 +56,51 @@ export default function VehicleDrawer({ vehicle, onClose, onLogMaintenance, onRe
 
   return (
     <Drawer open={true} onClose={onClose} title={vehicle.name || 'Vehicle Details'}>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+      <div className="mb-16">
+        <div className="flex items-center gap-8 mb-8">
           <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: statusColor }} />
-          <span style={{ fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>{vehicle.status}</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-muted)', marginLeft: 'auto' }}>{vehicle.type}</span>
+          <span className="text-13 fw-600" style={{ textTransform: 'capitalize' }}>{vehicle.status}</span>
+          <span className="text-sm text-muted ml-auto">{vehicle.type}</span>
         </div>
         {vehicle.maintenanceOverdue && (
-          <div className="maintenance-alert" style={{ marginBottom: 12 }}>
+          <div className="maintenance-alert mb-12">
             Maintenance overdue ({vehicle.daysSinceMaintenance} days since last service)
           </div>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
+        <div className="gap-8 text-13" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
           <div>
-            <span style={{ color: 'var(--color-text-muted)' }}>Completed rides</span>
-            <div style={{ fontWeight: 600 }}>{vehicle.rideCount}</div>
+            <span className="text-muted">Completed rides</span>
+            <div className="fw-600">{vehicle.rideCount}</div>
           </div>
           <div>
-            <span style={{ color: 'var(--color-text-muted)' }}>Last used</span>
-            <div style={{ fontWeight: 600 }}>{lastUsed}</div>
+            <span className="text-muted">Last used</span>
+            <div className="fw-600">{lastUsed}</div>
           </div>
           <div>
-            <span style={{ color: 'var(--color-text-muted)' }}>Total miles</span>
-            <div style={{ fontWeight: 600 }}>{vehicle.total_miles != null ? Number(vehicle.total_miles).toLocaleString() : 'N/A'}</div>
+            <span className="text-muted">Total miles</span>
+            <div className="fw-600">{vehicle.total_miles != null ? Number(vehicle.total_miles).toLocaleString() : 'N/A'}</div>
           </div>
           <div>
-            <span style={{ color: 'var(--color-text-muted)' }}>Last maintenance</span>
-            <div style={{ fontWeight: 600 }}>{lastMaint}</div>
+            <span className="text-muted">Last maintenance</span>
+            <div className="fw-600">{lastMaint}</div>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="flex gap-8" style={{ marginBottom: 20 }}>
         {actionButtons}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: 12 }}>
-        <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 8px', color: 'var(--color-text-secondary)' }}>
-          <i className="ti ti-tool" style={{ marginRight: 4 }} />Maintenance History
+      <div className="pt-12" style={{ borderTop: '1px solid var(--color-border-light)' }}>
+        <h4 className="text-13 fw-700 text-secondary" style={{ margin: '0 0 8px' }}>
+          <i className="ti ti-tool mr-4" />Maintenance History
         </h4>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 16, color: 'var(--color-text-muted)', fontSize: 13 }}>
+          <div className="text-center p-16 text-muted text-13">
             Loading...
           </div>
         ) : logs.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 16, color: 'var(--color-text-muted)', fontSize: 13 }}>
+          <div className="text-center p-16 text-muted text-13">
             No maintenance history yet.
           </div>
         ) : (

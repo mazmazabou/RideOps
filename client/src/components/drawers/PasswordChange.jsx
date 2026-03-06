@@ -35,15 +35,15 @@ export default function PasswordChange({ variant = 'drawer' }) {
   return (
     <div className={variant === 'drawer' ? 'drawer-section' : undefined}>
       {variant === 'drawer' && <div className="drawer-section-title">Change Password</div>}
-      <div style={{ marginBottom: 8 }}>
+      <div className="mb-8">
         <label className="ro-label">Current Password</label>
         <input type="password" className="ro-input" id="drawer-pw-current" value={current} onChange={e => setCurrent(e.target.value)} />
       </div>
-      <div style={{ marginBottom: 8 }}>
+      <div className="mb-8">
         <label className="ro-label">New Password (min 8)</label>
         <input type="password" className="ro-input" id="drawer-pw-new" value={newPw} onChange={e => setNewPw(e.target.value)} />
       </div>
-      <div style={{ marginBottom: 8 }}>
+      <div className="mb-8">
         <label className="ro-label">Confirm</label>
         <input type="password" className="ro-input" id="drawer-pw-confirm" value={confirm} onChange={e => setConfirm(e.target.value)} />
       </div>

@@ -90,7 +90,7 @@ export default function ReportsTab({ dateRange }) {
 
             {/* RideOps Wrapped */}
             {semesterData.current && (
-              <div className="ro-wrapped" style={{ marginTop: '16px' }}>
+              <div className="ro-wrapped mt-16">
                 <div className="wrapped-grid">
                   <div className="wrapped-card">
                     <div className="wrapped-card__icon"><i className="ti ti-road"></i></div>
@@ -123,7 +123,7 @@ export default function ReportsTab({ dateRange }) {
             {/* Monthly Breakdown */}
             {semesterData.monthlyBreakdown?.length > 0 && (
               <>
-                <h4 style={{ marginTop: '16px' }}>Monthly Breakdown</h4>
+                <h4 className="mt-16">Monthly Breakdown</h4>
                 <table className="grid-table">
                   <thead><tr><th>Month</th><th>Completed</th><th>Total</th><th>Riders</th></tr></thead>
                   <tbody>
@@ -143,7 +143,7 @@ export default function ReportsTab({ dateRange }) {
             {/* Driver Leaderboard */}
             {semesterData.driverLeaderboard?.length > 0 && (
               <>
-                <h4 style={{ marginTop: '16px' }}>Driver Leaderboard</h4>
+                <h4 className="mt-16">Driver Leaderboard</h4>
                 <table className="grid-table">
                   <thead><tr><th>Driver</th><th>Completed Rides</th></tr></thead>
                   <tbody>
@@ -209,7 +209,7 @@ export default function ReportsTab({ dateRange }) {
 
             {/* Description */}
             <div className="ao-report-desc">
-              <i className="ti ti-info-circle" style={{ marginRight: '4px', opacity: 0.6 }}></i>
+              <i className="ti ti-info-circle mr-4" style={{ opacity: 0.6 }}></i>
               {info.desc}
               {dateLabel && <span className="ao-report-desc-date"> ({dateLabel})</span>}
             </div>

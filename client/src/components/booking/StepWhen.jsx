@@ -16,7 +16,7 @@ export default function StepWhen({ data, onChange, onNext, onBack, opsConfig }) 
       <button className="step-back" id="step2-back" onClick={onBack}>
         <i className="ti ti-arrow-left" /> Back
       </button>
-      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>When do you need a ride?</h3>
+      <h3 className="text-16 fw-700" style={{ margin: '0 0 4px' }}>When do you need a ride?</h3>
       <p className="text-muted text-sm mb-16">{serviceHoursText}</p>
       <label className="ro-label">Date</label>
       <DateChips
@@ -24,7 +24,7 @@ export default function StepWhen({ data, onChange, onNext, onBack, opsConfig }) 
         selectedDate={data.date}
         onSelect={date => onChange({ ...data, date })}
       />
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-16">
         <label className="ro-label">Time</label>
         <input
           type="time"

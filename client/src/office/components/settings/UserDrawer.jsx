@@ -45,17 +45,17 @@ export default function UserDrawer({ userId, onClose, onResetPassword, onDeleteU
   return (
     <Drawer open={!!userId} onClose={onClose} title="User Details">
       {loading && (
-        <div className="text-muted" style={{ padding: '24px', textAlign: 'center' }}>Loading...</div>
+        <div className="text-muted p-24 text-center">Loading...</div>
       )}
       {!loading && user && (
         <div>
           {/* User header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          <div className="flex items-center gap-12 mb-16">
             <div className="profile-avatar">
               <img src={user.avatar_url || defaultAvatarUrl(user.name)} alt={user.name} />
             </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: '16px' }}>{user.name}</div>
+              <div className="fw-600 text-16">{user.name}</div>
               <span className={`status-badge status-badge--${user.role === 'office' ? 'approved' : user.role === 'driver' ? 'scheduled' : 'pending'}`}>
                 {user.role}
               </span>
@@ -64,11 +64,10 @@ export default function UserDrawer({ userId, onClose, onResetPassword, onDeleteU
 
           {/* Deleted banner */}
           {user.deleted_at && (
-            <div style={{
-              padding: '12px', borderRadius: 'var(--radius-sm)', marginBottom: '16px',
+            <div className="mb-16 text-13" style={{
+              padding: '12px', borderRadius: 'var(--radius-sm)',
               background: 'rgba(107,114,128,0.1)',
               border: '1px solid var(--color-text-muted)',
-              fontSize: '13px',
             }}>
               <strong>Deleted</strong> on {new Date(user.deleted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
@@ -76,16 +75,14 @@ export default function UserDrawer({ userId, onClose, onResetPassword, onDeleteU
 
           {/* No-show banner for riders */}
           {user.role === 'rider' && missCount > 0 && (
-            <div style={{
-              padding: '12px', borderRadius: 'var(--radius-sm)', marginBottom: '16px',
+            <div className="mb-16 text-13" style={{
+              padding: '12px', borderRadius: 'var(--radius-sm)',
               background: missCount >= maxStrikes ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
               border: `1px solid ${missCount >= maxStrikes ? 'var(--status-denied)' : 'var(--status-on-the-way)'}`,
-              fontSize: '13px',
             }}>
               <strong>{missCount >= maxStrikes ? 'Service Terminated' : 'No-Show Warning'}</strong>: {missCount} / {maxStrikes} consecutive no-shows.
               <button
-                className="ro-btn ro-btn--outline ro-btn--sm"
-                style={{ marginLeft: '8px' }}
+                className="ro-btn ro-btn--outline ro-btn--sm ml-8"
                 onClick={handleResetMissCount}
               >
                 Reset Count
@@ -94,12 +91,9 @@ export default function UserDrawer({ userId, onClose, onResetPassword, onDeleteU
           )}
 
           {/* Details */}
-          <div style={{
-            fontSize: '13px',
+          <div className="text-13 gap-8 mb-24" style={{
             display: 'grid',
             gridTemplateColumns: '100px 1fr',
-            gap: '8px',
-            marginBottom: '24px',
           }}>
             <span className="text-muted">Email</span><span>{user.email || '\u2014'}</span>
             <span className="text-muted">Username</span><span>{user.username}</span>
@@ -109,21 +103,17 @@ export default function UserDrawer({ userId, onClose, onResetPassword, onDeleteU
 
           {/* Recent rides */}
           {rides.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
-              <h4 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+            <div className="mb-24">
+              <h4 className="text-13 fw-600 mb-8">
                 Recent Rides ({rides.length})
               </h4>
-              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              <div className="overflow-y-auto" style={{ maxHeight: '200px' }}>
                 {rides.slice(0, 10).map(r => (
-                  <div key={r.id} style={{
-                    padding: '8px',
+                  <div key={r.id} className="flex justify-between p-8 text-sm" style={{
                     borderBottom: '1px solid var(--color-border)',
-                    fontSize: '12px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
                   }}>
                     <span>{r.pickup_location} \u2192 {r.dropoff_location}</span>
-                    <span className={`status-badge status-badge--${r.status}`} style={{ fontSize: '11px' }}>
+                    <span className={`status-badge status-badge--${r.status} text-xs`}>
                       {r.status}
                     </span>
                   </div>
@@ -134,7 +124,7 @@ export default function UserDrawer({ userId, onClose, onResetPassword, onDeleteU
 
           {/* Actions */}
           {!isSelf && (
-            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
+            <div className="pt-16" style={{ borderTop: '1px solid var(--color-border)' }}>
               {user.deleted_at ? (
                 <button
                   className="ro-btn ro-btn--outline ro-btn--sm"
@@ -145,8 +135,7 @@ export default function UserDrawer({ userId, onClose, onResetPassword, onDeleteU
               ) : (
                 <>
                   <button
-                    className="ro-btn ro-btn--outline ro-btn--sm"
-                    style={{ marginRight: '8px' }}
+                    className="ro-btn ro-btn--outline ro-btn--sm mr-8"
                     onClick={() => onResetPassword(userId, user.name)}
                   >
                     <i className="ti ti-key"></i> Reset Password

@@ -29,7 +29,7 @@ export default function FleetUtilWidget({ data }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="flex-col" style={{ gap: '0.5rem' }}>
         {sorted.map((vehicle, i) => {
           const rides = vehicle.totalRides || 0;
           const pct = maxRides > 0 ? (rides / maxRides) * 100 : 0;

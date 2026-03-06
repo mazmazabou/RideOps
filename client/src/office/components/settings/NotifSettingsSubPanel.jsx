@@ -87,24 +87,19 @@ export default function NotifSettingsSubPanel() {
       {prefs && (() => {
         const entries = Object.entries(prefs.preferences);
         return entries.map(([eventType, pref], idx) => (
-          <div key={eventType} style={{
+          <div key={eventType} className="flex items-center justify-between gap-16" style={{
             padding: '12px 0',
             borderBottom: idx < entries.length - 1 ? '1px solid var(--color-border)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
           }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>{pref.label}</div>
+            <div className="min-w-0">
+              <div className="fw-600 text-13" style={{ marginBottom: '2px' }}>{pref.label}</div>
               <div className="text-xs text-muted">{pref.description}</div>
             </div>
             <div className="flex gap-16" style={{ flexShrink: 0 }}>
               {Object.entries(pref.channels).map(([channel, ch]) => (
                 <label
                   key={channel}
-                  className="flex items-center gap-4"
-                  style={{ fontSize: '13px', cursor: 'pointer' }}
+                  className="flex items-center gap-4 text-13 cursor-pointer"
                 >
                   <input
                     type="checkbox"
@@ -120,10 +115,9 @@ export default function NotifSettingsSubPanel() {
       })()}
 
       <button
-        className="ro-btn ro-btn--primary"
+        className="ro-btn ro-btn--primary mt-8"
         onClick={handleSave}
         disabled={saving}
-        style={{ marginTop: '8px' }}
       >
         <i className="ti ti-device-floppy"></i> {saving ? 'Saving...' : 'Save'}
       </button>

@@ -86,7 +86,7 @@ export default function RouteDemandMatrixWidget({ matrixData }) {
             <tr>
               <th></th>
               {destinations.map((d) => (
-                <th key={d} title={d} style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                <th key={d} title={d} className="text-sm text-nowrap">
                   {shorten(d)}
                 </th>
               ))}
@@ -97,7 +97,8 @@ export default function RouteDemandMatrixWidget({ matrixData }) {
               <tr key={o}>
                 <td
                   title={o}
-                  style={{ fontWeight: 600, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
+                  className="fw-600 text-nowrap"
+                  style={{ fontSize: '0.8rem' }}
                 >
                   {shorten(o)}
                 </td>
@@ -106,9 +107,9 @@ export default function RouteDemandMatrixWidget({ matrixData }) {
                   return (
                     <td
                       key={d}
+                      className="text-center"
                       style={{
                         background: cellBg(val),
-                        textAlign: 'center',
                         fontWeight: val > 0 ? 600 : 400,
                         color: val > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
                         minWidth: 40,
@@ -123,14 +124,7 @@ export default function RouteDemandMatrixWidget({ matrixData }) {
           </tbody>
         </table>
       </div>
-      <div
-        style={{
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)',
-          marginTop: 8,
-          textAlign: 'center',
-        }}
-      >
+      <div className="text-sm mt-8 text-center" style={{ color: 'var(--text-muted)' }}>
         Top 8 origins x top 8 destinations. Darker = higher volume.
       </div>
     </div>

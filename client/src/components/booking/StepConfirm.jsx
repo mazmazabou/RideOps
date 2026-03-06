@@ -85,8 +85,8 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
       <button className="step-back" id="step3-back" onClick={onBack}>
         <i className="ti ti-arrow-left" /> Back
       </button>
-      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px' }}>Confirm your ride</h3>
-      <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16 }}>
+      <h3 className="text-16 fw-700" style={{ margin: '0 0 12px' }}>Confirm your ride</h3>
+      <div className="p-16 mb-16" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
         <div className="confirm-row">
           <span className="confirm-label">From</span>
           <span className="confirm-value" id="confirm-from">{data.pickup}</span>
@@ -101,7 +101,7 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-16">
         <label className="ro-label">Notes (optional)</label>
         <textarea
           id="notes"
@@ -114,8 +114,8 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
       </div>
 
       {/* Recurring ride toggle */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+      <div className="mb-16">
+        <label className="flex items-center gap-8 cursor-pointer text-14 fw-600">
           <input
             type="checkbox"
             id="recurring-toggle"
@@ -123,20 +123,20 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
             onChange={e => setIsRecurring(e.target.checked)}
             style={{ width: 18, height: 18, accentColor: 'var(--color-primary)' }}
           />
-          <i className="ti ti-repeat" style={{ fontSize: 16, color: 'var(--color-primary)' }} />
+          <i className="ti ti-repeat text-16" style={{ color: 'var(--color-primary)' }} />
           Make this a recurring ride
         </label>
       </div>
 
-      <div id="recurring-options" style={{ display: isRecurring ? 'block' : 'none', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16 }}>
+      <div id="recurring-options" className="p-16 mb-16" style={{ display: isRecurring ? 'block' : 'none', background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
         <label className="ro-label">
           Repeat on ({opDays.length > 2
             ? ourDayLabel(opDays[0]) + '\u2013' + ourDayLabel(opDays[opDays.length - 1])
             : opDays.map(ourDayLabel).join(', ')})
         </label>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }} id="recurring-days">
+        <div className="flex gap-8 flex-wrap mb-16" id="recurring-days">
           {opDays.map(d => (
-            <label key={d} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, cursor: 'pointer' }}>
+            <label key={d} className="flex items-center gap-4 text-13 cursor-pointer">
               <input
                 type="checkbox"
                 value={d}

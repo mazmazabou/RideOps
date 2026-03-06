@@ -10,10 +10,10 @@ const COLUMNS = [
 ];
 
 function SortIcon({ col, sortCol, sortDir }) {
-  if (col !== sortCol) return <i className="ti ti-arrows-sort" style={{ opacity: 0.3, marginLeft: 4, fontSize: 12 }} />;
+  if (col !== sortCol) return <i className="ti ti-arrows-sort ml-4 text-sm" style={{ opacity: 0.3 }} />;
   return sortDir === 'asc'
-    ? <i className="ti ti-sort-ascending" style={{ marginLeft: 4, fontSize: 12 }} />
-    : <i className="ti ti-sort-descending" style={{ marginLeft: 4, fontSize: 12 }} />;
+    ? <i className="ti ti-sort-ascending ml-4 text-sm" />
+    : <i className="ti ti-sort-descending ml-4 text-sm" />;
 }
 
 export default function RidesTable({
@@ -42,7 +42,8 @@ export default function RidesTable({
                 <th
                   key={col.key}
                   onClick={() => onSort(col.key)}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  className="cursor-pointer"
+                  style={{ userSelect: 'none' }}
                 >
                   {col.label}
                   <SortIcon col={col.key} sortCol={sortCol} sortDir={sortDir} />
@@ -54,7 +55,7 @@ export default function RidesTable({
           <tbody id="rides-tbody">
             {filteredRides.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>
+                <td colSpan={7} className="text-center p-24 text-muted">
                   No rides match the current filters.
                 </td>
               </tr>

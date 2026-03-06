@@ -9,15 +9,15 @@ function getUrgencyBadge(ride) {
   const diffMin = Math.round(diffMs / 60000);
   if (diffMin >= 0 && diffMin <= 15) {
     return (
-      <span style={{ color: 'var(--status-no-show)', fontWeight: 700, fontSize: 11 }}>
-        <i className="ti ti-clock" style={{ fontSize: 13, verticalAlign: 'middle' }} /> In {diffMin} min
+      <span className="fw-700 text-xs" style={{ color: 'var(--status-no-show)' }}>
+        <i className="ti ti-clock text-13" style={{ verticalAlign: 'middle' }} /> In {diffMin} min
       </span>
     );
   }
   if (diffMin > 15 && diffMin <= 30) {
     return (
-      <span style={{ color: 'var(--status-on-the-way)', fontWeight: 700, fontSize: 11 }}>
-        <i className="ti ti-clock" style={{ fontSize: 13, verticalAlign: 'middle' }} /> In {diffMin} min
+      <span className="fw-700 text-xs" style={{ color: 'var(--status-on-the-way)' }}>
+        <i className="ti ti-clock text-13" style={{ verticalAlign: 'middle' }} /> In {diffMin} min
       </span>
     );
   }
@@ -39,7 +39,7 @@ export default function AvailableRidesList({ rides, onRefresh }) {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div className="flex items-center justify-between mb-12">
         <span className="fw-700" style={{ fontSize: 15 }}>Available Rides</span>
         <span className="text-xs text-muted">{rides.length} ride{rides.length === 1 ? '' : 's'}</span>
       </div>
@@ -52,13 +52,13 @@ export default function AvailableRidesList({ rides, onRefresh }) {
       ) : (
         <div className="strip-list">
           {rides.map(ride => (
-            <div key={ride.id} className="strip-row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+            <div key={ride.id} className="strip-row flex-wrap gap-8">
+              <div className="flex items-center gap-8 flex-1 min-w-0">
                 <span className="fw-700 text-sm">{formatTime(ride.requestedTime)}</span>
                 {getUrgencyBadge(ride)}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="fw-600 text-sm" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div className="flex-1 min-w-0">
+                <div className="fw-600 text-sm text-nowrap overflow-hidden" style={{ textOverflow: 'ellipsis' }}>
                   {ride.pickupLocation} → {ride.dropoffLocation}
                 </div>
                 <div className="text-xs text-muted">{ride.riderName}</div>

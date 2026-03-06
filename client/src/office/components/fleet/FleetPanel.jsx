@@ -102,7 +102,7 @@ export default function FleetPanel() {
     showModal({
       title: 'Vehicle Status Definitions',
       body: (
-        <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+        <div className="text-13" style={{ lineHeight: 1.6 }}>
           <p><strong>Active</strong> {'\u2014'} In service, available for ride assignments.</p>
           <p><strong>Retired</strong> {'\u2014'} Removed from service. History preserved.</p>
           <p><strong>Maintenance</strong> {'\u2014'} Temporarily unavailable for service.</p>
@@ -137,11 +137,11 @@ export default function FleetPanel() {
   return (
     <div>
       <div className="ro-section">
-        <div className="ro-section__header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="ro-section__header flex items-center justify-between">
           <h3 className="ro-section__title">
             <i className="ti ti-bus" /> Fleet Vehicles
           </h3>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-8">
             <button
               className="ro-btn ro-btn--outline ro-btn--sm"
               title="Status definitions"
@@ -156,10 +156,10 @@ export default function FleetPanel() {
         </div>
 
         {vehicles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <i className="ti ti-bus-off" style={{ fontSize: 32, color: 'var(--color-text-muted)' }} />
-            <div style={{ fontWeight: 600, marginTop: 8, color: 'var(--color-text-secondary)' }}>No vehicles</div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginTop: 4 }}>Add vehicles to track fleet usage.</div>
+          <div className="text-center" style={{ padding: 40 }}>
+            <i className="ti ti-bus-off text-muted" style={{ fontSize: 32 }} />
+            <div className="fw-600 mt-8 text-secondary">No vehicles</div>
+            <div className="text-13 text-muted mt-4">Add vehicles to track fleet usage.</div>
           </div>
         ) : (
           <div className="vehicles-grid">
@@ -229,8 +229,8 @@ function AddVehicleModal({ onConfirm, onCancel }) {
       <div className="ro-modal">
         <div className="ro-modal__title">Add Vehicle</div>
         <div className="ro-modal__body">
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--color-text-secondary)' }}>
+          <div className="mb-12">
+            <label className="text-sm fw-600 text-secondary" style={{ display: 'block', marginBottom: 4 }}>
               Name <span style={{ color: 'var(--status-no-show)' }}>*</span>
             </label>
             <input
@@ -238,18 +238,18 @@ function AddVehicleModal({ onConfirm, onCancel }) {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Cart #1"
-              style={{ width: '100%', padding: '8px 10px', fontSize: 13, borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
+              className="w-full text-13" style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
               autoFocus
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--color-text-secondary)' }}>
+            <label className="text-sm fw-600 text-secondary" style={{ display: 'block', marginBottom: 4 }}>
               Type
             </label>
             <select
               value={type}
               onChange={e => setType(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px', fontSize: 13, borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
+              className="w-full text-13" style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
             >
               <option value="standard">Standard</option>
               <option value="accessible">Accessible</option>
@@ -282,23 +282,23 @@ function MaintenanceModal({ vehicle, onConfirm, onCancel }) {
       <div className="ro-modal">
         <div className="ro-modal__title">Log Maintenance</div>
         <div className="ro-modal__body">
-          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 12px' }}>
+          <p className="text-13 text-secondary" style={{ margin: '0 0 12px' }}>
             {vehicle.name}
           </p>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--color-text-secondary)' }}>
+          <div className="mb-12">
+            <label className="text-sm fw-600 text-secondary" style={{ display: 'block', marginBottom: 4 }}>
               Notes <span style={{ color: 'var(--status-no-show)' }}>*</span>
             </label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Describe maintenance performed..."
-              style={{ width: '100%', minHeight: 80, padding: '8px 10px', fontSize: 13, borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', resize: 'vertical' }}
+              className="w-full text-13" style={{ minHeight: 80, padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', resize: 'vertical' }}
               autoFocus
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--color-text-secondary)' }}>
+            <label className="text-sm fw-600 text-secondary" style={{ display: 'block', marginBottom: 4 }}>
               Mileage (optional)
             </label>
             <input
@@ -306,7 +306,7 @@ function MaintenanceModal({ vehicle, onConfirm, onCancel }) {
               value={mileage}
               onChange={e => setMileage(e.target.value)}
               placeholder="Current mileage"
-              style={{ width: '100%', padding: '8px 10px', fontSize: 13, borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
+              className="w-full text-13" style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
             />
           </div>
         </div>

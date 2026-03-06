@@ -25,9 +25,9 @@ export default function StepWhere({ data, onChange, onNext, serviceScopeText }) 
 
   return (
     <div className="step active" id="step-1">
-      <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px' }}>Where are you going?</h3>
+      <h3 className="text-16 fw-700" style={{ margin: '0 0 4px' }}>Where are you going?</h3>
       <p className="text-muted text-sm mb-16" id="service-scope-text">{serviceScopeText || 'Campus locations only.'}</p>
-      <div style={{ marginBottom: 12 }}>
+      <div className="mb-12">
         <label className="ro-label">From</label>
         <select
           id="pickup-location"
@@ -40,7 +40,7 @@ export default function StepWhere({ data, onChange, onNext, serviceScopeText }) 
           {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
         </select>
       </div>
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-16">
         <label className="ro-label">To</label>
         <select
           id="dropoff-location"

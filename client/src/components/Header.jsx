@@ -17,9 +17,9 @@ export default function Header() {
       <header className="rider-header">
         <div className="rider-header__left">
           <span id="org-short-name">{orgShortName}</span>
-          <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>Rider</span>
+          <span className="text-muted fw-400">Rider</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="flex items-center gap-8">
           <button
             className="notif-bell"
             id="notif-bell-btn"

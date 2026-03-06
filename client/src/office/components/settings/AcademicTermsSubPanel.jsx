@@ -26,14 +26,14 @@ export default function AcademicTermsSubPanel() {
     const ok = await showModal({
       title: 'Add Academic Term',
       body: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="flex-col gap-12">
           <div><label className="ro-label">Name</label><input className="ro-input" id="modal-term-name" placeholder="e.g. Fall 2026" /></div>
           <div><label className="ro-label">Start Date</label><input className="ro-input" id="modal-term-start" type="date" /></div>
           <div><label className="ro-label">End Date</label><input className="ro-input" id="modal-term-end" type="date" /></div>
           <div>
             <label className="ro-label">Display Order</label>
             <input className="ro-input" id="modal-term-sort" type="number" defaultValue="0" min="0" placeholder="0" />
-            <span className="text-xs text-muted" style={{ marginTop: '4px', display: 'block' }}>
+            <span className="text-xs text-muted mt-4" style={{ display: 'block' }}>
               Lower numbers appear first in the list
             </span>
           </div>
@@ -66,14 +66,14 @@ export default function AcademicTermsSubPanel() {
     const ok = await showModal({
       title: 'Edit Academic Term',
       body: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="flex-col gap-12">
           <div><label className="ro-label">Name</label><input className="ro-input" id="modal-term-name" defaultValue={term.name} /></div>
           <div><label className="ro-label">Start Date</label><input className="ro-input" id="modal-term-start" type="date" defaultValue={startVal} /></div>
           <div><label className="ro-label">End Date</label><input className="ro-input" id="modal-term-end" type="date" defaultValue={endVal} /></div>
           <div>
             <label className="ro-label">Display Order</label>
             <input className="ro-input" id="modal-term-sort" type="number" defaultValue={sortVal} min="0" />
-            <span className="text-xs text-muted" style={{ marginTop: '4px', display: 'block' }}>
+            <span className="text-xs text-muted mt-4" style={{ display: 'block' }}>
               Lower numbers appear first in the list
             </span>
           </div>
@@ -126,7 +126,7 @@ export default function AcademicTermsSubPanel() {
 
   return (
     <div id="academic-terms-container" className="p-24">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div className="flex justify-between items-center mb-16">
         <h3 className="ro-section__title" style={{ margin: 0 }}>Academic Terms</h3>
         <button className="ro-btn ro-btn--primary ro-btn--sm" onClick={handleAdd}>
           <i className="ti ti-plus"></i> Add Term
@@ -135,23 +135,20 @@ export default function AcademicTermsSubPanel() {
 
       {terms.length === 0 ? (
         <div className="text-muted text-center" style={{ padding: '32px' }}>
-          <i className="ti ti-calendar-off" style={{ fontSize: '32px', display: 'block', marginBottom: '8px' }}></i>
+          <i className="ti ti-calendar-off mb-8" style={{ fontSize: '32px', display: 'block' }}></i>
           No academic terms defined.
         </div>
       ) : (
         <div style={{ display: 'grid', gap: '8px' }}>
           {terms.map(term => (
-            <div key={term.id} style={{
+            <div key={term.id} className="flex justify-between items-center" style={{
               padding: '12px 16px',
               background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
             }}>
               <div>
-                <div style={{ fontWeight: 600, fontSize: '14px' }}>{term.name}</div>
+                <div className="fw-600 text-14">{term.name}</div>
                 <div className="text-xs text-muted">
                   {term.start_date ? term.start_date.slice(0, 10) : ''} &mdash; {term.end_date ? term.end_date.slice(0, 10) : ''}
                   {term.sort_order != null && <span> &middot; Display Order: {term.sort_order}</span>}

@@ -4,11 +4,11 @@ export default function Toolbar({
   viewMode, onViewChange,
 }) {
   return (
-    <div className="filter-bar" style={{ paddingTop: 0, gap: '12px', alignItems: 'center' }}>
+    <div className="filter-bar items-center gap-12" style={{ paddingTop: 0 }}>
       <span className="text-sm text-muted" id="ride-filter-count">
         {totalCount} ride{totalCount !== 1 ? 's' : ''}
       </span>
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
       {selectedCount > 0 && (
         <span id="rides-bulk-actions">
           <button
@@ -36,7 +36,7 @@ export default function Toolbar({
       >
         <i className="ti ti-plus"></i> New Ride
       </button>
-      <div className="ro-view-toggle" style={{ display: 'inline-flex', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+      <div className="ro-view-toggle overflow-hidden" style={{ display: 'inline-flex', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
         <button
           className={`ro-view-toggle__btn${viewMode === 'table' ? ' active' : ''}`}
           id="rides-view-table-btn"

@@ -48,9 +48,9 @@ export default function ClockButton({ isActive, employee, rides, userId, onRefre
   if (isActive) {
     return (
       <button
-        className="ro-btn ro-btn--action ro-btn--full"
+        className="ro-btn ro-btn--action ro-btn--full mb-24"
         onClick={handleToggle}
-        style={{ background: 'transparent', color: 'var(--status-no-show)', border: '2px solid var(--status-no-show)', marginBottom: 24 }}
+        style={{ background: 'transparent', color: 'var(--status-no-show)', border: '2px solid var(--status-no-show)' }}
       >
         <i className="ti ti-plug-off" /> CLOCK OUT
       </button>
@@ -58,7 +58,7 @@ export default function ClockButton({ isActive, employee, rides, userId, onRefre
   }
 
   return (
-    <button className="ro-btn ro-btn--primary ro-btn--action ro-btn--full" onClick={handleToggle} style={{ maxWidth: 320, marginBottom: 12 }}>
+    <button className="ro-btn ro-btn--primary ro-btn--action ro-btn--full mb-12" onClick={handleToggle} style={{ maxWidth: 320 }}>
       <i className="ti ti-plug" /> CLOCK IN
     </button>
   );

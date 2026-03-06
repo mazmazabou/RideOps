@@ -141,17 +141,17 @@ export default function RideDrawer({
   return (
     <Drawer open={!!ride} onClose={onClose} title="Ride Details">
       {/* Status */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ marginBottom: 8 }}>
-          <span className={`status-badge status-badge--${ride.status}`} style={{ fontSize: '14px' }}>
+      <div className="mb-16">
+        <div className="mb-8">
+          <span className={`status-badge status-badge--${ride.status} text-14`}>
             {statusLabel(ride.status)}
           </span>
         </div>
 
         {/* Rider */}
-        <div className="ro-label" style={{ marginTop: 8 }}>Rider</div>
-        <div className="profile-card profile-card--compact" style={{ marginBottom: 8 }}>
-          <div style={{ fontWeight: 600 }}>{ride.riderName || '\u2014'}</div>
+        <div className="ro-label mt-8">Rider</div>
+        <div className="profile-card profile-card--compact mb-8">
+          <div className="fw-600">{ride.riderName || '\u2014'}</div>
           {ride.riderEmail && <div className="text-sm text-muted">{ride.riderEmail}</div>}
           {ride.riderPhone && <div className="text-sm text-muted">{ride.riderPhone}</div>}
         </div>
@@ -159,9 +159,9 @@ export default function RideDrawer({
         {/* Driver */}
         {ride.assignedDriverId && (
           <>
-            <div className="ro-label" style={{ marginTop: 12 }}>Driver</div>
-            <div className="profile-card profile-card--compact" style={{ marginBottom: 8 }}>
-              <div style={{ fontWeight: 600 }}>{driverName}</div>
+            <div className="ro-label mt-12">Driver</div>
+            <div className="profile-card profile-card--compact mb-8">
+              <div className="fw-600">{driverName}</div>
             </div>
           </>
         )}
@@ -221,9 +221,8 @@ export default function RideDrawer({
 
       {/* Grace info */}
       {graceInfo.message && (
-        <div className="text-sm" style={{
+        <div className="text-sm fw-600" style={{
           padding: '8px 0',
-          fontWeight: 600,
           color: graceInfo.canNoShow ? 'var(--status-no-show)' : 'var(--status-grace)',
         }}>
           {graceInfo.message}
@@ -233,7 +232,7 @@ export default function RideDrawer({
       {/* Actions */}
       <div className="drawer-section">
         <div className="drawer-section-title">Actions</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex-col gap-8">
           {/* Pending */}
           {ride.status === 'pending' && (
             <>
@@ -249,8 +248,7 @@ export default function RideDrawer({
           {/* Approved + unassigned */}
           {ride.status === 'approved' && !ride.assignedDriverId && (
             <select
-              className="reassign-select"
-              style={{ width: '100%' }}
+              className="reassign-select w-full"
               defaultValue=""
               onChange={e => handleAssign(e.target.value)}
             >
@@ -290,13 +288,12 @@ export default function RideDrawer({
               {/* Unassign / Reassign */}
               {ride.assignedDriverId && (
                 <>
-                  <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '8px 0' }} />
+                  <hr className="border-none" style={{ borderTop: '1px solid var(--color-border)', margin: '8px 0' }} />
                   <button className="ro-btn ro-btn--outline ro-btn--full" onClick={handleUnassign}>
                     Unassign Driver
                   </button>
                   <select
-                    className="reassign-select"
-                    style={{ width: '100%' }}
+                    className="reassign-select w-full"
                     defaultValue=""
                     onChange={e => handleReassign(e.target.value)}
                   >

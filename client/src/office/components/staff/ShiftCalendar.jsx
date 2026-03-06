@@ -543,13 +543,13 @@ function EmployeePickerModal({ employees, onConfirm, onCancel }) {
       <div className="ro-modal">
         <div className="ro-modal__title">Add Shift</div>
         <div className="ro-modal__body">
-          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 12px' }}>
+          <p className="text-13 text-secondary" style={{ margin: '0 0 12px' }}>
             Select the driver for this shift:
           </p>
           <select
             value={selected}
             onChange={e => setSelected(e.target.value)}
-            style={{ width: '100%', padding: '8px 10px', fontSize: 13, borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
+            className="w-full text-13" style={{ padding: '8px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}
           >
             {employees.map(e => (
               <option key={e.id} value={e.id}>

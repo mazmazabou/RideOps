@@ -52,7 +52,7 @@ export default function VehicleCard({ vehicle, onLogMaintenance, onRetire, onDel
           Maintenance overdue ({vehicle.daysSinceMaintenance} days since last service)
         </div>
       )}
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }} onClick={e => e.stopPropagation()}>
+      <div className="flex gap-8 mt-8" onClick={e => e.stopPropagation()}>
         {actionButtons}
       </div>
     </div>

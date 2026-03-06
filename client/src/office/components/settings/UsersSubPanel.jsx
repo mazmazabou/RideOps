@@ -15,10 +15,10 @@ const USER_COLUMNS = [
 ];
 
 function SortIcon({ col, sortCol, sortDir }) {
-  if (col !== sortCol) return <i className="ti ti-arrows-sort" style={{ opacity: 0.3, marginLeft: 4, fontSize: 12 }} />;
+  if (col !== sortCol) return <i className="ti ti-arrows-sort ml-4 text-sm" style={{ opacity: 0.3 }} />;
   return sortDir === 'asc'
-    ? <i className="ti ti-sort-ascending" style={{ marginLeft: 4, fontSize: 12 }} />
-    : <i className="ti ti-sort-descending" style={{ marginLeft: 4, fontSize: 12 }} />;
+    ? <i className="ti ti-sort-ascending ml-4 text-sm" />
+    : <i className="ti ti-sort-descending ml-4 text-sm" />;
 }
 
 export default function UsersSubPanel() {
@@ -153,7 +153,7 @@ export default function UsersSubPanel() {
     const ok = await showModal({
       title: 'Create New User',
       body: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="flex-col gap-12">
           <div><label className="ro-label">Username</label><input className="ro-input" placeholder="Username" onChange={e => { formData.username = e.target.value; }} /></div>
           <div><label className="ro-label">Full Name</label><input className="ro-input" placeholder="Full name" onChange={e => { formData.name = e.target.value; }} /></div>
           <div><label className="ro-label">Email</label><input className="ro-input" type="email" placeholder="Email" onChange={e => { formData.email = e.target.value; }} /></div>
@@ -197,7 +197,7 @@ export default function UsersSubPanel() {
       body: (
         <>
           <p>Reset password for <strong>{userName}</strong>?</p>
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-12">
             <label className="ro-label">New Password</label>
             <input className="ro-input" id="modal-reset-pw" type="password" placeholder="Min 8 characters" />
           </div>
@@ -272,7 +272,7 @@ export default function UsersSubPanel() {
 
   return (
     <>
-      <div className="filter-bar" style={{ alignItems: 'center' }}>
+      <div className="filter-bar items-center">
         <input
           type="text"
           id="admin-user-filter"
@@ -281,7 +281,7 @@ export default function UsersSubPanel() {
           style={{ maxWidth: '400px' }}
           onChange={handleFilterChange}
         />
-        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--color-text-muted)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        <label className="flex items-center text-13 text-muted cursor-pointer text-nowrap" style={{ gap: '6px' }}>
           <input type="checkbox" checked={showDeleted} onChange={e => setShowDeleted(e.target.checked)} />
           Show deleted
         </label>
@@ -306,7 +306,8 @@ export default function UsersSubPanel() {
                   <th
                     key={col.key}
                     onClick={() => handleSort(col.key)}
-                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                    className="cursor-pointer"
+                    style={{ userSelect: 'none' }}
                   >
                     {col.label}
                     <SortIcon col={col.key} sortCol={sortCol} sortDir={sortDir} />
@@ -319,7 +320,7 @@ export default function UsersSubPanel() {
               {pagedUsers.map(u => {
                 const isDeleted = !!u.deleted_at;
                 return (
-                  <tr key={u.id} style={{ cursor: 'pointer', opacity: isDeleted ? 0.5 : 1 }} onClick={() => setDrawerUserId(u.id)}>
+                  <tr key={u.id} className={`cursor-pointer${isDeleted ? ' opacity-50' : ''}`} onClick={() => setDrawerUserId(u.id)}>
                     <td onClick={e => e.stopPropagation()}>
                       {!isDeleted && <input type="checkbox" checked={selectedIds.has(u.id)} onChange={() => toggleSelect(u.id)} />}
                     </td>
@@ -333,7 +334,7 @@ export default function UsersSubPanel() {
                     <td className="text-muted">{u.member_id || '\u2014'}</td>
                     <td className="text-muted">{u.phone || '\u2014'}</td>
                     <td onClick={e => e.stopPropagation()}>
-                      <div style={{ position: 'relative' }}>
+                      <div className="relative">
                         {isDeleted ? (
                           <KebabMenu
                             onRestore={() => handleRestoreUser(u.id, u.name)}
@@ -350,7 +351,7 @@ export default function UsersSubPanel() {
                 );
               })}
               {pagedUsers.length === 0 && (
-                <tr><td colSpan={8} className="text-center text-muted" style={{ padding: '24px' }}>No users found.</td></tr>
+                <tr><td colSpan={8} className="text-center text-muted p-24">No users found.</td></tr>
               )}
             </tbody>
           </table>
@@ -374,7 +375,7 @@ export default function UsersSubPanel() {
               <i className="ti ti-trash"></i> Delete Selected (<span id="users-selected-count">{selectedIds.size}</span>)
             </button>
             <div className="table-toolbar__actions">
-              <div style={{ position: 'relative' }}>
+              <div className="relative">
                 <button
                   className="table-toolbar__btn"
                   id="admin-role-filter-btn"
@@ -431,7 +432,7 @@ function KebabMenu({ onResetPassword, onDelete, onRestore }) {
         <i className="ti ti-dots-vertical"></i>
       </button>
       {open && (
-        <div className="kebab-menu" style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10 }}>
+        <div className="kebab-menu absolute" style={{ right: 0, top: '100%', zIndex: 10 }}>
           {onRestore ? (
             <button className="kebab-item" onClick={() => { setOpen(false); onRestore(); }}>
               <i className="ti ti-refresh"></i> Restore

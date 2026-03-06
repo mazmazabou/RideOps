@@ -64,7 +64,7 @@ export default function DriverLeaderboardWidget({ drivers }) {
         <tbody>
           {sorted.map((driver, i) => (
             <tr key={i}>
-              <td className="ao-td" style={{ fontWeight: 500 }}>
+              <td className="ao-td fw-500">
                 {driver.driverName || 'Unknown'}
               </td>
               <td className="ao-td ao-td--right ao-td--bold">

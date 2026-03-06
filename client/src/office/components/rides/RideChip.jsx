@@ -9,9 +9,8 @@ export default function RideChip({ ride, offset, onClick }) {
 
   return (
     <span
-      className={`ride-chip status-${ride.status}${offset === 'mid' ? ' offset-mid' : ''}`}
+      className={`ride-chip status-${ride.status}${offset === 'mid' ? ' offset-mid' : ''} cursor-pointer`}
       onClick={() => onClick(ride)}
-      style={{ cursor: 'pointer' }}
     >
       <span>{ride.riderName || '\u2014'}</span>
       <span className="time">{time}</span>

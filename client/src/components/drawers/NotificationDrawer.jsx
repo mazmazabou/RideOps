@@ -146,19 +146,19 @@ export default function NotificationDrawer({ open, onClose, onCountChange }) {
     <Drawer open={open} onClose={onClose} title="Notifications">
       {/* Selection toolbar */}
       {notifications.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border, #e5e7eb)' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-text-muted)', cursor: 'pointer' }}>
-            <input type="checkbox" id="notif-select-all" checked={allSelected} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /> Select All
+        <div className="flex gap-8 items-center mb-12 pb-8" style={{ borderBottom: '1px solid var(--color-border, #e5e7eb)' }}>
+          <label className="flex items-center gap-6 text-sm text-muted cursor-pointer">
+            <input type="checkbox" id="notif-select-all" checked={allSelected} onChange={toggleSelectAll} className="cursor-pointer" /> Select All
           </label>
-          <button className="ro-btn ro-btn--outline ro-btn--sm" id="notif-mark-read" disabled={selectedIds.size === 0} style={{ fontSize: 12 }} onClick={handleMarkRead}>
+          <button className="ro-btn ro-btn--outline ro-btn--sm text-sm" id="notif-mark-read" disabled={selectedIds.size === 0} onClick={handleMarkRead}>
             {markReadLabel}
           </button>
-          <button className="ro-btn ro-btn--outline ro-btn--sm" id="notif-clear" disabled={selectedIds.size === 0} style={{ fontSize: 12 }} onClick={handleClear}>
-            <i className="ti ti-trash" style={{ fontSize: 14 }} /> <span className="notif-clear-label">{clearLabel}</span>
+          <button className="ro-btn ro-btn--outline ro-btn--sm text-sm" id="notif-clear" disabled={selectedIds.size === 0} onClick={handleClear}>
+            <i className="ti ti-trash text-14" /> <span className="notif-clear-label">{clearLabel}</span>
           </button>
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           {totalCount > notifications.length && (
-            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+            <span className="text-xs text-muted">
               Showing {notifications.length} of {totalCount}
             </span>
           )}
@@ -168,7 +168,7 @@ export default function NotificationDrawer({ open, onClose, onCountChange }) {
       {/* Notification list */}
       {notifications.length === 0 ? (
         <div className="notif-empty">
-          <i className="ti ti-bell-off" style={{ fontSize: 24, display: 'block', marginBottom: 8 }} />
+          <i className="ti ti-bell-off text-24 mb-8" style={{ display: 'block' }} />
           No notifications yet
         </div>
       ) : (
@@ -178,19 +178,18 @@ export default function NotificationDrawer({ open, onClose, onCountChange }) {
             return (
               <li
                 key={n.id}
-                className={`notif-item ${n.read ? 'notif-item--read' : 'notif-item--unread'}`}
+                className={`notif-item ${n.read ? 'notif-item--read' : 'notif-item--unread'} flex items-start gap-8`}
                 data-notif-id={n.id}
-                style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}
                 onClick={() => handleClickNotif(n)}
               >
                 <input
                   type="checkbox"
-                  className="notif-item-cb"
+                  className="notif-item-cb mt-4 cursor-pointer"
                   data-id={n.id}
                   checked={selectedIds.has(n.id)}
                   onChange={() => toggleSelect(n.id)}
                   onClick={e => e.stopPropagation()}
-                  style={{ marginTop: 4, cursor: 'pointer', flexShrink: 0 }}
+                  style={{ flexShrink: 0 }}
                 />
                 <div className="notif-item__icon"><i className={`ti ${icon}`} /></div>
                 <div className="notif-item__content">

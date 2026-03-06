@@ -22,12 +22,13 @@ export default function VehicleSelector({ rideId, vehicleId, vehicles, onRefresh
 
   if (vehicleId && !showSelect) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--color-text-muted)', marginTop: 8, marginBottom: 8 }}>
+      <div className="flex items-center gap-6 text-13 text-muted mt-8 mb-8">
         <i className="ti ti-car" style={{ color: 'var(--color-primary)' }} />
         <span>{currentVehicle?.name || 'Vehicle'}</span>
         <button
           onClick={() => setShowSelect(true)}
-          style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+          className="ml-auto text-xs border-none cursor-pointer"
+          style={{ color: 'var(--color-primary)', background: 'none', textDecoration: 'underline' }}
         >
           Change
         </button>
@@ -36,17 +37,18 @@ export default function VehicleSelector({ rideId, vehicleId, vehicles, onRefresh
   }
 
   return (
-    <div id="ride-vehicle-row" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+    <div id="ride-vehicle-row" className="mt-12 pt-12" style={{ borderTop: '1px solid var(--color-border)' }}>
+      <div className="text-sm fw-600 text-muted mb-8" style={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
         <i className="ti ti-car" /> Vehicle
       </div>
       <select
         id="ride-vehicle-select"
         onChange={e => handleChange(e.target.value)}
         defaultValue=""
+        className="w-full text-14"
         style={{
-          width: '100%', padding: '10px 12px', border: '1px solid var(--color-border)',
-          borderRadius: 8, fontSize: 14, background: 'var(--color-surface)',
+          padding: '10px 12px', border: '1px solid var(--color-border)',
+          borderRadius: 8, background: 'var(--color-surface)',
           color: 'var(--color-text)', appearance: 'none',
         }}
       >

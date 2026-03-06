@@ -35,7 +35,7 @@ function OfficeApp() {
       if (res.ok && data.rulesHtml) {
         await showModal({
           title: 'Program Rules & Guidelines',
-          body: <div style={{ maxHeight: '60vh', overflowY: 'auto', fontSize: 14, lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: data.rulesHtml }} />,
+          body: <div className="overflow-y-auto text-14" style={{ maxHeight: '60vh', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: data.rulesHtml }} />,
           confirmLabel: 'Close',
           cancelLabel: null,
         });

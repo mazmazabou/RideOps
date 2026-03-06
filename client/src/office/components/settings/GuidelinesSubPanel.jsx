@@ -57,10 +57,10 @@ export default function GuidelinesSubPanel() {
 
   return (
     <div className="p-24">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+      <div className="flex justify-between items-center mb-8">
         <div>
           <h3 className="ro-section__title" style={{ margin: 0 }}>Program Rules &amp; Guidelines</h3>
-          <div className="text-xs text-muted" style={{ marginTop: '4px' }}>
+          <div className="text-xs text-muted mt-4">
             Shown to riders and drivers in the &ldquo;Program Rules&rdquo; modal.
             Supports bold, italic, bullets, and highlights.
           </div>
@@ -74,20 +74,19 @@ export default function GuidelinesSubPanel() {
           <i className="ti ti-device-floppy"></i> {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
-      <div style={{
+      <div className="overflow-hidden mt-16" style={{
         background: 'var(--color-surface)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-md)',
-        overflow: 'hidden',
-        marginTop: '16px',
       }}>
         <div
           ref={editorRef}
           id="program-guidelines-editor"
-          style={{ minHeight: '320px', fontSize: '14px' }}
+          className="text-14"
+          style={{ minHeight: '320px' }}
         ></div>
       </div>
-      <div className="text-xs text-muted" style={{ marginTop: '8px' }}>
+      <div className="text-xs text-muted mt-8">
         Changes save to the database and are immediately visible to all users.
       </div>
     </div>

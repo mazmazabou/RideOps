@@ -46,7 +46,7 @@ export default function RiderCohortsWidget({ data }) {
 
       {retentionRate != null && (
         <div className="ao-cohort-footer">
-          Retention Rate: <strong style={{ color: 'var(--color-text, #1f2937)', fontSize: '1rem' }}>{retentionRate.toFixed(1)}%</strong>
+          Retention Rate: <strong className="text-16" style={{ color: 'var(--color-text, #1f2937)' }}>{retentionRate.toFixed(1)}%</strong>
         </div>
       )}
     </div>

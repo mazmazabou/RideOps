@@ -22,7 +22,7 @@ export default function HeroCard({ ride, onCancel, opsConfig }) {
         <StatusBadge status={ride.status} />
       </div>
       <div className="ride-hero__route">
-        {ride.pickupLocation} <i className="ti ti-arrow-right" style={{ fontSize: 14, verticalAlign: 'middle' }} /> {ride.dropoffLocation}
+        {ride.pickupLocation} <i className="ti ti-arrow-right text-14" style={{ verticalAlign: 'middle' }} /> {ride.dropoffLocation}
       </div>
       <div className="ride-hero__time">{formatDateTime(ride.requestedTime)}</div>
 
@@ -49,35 +49,35 @@ export default function HeroCard({ ride, onCancel, opsConfig }) {
       {ride.status === 'driver_arrived_grace' && (
         <>
           <div className="ride-hero__message">
-            <i className="ti ti-map-pin-check" style={{ color: 'var(--status-grace)', fontSize: 18 }} /> Your driver has arrived!
+            <i className="ti ti-map-pin-check text-18" style={{ color: 'var(--status-grace)' }} /> Your driver has arrived!
           </div>
           <GraceTimer graceStartTime={ride.graceStartTime} gracePeriodMinutes={graceMins} />
         </>
       )}
 
       {driverProfile && (
-        <div style={{ marginTop: 16 }}>
+        <div className="mt-16">
           <ProfileCard user={driverProfile} variant="hero" />
         </div>
       )}
       {showDriver && ride.driverPhone && (
         <a
           href={`sms:${ride.driverPhone}`}
-          className="ro-btn ro-btn--outline ro-btn--full"
-          style={{ marginTop: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          className="ro-btn ro-btn--outline ro-btn--full flex items-center justify-center gap-6 mt-12"
+          style={{ textDecoration: 'none' }}
         >
           <i className="ti ti-message" /> Text Driver
         </a>
       )}
 
       {ride.notes && (
-        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 8 }}>
-          <i className="ti ti-note" style={{ marginRight: 4 }} /> {ride.notes}
+        <div className="text-sm text-muted mt-8">
+          <i className="ti ti-note mr-4" /> {ride.notes}
         </div>
       )}
 
       {canCancel && (
-        <button className="ro-btn ro-btn--outline ro-btn--full" style={{ marginTop: 16 }} onClick={() => onCancel(ride.id)}>
+        <button className="ro-btn ro-btn--outline ro-btn--full mt-16" onClick={() => onCancel(ride.id)}>
           Cancel Ride
         </button>
       )}

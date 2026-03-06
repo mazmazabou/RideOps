@@ -268,7 +268,7 @@ export default function RidesPanel() {
     const ok = await showModal({
       title: 'Create Ride',
       body: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="flex-col gap-12">
           <div><label className="ro-label">Rider Name *</label><input className="ro-input" placeholder="Full name" onChange={e => { formData.riderName = e.target.value; }} /></div>
           <div><label className="ro-label">Rider Email *</label><input className="ro-input" type="email" placeholder="Email" onChange={e => { formData.riderEmail = e.target.value; }} /></div>
           <div><label className="ro-label">Rider Phone</label><input className="ro-input" placeholder="Phone (optional)" onChange={e => { formData.riderPhone = e.target.value; }} /></div>
@@ -286,9 +286,9 @@ export default function RidesPanel() {
               {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
             </select>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <div style={{ flex: 1 }}><label className="ro-label">Date *</label><input className="ro-input" type="date" defaultValue={today} onChange={e => { formData.date = e.target.value; }} /></div>
-            <div style={{ flex: 1 }}><label className="ro-label">Time *</label><input className="ro-input" type="time" onChange={e => { formData.time = e.target.value; }} /></div>
+          <div className="flex gap-12">
+            <div className="flex-1"><label className="ro-label">Date *</label><input className="ro-input" type="date" defaultValue={today} onChange={e => { formData.date = e.target.value; }} /></div>
+            <div className="flex-1"><label className="ro-label">Time *</label><input className="ro-input" type="time" onChange={e => { formData.time = e.target.value; }} /></div>
           </div>
           <div><label className="ro-label">Notes</label><input className="ro-input" placeholder="Notes (optional)" onChange={e => { formData.notes = e.target.value; }} /></div>
         </div>

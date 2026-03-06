@@ -21,7 +21,7 @@ export default function SkeletonLoader({ type }) {
 
   if (type === 'table') {
     return (
-      <div className="analytics-skeleton" style={{ padding: 16 }}>
+      <div className="analytics-skeleton p-16">
         <div className="analytics-skeleton__bar analytics-skeleton__bar--full" />
         <div className="analytics-skeleton__bar analytics-skeleton__bar--long" />
         <div className="analytics-skeleton__bar analytics-skeleton__bar--medium" />
@@ -44,7 +44,7 @@ export default function SkeletonLoader({ type }) {
     return (
       <>
         {cards.map((_, i) => (
-          <div key={i} className="kpi-card kpi-card--neutral" style={{ opacity: 0.5 }}>
+          <div key={i} className="kpi-card kpi-card--neutral opacity-50">
             <div className="kpi-card__value ao-skeleton-block" style={{ width: 40, height: 28, margin: '0 auto' }} />
             <div className="kpi-card__label ao-skeleton-block" style={{ width: 80, height: 12, margin: '8px auto 0' }} />
           </div>

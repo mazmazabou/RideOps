@@ -113,7 +113,7 @@ export default function DispatchPanel() {
           <h3 className="ro-section__title">
             <i className="ti ti-clock-hour-4" /> Pending Rides
             {pendingRides.length > 0 && (
-              <span className="status-badge status-badge--pending" style={{ marginLeft: 8, fontSize: 11 }}>
+              <span className="status-badge status-badge--pending ml-8 text-xs">
                 {pendingRides.length}
               </span>
             )}

@@ -54,7 +54,7 @@ export default function FilterBar({
           onClick={handlePillClick}
         />
       ))}
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
       <input
         type="date"
         id="rides-date-from"

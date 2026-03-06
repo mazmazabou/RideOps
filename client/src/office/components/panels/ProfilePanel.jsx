@@ -14,15 +14,11 @@ const cardStyle = {
 };
 
 const cardTitleStyle = {
-  fontSize: '14px',
-  fontWeight: 600,
   margin: '0 0 4px',
   color: 'var(--color-text)',
 };
 
 const cardDescStyle = {
-  fontSize: '12px',
-  color: 'var(--color-muted)',
   margin: '0 0 20px',
 };
 
@@ -56,12 +52,13 @@ export default function ProfilePanel() {
 
       {/* Identity Header */}
       <div style={{ ...cardStyle, marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="flex items-center gap-16">
           <button
             onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+            className="relative p-0 border-none cursor-pointer"
             style={{
-              position: 'relative', flexShrink: 0, padding: 0, border: 'none',
-              background: 'none', cursor: 'pointer', borderRadius: '50%',
+              flexShrink: 0,
+              background: 'none', borderRadius: '50%',
             }}
             title="Change avatar"
           >
@@ -73,42 +70,40 @@ export default function ProfilePanel() {
                 background: 'var(--color-bg)', display: 'block',
               }}
             />
-            <span style={{
-              position: 'absolute', bottom: -2, right: -2,
+            <span className="absolute flex items-center justify-center text-sm" style={{
+              bottom: -2, right: -2,
               width: 26, height: 26, borderRadius: '50%',
               background: 'var(--color-surface)', border: '2px solid var(--color-border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '12px', color: 'var(--color-muted)',
+              color: 'var(--color-muted)',
             }}>
               <i className="ti ti-camera" />
             </span>
           </button>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: '18px', fontWeight: 600, lineHeight: 1.3 }}>{displayName}</div>
-            <div style={{ fontSize: '13px', color: 'var(--color-muted)', marginTop: '2px' }}>
+          <div className="min-w-0 flex-1">
+            <div className="text-18 fw-600 lh-tight">{displayName}</div>
+            <div className="text-13" style={{ color: 'var(--color-muted)', marginTop: '2px' }}>
               {displayRole}{displayEmail ? ` \u00B7 ${displayEmail}` : ''}
             </div>
           </div>
         </div>
 
         {showAvatarPicker && profileData && (
-          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
+          <div className="mt-16 pt-16" style={{ borderTop: '1px solid var(--color-border)' }}>
             <AvatarPicker currentUrl={avatarUrl || profileData.avatar_url} userId={profileData.id} onSelect={handleAvatarSelect} />
           </div>
         )}
       </div>
 
       {/* Two-column layout: Personal Info + Security */}
-      <div style={{
+      <div className="items-start" style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(0, 3fr) minmax(280px, 2fr)',
         gap: '20px',
-        alignItems: 'start',
       }}>
         {/* Personal Information Card */}
         <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>Personal Information</h3>
-          <p style={cardDescStyle}>Update your name, contact, and academic details.</p>
+          <h3 className="text-14 fw-600" style={cardTitleStyle}>Personal Information</h3>
+          <p className="text-sm" style={{ ...cardDescStyle, color: 'var(--color-muted)' }}>Update your name, contact, and academic details.</p>
           <ProfileForm
             idPrefix="admin-profile-"
             placeholderWho="staff"
@@ -122,8 +117,8 @@ export default function ProfilePanel() {
 
         {/* Security Card */}
         <div style={cardStyle}>
-          <h3 style={cardTitleStyle}>Security</h3>
-          <p style={cardDescStyle}>Change your account password.</p>
+          <h3 className="text-14 fw-600" style={cardTitleStyle}>Security</h3>
+          <p className="text-sm" style={{ ...cardDescStyle, color: 'var(--color-muted)' }}>Change your account password.</p>
           <PasswordChange variant="panel" />
         </div>
       </div>

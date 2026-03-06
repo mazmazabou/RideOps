@@ -61,8 +61,8 @@ export default function TopRoutesWidget({ routes }) {
           {sorted.map((route, i) => (
             <tr key={i}>
               <td className="ao-td">
-                <span style={{ fontWeight: 500 }}>{route.pickupLocation}</span>
-                <span style={{ color: 'var(--color-text-muted, #6b7280)', margin: '0 0.25rem' }}>&rarr;</span>
+                <span className="fw-500">{route.pickupLocation}</span>
+                <span className="text-muted" style={{ margin: '0 0.25rem' }}>&rarr;</span>
                 <span>{route.dropoffLocation}</span>
               </td>
               <td className="ao-td ao-td--right ao-td--bold">

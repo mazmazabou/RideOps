@@ -102,7 +102,7 @@ export default function DateFilterBar({ dateRange, onDateChange, onRefresh }) {
                 className="ro-btn ro-btn--ghost ro-btn--xs"
                 onClick={e => { e.stopPropagation(); setMoreOpen(!moreOpen); }}
               >
-                More <i className="ti ti-chevron-down" style={{ fontSize: '12px' }}></i>
+                More <i className="ti ti-chevron-down text-sm"></i>
               </button>
               {moreOpen && (
                 <div className="analytics-term-dropdown open ao-term-dropdown">

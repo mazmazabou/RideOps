@@ -195,7 +195,7 @@ export default function DispatchGrid({
 
   return (
     <div>
-      <div className="ro-section__header" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="ro-section__header flex items-center gap-12">
         <h3 className="ro-section__title" style={{ margin: 0 }}>
           <i className="ti ti-calendar-time" /> Schedule
         </h3>
@@ -204,8 +204,8 @@ export default function DispatchGrid({
           id="dispatch-date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value || today)}
-          className="ro-input"
-          style={{ width: 160, fontSize: 13 }}
+          className="ro-input text-13"
+          style={{ width: 160 }}
         />
       </div>
 
@@ -227,7 +227,7 @@ export default function DispatchGrid({
         >
           {/* Header row */}
           <div className="time-grid__header" style={{ gridTemplateColumns: gridColStyle }}>
-            <div className="time-grid__time-label" style={{ fontWeight: 700 }}>Driver</div>
+            <div className="time-grid__time-label fw-700">Driver</div>
             {hourLabels.map((label, i) => (
               <div key={i} className="time-grid__time-label">{label}</div>
             ))}
@@ -276,7 +276,7 @@ export default function DispatchGrid({
                 return rideHour === h;
               });
               return (
-                <div key={h} style={{ position: 'relative', borderRight: '1px solid var(--color-border-light)' }}>
+                <div key={h} className="relative" style={{ borderRight: '1px solid var(--color-border-light)' }}>
                   {ridesInHour.map(r => (
                     <RideStrip
                       key={r.id}

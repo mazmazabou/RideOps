@@ -69,7 +69,7 @@ export default function DataSubPanel() {
         Automatically purge closed rides (completed, no-show, denied, cancelled) older than the configured period.
         Active rides are never purged. Set value to 0 to keep rides forever.
       </div>
-      <div className="flex items-center gap-8 mb-16" style={{ flexWrap: 'wrap' }}>
+      <div className="flex items-center gap-8 mb-16 flex-wrap">
         <label className="ro-label" style={{ marginBottom: 0 }}>Delete closed rides older than:</label>
         <input
           type="number"
@@ -98,7 +98,7 @@ export default function DataSubPanel() {
       </div>
       <div className="text-xs text-muted mb-24" id="retention-status">{retentionStatus}</div>
       <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '16px 0' }} />
-      <h4 className="ro-section__title" style={{ fontSize: '14px' }}>Manual Purge</h4>
+      <h4 className="ro-section__title text-14">Manual Purge</h4>
       <div className="text-xs text-muted mb-8">
         Run the retention policy now. This will permanently delete qualifying closed rides.
       </div>

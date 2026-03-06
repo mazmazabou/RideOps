@@ -18,7 +18,7 @@ export default function DriverHeader() {
       <header className="driver-header">
         <div className="driver-header__left">
           <span id="org-short-name">{orgShortName}</span>
-          <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>Driver</span>
+          <span className="text-muted fw-400">Driver</span>
         </div>
         <div className="driver-header__right">
           <button

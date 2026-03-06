@@ -30,7 +30,7 @@ export default function MyRidesPanel({ activeRides, onBookRide, onRefresh, opsCo
   if (activeRides.length === 0) {
     return (
       <EmptyState icon="ti-car-off" title="No active rides" message="Book a ride to get started!">
-        <button className="ro-btn ro-btn--primary ro-btn--sm" style={{ marginTop: 12 }} onClick={onBookRide}>
+        <button className="ro-btn ro-btn--primary ro-btn--sm mt-12" onClick={onBookRide}>
           <i className="ti ti-plus" /> Book a Ride
         </button>
       </EmptyState>
@@ -44,16 +44,16 @@ export default function MyRidesPanel({ activeRides, onBookRide, onRefresh, opsCo
     <>
       <HeroCard ride={hero} onCancel={handleCancel} opsConfig={opsConfig} />
       {rest.length > 0 && (
-        <div style={{ marginTop: 16 }}>
+        <div className="mt-16">
           <div className="text-sm fw-600 text-muted mb-8">
             {rest.length} more active ride{rest.length > 1 ? 's' : ''}
           </div>
           <div className="strip-list">
             {rest.map(r => (
-              <div key={r.id} className="strip-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+              <div key={r.id} className="strip-row flex-col items-start gap-4">
                 <div><StatusBadge status={r.status} /></div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  {r.pickupLocation} <i className="ti ti-arrow-right" style={{ fontSize: 12 }} /> {r.dropoffLocation}
+                <div className="text-13 fw-600">
+                  {r.pickupLocation} <i className="ti ti-arrow-right text-sm" /> {r.dropoffLocation}
                 </div>
                 <div className="text-xs text-muted">{formatDateTime(r.requestedTime)}</div>
                 {(r.status === 'pending' || (r.status === 'approved' && !r.assignedDriverId)) && (

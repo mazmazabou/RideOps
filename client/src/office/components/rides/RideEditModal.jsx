@@ -87,7 +87,7 @@ export default function RideEditModal({ ride, locations, onClose, onSaved }) {
           Rider Notes
           <textarea className="ro-input" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </label>
-        <hr style={{ margin: '16px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+        <hr className="border-none" style={{ margin: '16px 0', borderTop: '1px solid var(--border)' }} />
         <label>
           Change Notes <span style={{ color: 'var(--status-no-show)' }}>*</span>
           <textarea
@@ -111,11 +111,11 @@ export default function RideEditModal({ ride, locations, onClose, onSaved }) {
           />
         </label>
         {errorMsg && (
-          <div className="small-text" style={{ marginTop: 8, color: 'var(--status-no-show)' }}>
+          <div className="small-text mt-8" style={{ color: 'var(--status-no-show)' }}>
             {errorMsg}
           </div>
         )}
-        <div className="flex-row" style={{ gap: 8, marginTop: 12 }}>
+        <div className="flex-row gap-8 mt-12">
           <button className="btn primary" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
           </button>

@@ -14,7 +14,7 @@ export default function RideRow({ ride, selected, employees, onToggleSelect, onR
     : '\u2014';
 
   return (
-    <tr style={{ cursor: 'pointer' }} onClick={(e) => {
+    <tr className="cursor-pointer" onClick={(e) => {
       if (e.target.closest('.ro-btn') || e.target.closest('.clickable-name') || e.target.closest('input[type="checkbox"]')) return;
       onRowClick(ride);
     }}>

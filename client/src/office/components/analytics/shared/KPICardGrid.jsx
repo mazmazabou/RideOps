@@ -16,7 +16,7 @@ export default function KPICardGrid({ cards }) {
         <div key={i} className={`kpi-card ${card.colorClass || ''}`}>
           <div className="kpi-value">{card.value}</div>
           <div className="kpi-label">
-            <i className={`ti ${card.icon}`} style={{ marginRight: 4 }}></i>
+            <i className={`ti ${card.icon} mr-4`}></i>
             {card.label}
           </div>
         </div>

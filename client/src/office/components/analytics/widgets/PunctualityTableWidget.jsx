@@ -43,7 +43,7 @@ export default function PunctualityTableWidget({ byDriver }) {
   function renderCell(row, colKey) {
     switch (colKey) {
       case 'name':
-        return <span style={{ fontWeight: 600 }}>{row.name}</span>;
+        return <span className="fw-600">{row.name}</span>;
 
       case 'tardyCount': {
         const cls = row.tardyCount === 0 ? 'badge--good' : 'badge--danger';

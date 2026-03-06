@@ -25,7 +25,7 @@ export default function ActiveRideCard({ ride, vehicles, gracePeriodMinutes, onR
       title: 'Confirm On My Way',
       body: (
         <div>
-          <div style={{ marginBottom: 12 }}>Which vehicle are you taking?</div>
+          <div className="mb-12">Which vehicle are you taking?</div>
           <select
             id="modal-vehicle-select"
             className="form-select"
@@ -136,21 +136,21 @@ export default function ActiveRideCard({ ride, vehicles, gracePeriodMinutes, onR
   }
 
   return (
-    <div className="active-ride-card" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: 20, marginBottom: 16 }} data-ride-id={ride.id}>
+    <div className="active-ride-card mb-16" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', padding: 20 }} data-ride-id={ride.id}>
       {vehicleBanner && (
         <div id="vehicle-required-banner-slot">
-          <div style={{
+          <div className="flex items-center gap-10 mb-12" style={{
             background: 'rgba(255,193,7,0.12)', border: '1px solid rgba(255,193,7,0.4)',
-            borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+            borderRadius: 8, padding: '10px 14px',
           }}>
             <i className="ti ti-alert-triangle" style={{ color: '#d97706', flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: 'var(--color-text)' }}>
+            <span className="text-13" style={{ color: 'var(--color-text)' }}>
               <strong>Select a vehicle</strong> in the section below before completing this ride.
             </span>
           </div>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <div className="flex items-center gap-8 mb-12">
         {ride.status === 'driver_arrived_grace'
           ? <span className="status-badge status-badge--driver_arrived_grace">Grace Period</span>
           : <StatusBadge status={ride.status} />
@@ -165,24 +165,24 @@ export default function ActiveRideCard({ ride, vehicles, gracePeriodMinutes, onR
         graduationYear: ride.riderGraduationYear,
         bio: ride.riderBio,
       }} variant="compact" />
-      <div className="text-sm" style={{ margin: '8px 0', color: 'var(--color-text-secondary)' }}>
-        <i className="ti ti-map-pin" style={{ fontSize: 14, verticalAlign: 'middle' }} />
+      <div className="text-sm text-secondary" style={{ margin: '8px 0' }}>
+        <i className="ti ti-map-pin text-14" style={{ verticalAlign: 'middle' }} />
         {' '}{ride.pickupLocation} → {ride.dropoffLocation}
       </div>
       {phone && (
-        <div style={{ marginBottom: 8 }}>
-          <a href={`tel:${phone}`} style={{ color: 'var(--color-primary)', fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <i className="ti ti-phone" style={{ fontSize: 16 }} /> {phone}
+        <div className="mb-8">
+          <a href={`tel:${phone}`} className="items-center gap-4 text-13" style={{ color: 'var(--color-primary)', textDecoration: 'none', display: 'inline-flex' }}>
+            <i className="ti ti-phone text-16" /> {phone}
           </a>
         </div>
       )}
       {ride.notes && (
-        <div className="text-xs text-muted" style={{ marginBottom: 12 }}>
-          <i className="ti ti-note" style={{ fontSize: 14, verticalAlign: 'middle' }} /> {ride.notes}
+        <div className="text-xs text-muted mb-12">
+          <i className="ti ti-note text-14" style={{ verticalAlign: 'middle' }} /> {ride.notes}
         </div>
       )}
       <VehicleSelector rideId={ride.id} vehicleId={ride.vehicleId} vehicles={vehicles} onRefresh={onRefresh} />
-      <div style={{ marginTop: 16 }}>{cta}</div>
+      <div className="mt-16">{cta}</div>
     </div>
   );
 }
@@ -191,11 +191,11 @@ function GraceActions({ ride, gracePeriodMinutes, onComplete, onNoShow }) {
   const { expired } = useGraceTimer(ride.graceStartTime, gracePeriodMinutes);
 
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      <button className="ro-btn ro-btn--success ro-btn--action" style={{ flex: 1 }} onClick={onComplete}>
+    <div className="flex gap-8">
+      <button className="ro-btn ro-btn--success ro-btn--action flex-1" onClick={onComplete}>
         <i className="ti ti-check" /> RIDER BOARDED
       </button>
-      <button className="ro-btn ro-btn--danger ro-btn--action" style={{ flex: 1 }} onClick={onNoShow} disabled={!expired}>
+      <button className="ro-btn ro-btn--danger ro-btn--action flex-1" onClick={onNoShow} disabled={!expired}>
         <i className="ti ti-user-off" /> NO SHOW
       </button>
     </div>

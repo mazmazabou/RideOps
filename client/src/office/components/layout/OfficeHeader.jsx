@@ -1,6 +1,6 @@
 export default function OfficeHeader({ title, unreadCount, onBellClick }) {
   return (
-    <header className="ro-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <header className="ro-header flex justify-between items-center">
       <h1 className="ro-header-title" id="header-title">{title}</h1>
       <button className="notif-bell" id="notif-bell-btn" title="Notifications" onClick={onBellClick}>
         <i className="ti ti-bell"></i>

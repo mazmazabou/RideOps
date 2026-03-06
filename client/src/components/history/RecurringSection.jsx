@@ -40,16 +40,16 @@ export default function RecurringSection() {
 
   return (
     <div className="recurring-section" id="recurring-section">
-      <h4 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px' }}>
-        <i className="ti ti-repeat" style={{ marginRight: 4 }} /> Recurring Rides
+      <h4 className="text-14 fw-700" style={{ margin: '0 0 12px' }}>
+        <i className="ti ti-repeat mr-4" /> Recurring Rides
       </h4>
       <div id="recurring-content">
         {recurring.map(r => (
           <div key={r.id} className="recurring-item">
-            <div style={{ fontSize: 13, fontWeight: 600 }}>
-              {r.pickup_location} <i className="ti ti-arrow-right" style={{ fontSize: 11 }} /> {r.dropoff_location}
+            <div className="text-13 fw-600">
+              {r.pickup_location} <i className="ti ti-arrow-right text-xs" /> {r.dropoff_location}
             </div>
-            <div className="text-xs text-muted" style={{ marginTop: 2 }}>
+            <div className="text-xs text-muted mt-2">
               {formatTimeAmPm(r.time_of_day)} &middot; {formatDaysOfWeek(r.days_of_week)}
             </div>
             <div className="text-xs text-muted">

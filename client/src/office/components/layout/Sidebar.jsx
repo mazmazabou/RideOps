@@ -40,7 +40,7 @@ export default function Sidebar({ activePanel, onPanelChange, user, tenantConfig
           style={{ objectFit: 'cover' }}
         />
         <div className="ro-brand-text">
-          <span className="fw-700" id="org-short-name" style={{ fontSize: '14px' }}>
+          <span className="fw-700 text-14" id="org-short-name">
             {tenantConfig?.orgShortName || 'RideOps'}
           </span>
           <span className="text-xs text-muted">Operations</span>

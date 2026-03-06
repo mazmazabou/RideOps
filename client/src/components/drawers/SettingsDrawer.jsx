@@ -18,10 +18,10 @@ export default function SettingsDrawer({ open, onClose }) {
   return (
     <Drawer open={open} onClose={onClose} title="Settings">
       {/* Header with avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div className="flex items-center gap-12" style={{ marginBottom: 20 }}>
         <ProfileAvatar avatarUrl={user.avatar_url} name={user.name} size="lg" />
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{user.preferred_name || user.name || ''}</div>
+          <div className="fw-700" style={{ fontSize: 15 }}>{user.preferred_name || user.name || ''}</div>
           <div className="text-xs text-muted">{user.email || ''}</div>
         </div>
       </div>
