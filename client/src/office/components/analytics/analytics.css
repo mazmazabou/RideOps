@@ -163,26 +163,26 @@
 /* ── Cohort Grid ──────────────────────────────────────────────── */
 .ao-cohort-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.4rem;
 }
 .ao-cohort-card {
-  padding: 0.75rem;
-  border-radius: 0.5rem;
+  padding: 0.4rem 0.25rem;
+  border-radius: 0.375rem;
   border: 1px solid var(--color-border, #e5e7eb);
   background: var(--color-card-bg, #fff);
   text-align: center;
 }
 .ao-cohort-icon {
-  font-size: 1.25rem;
+  font-size: 1rem;
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.125rem;
 }
 .ao-cohort-footer {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
   border-top: 1px solid var(--color-border, #e5e7eb);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-align: center;
   color: var(--color-text-muted, #6b7280);
 }

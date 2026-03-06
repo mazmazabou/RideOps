@@ -1,6 +1,6 @@
 // Widget Registry — defines all available analytics widgets (ported from widget-registry.js)
 
-export const WIDGET_LAYOUT_VERSION = 7;
+export const WIDGET_LAYOUT_VERSION = 11;
 
 export const WIDGET_CATEGORIES = {
   overview: 'Overview',
@@ -75,7 +75,7 @@ export const WIDGET_REGISTRY = {
     icon: 'ti-chart-donut-3',
     category: 'rides',
     skeletonType: 'donut',
-    minW: 3, maxW: 12, minH: 3, maxH: 6,
+    minW: 2, maxW: 12, minH: 3, maxH: 6,
   },
   'peak-hours': {
     title: 'Peak Hours',
@@ -124,14 +124,14 @@ export const WIDGET_REGISTRY = {
     icon: 'ti-bus',
     category: 'fleet',
     skeletonType: 'chart',
-    minW: 3, maxW: 12, minH: 3, maxH: 6,
+    minW: 3, maxW: 12, minH: 2, maxH: 6,
   },
   'rider-cohorts': {
     title: 'Rider Cohorts',
     icon: 'ti-users-group',
     category: 'riders',
     skeletonType: 'chart',
-    minW: 3, maxW: 12, minH: 3, maxH: 5,
+    minW: 1, maxW: 12, minH: 2, maxH: 8,
   },
   'hotspot-pickups': {
     title: 'Top Pickup Locations',
@@ -255,16 +255,16 @@ export const DEFAULT_WIDGET_LAYOUT = [
   { id: 'kpi-driver-punctuality',x: 8,  y: 0, w: 2, h: 1 },
   { id: 'kpi-fleet-available',   x: 10, y: 0, w: 2, h: 1 },
   // Row 1: charts begin
-  { id: 'ride-volume',           x: 0,  y: 1, w: 8,  h: 4 },
-  { id: 'ride-outcomes',         x: 8,  y: 1, w: 4,  h: 4 },
+  { id: 'ride-volume',           x: 0,  y: 1, w: 9,  h: 4 },
+  { id: 'ride-outcomes',         x: 9,  y: 1, w: 3,  h: 4 },
   { id: 'peak-hours',            x: 0,  y: 5, w: 12, h: 5 },
   { id: 'rides-by-dow',          x: 0,  y: 10, w: 4,  h: 4 },
   { id: 'rides-by-hour',         x: 4,  y: 10, w: 4,  h: 4 },
   { id: 'top-routes',            x: 8,  y: 10, w: 4,  h: 4 },
   { id: 'driver-leaderboard',    x: 0,  y: 14, w: 6,  h: 4 },
   { id: 'shift-coverage',        x: 6,  y: 14, w: 6,  h: 5 },
-  { id: 'fleet-utilization',     x: 0,  y: 19, w: 6,  h: 4 },
-  { id: 'rider-cohorts',         x: 6,  y: 19, w: 6,  h: 4 },
+  { id: 'fleet-utilization',     x: 0,  y: 19, w: 6,  h: 3 },
+  { id: 'rider-cohorts',         x: 6,  y: 19, w: 6,  h: 3 },
 ];
 
 export const DEFAULT_HOTSPOTS_LAYOUT = [

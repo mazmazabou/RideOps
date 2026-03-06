@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { useToast } from '../../../../contexts/ToastContext';
 import { WIDGET_REGISTRY, WIDGET_LAYOUT_VERSION } from '../constants.js';
 
 /**
@@ -80,6 +81,7 @@ export function useWidgetLayout(tabConfig, userId) {
   const { storagePrefix, defaultLayout, allowedWidgets } = tabConfig;
   const storageKey = getStorageKey(storagePrefix, userId);
   const customDefaultKeyVal = getCustomDefaultKey(storagePrefix, userId);
+  const { showToast } = useToast();
 
   // Lazy initializer: load from localStorage or fall back to built-in default
   const [layout, setLayout] = useState(() => {
@@ -126,7 +128,8 @@ export function useWidgetLayout(tabConfig, userId) {
    */
   const saveCustomDefault = useCallback(() => {
     writeLayout(customDefaultKeyVal, layoutRef.current);
-  }, [customDefaultKeyVal]);
+    showToast('Default layout saved', 'success');
+  }, [customDefaultKeyVal, showToast]);
 
   /**
    * Reset the layout: prefer user's custom default, otherwise built-in default.
@@ -144,7 +147,8 @@ export function useWidgetLayout(tabConfig, userId) {
 
     writeLayout(storageKey, items);
     setLayout(items);
-  }, [customDefaultKeyVal, defaultLayout, allowedWidgets, storageKey]);
+    showToast('Layout reset', 'success');
+  }, [customDefaultKeyVal, defaultLayout, allowedWidgets, storageKey, showToast]);
 
   return {
     layout,

@@ -1477,6 +1477,7 @@ input[type="checkbox"]:disabled {
   gap: 2px;
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  overflow: hidden;
 }
 
 .kpi-single__value {
@@ -1484,6 +1485,7 @@ input[type="checkbox"]:disabled {
   font-weight: 800;
   line-height: 1.2;
   color: var(--color-text);
+  flex-shrink: 0;
 }
 
 .kpi-single__label {
@@ -1498,6 +1500,7 @@ input[type="checkbox"]:disabled {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-shrink: 0;
 }
 
 .kpi-single__label i {
@@ -1529,19 +1532,8 @@ input[type="checkbox"]:disabled {
   line-height: 1;
 }
 
-/* Container query: default tier (240px+ width) */
+/* Container query: default tier (240px+ width) — ring only */
 @container kpi (min-width: 240px) {
-  .kpi-single {
-    gap: 4px;
-    padding: 10px;
-  }
-  .kpi-single__label {
-    font-size: 0.6875rem;
-    gap: 4px;
-  }
-  .kpi-single__label i {
-    font-size: 0.875rem;
-  }
   .kpi-single__ring {
     width: 44px;
     height: 44px;
@@ -1553,19 +1545,8 @@ input[type="checkbox"]:disabled {
   }
 }
 
-/* Container query: wide tier (320px+ width) */
+/* Container query: wide tier (320px+ width) — ring only */
 @container kpi (min-width: 320px) {
-  .kpi-single {
-    gap: 6px;
-    padding: 12px;
-  }
-  .kpi-single__label {
-    font-size: 0.75rem;
-    gap: 5px;
-  }
-  .kpi-single__label i {
-    font-size: 1rem;
-  }
   .kpi-single__ring {
     width: 52px;
     height: 52px;
