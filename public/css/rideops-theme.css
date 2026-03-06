@@ -2082,3 +2082,47 @@ input[type="checkbox"]:disabled {
   main, .ro-main { margin: 0 !important; padding: 0 !important; }
   .ro-shell { display: block !important; }
 }
+
+/* ── Section 23: Notification toggle switches ── */
+.notif-toggles { padding: 0; }
+.notif-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.notif-toggle-input { display: none; }
+.notif-toggle-switch {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--color-border);
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.notif-toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+.notif-toggle-input:checked + .notif-toggle-switch {
+  background: var(--color-primary);
+}
+.notif-toggle-input:checked + .notif-toggle-switch::after {
+  transform: translateX(16px);
+}
+.notif-toggle-input:disabled + .notif-toggle-switch {
+  opacity: 0.5;
+}
+.notif-toggle-text {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

@@ -2,6 +2,7 @@ import Drawer from '../ui/Drawer';
 import { ProfileAvatar } from '../ui/ProfileCard';
 import ProfileForm from './ProfileForm';
 import PasswordChange from './PasswordChange';
+import NotificationToggles from '../NotificationToggles';
 import { useAuth } from '../../contexts/AuthContext';
 import { isActiveStatus } from '../../utils/status';
 import { escapeHtml } from '../../utils/formatters';
@@ -36,6 +37,9 @@ export default function SettingsDrawer({ open, onClose }) {
 
       <ProfileForm />
       <PasswordChange />
+
+      <hr className="drawer-divider" />
+      <NotificationToggles role="rider" />
 
       <hr className="drawer-divider" />
       <button className="ro-btn ro-btn--danger ro-btn--full" onClick={logout}>
