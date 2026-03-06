@@ -70,6 +70,76 @@ module.exports = function(app, ctx) {
     res.json(shift);
   }));
 
+  // ----- Duplicate a shift with conflict detection -----
+  app.post('/api/shifts/duplicate', requireOffice, wrapAsync(async (req, res) => {
+    const { sourceShiftId, targetDayOfWeek, targetWeekStart, startTime, endTime, replaceConflicts } = req.body;
+
+    // Fetch source shift
+    const source = await query('SELECT * FROM shifts WHERE id = $1', [sourceShiftId]);
+    if (!source.rowCount) return res.status(404).json({ error: 'Source shift not found' });
+    const src = source.rows[0];
+
+    // Use provided values or fallback to source
+    const newStart = startTime || src.start_time;
+    const newEnd = endTime || src.end_time;
+    const newDow = targetDayOfWeek !== undefined ? Number(targetDayOfWeek) : src.day_of_week;
+    const newWeek = targetWeekStart !== undefined ? targetWeekStart : src.week_start;
+
+    // Validate dayOfWeek
+    if (!Number.isInteger(newDow) || newDow < 0 || newDow > 6) {
+      return res.status(400).json({ error: 'dayOfWeek must be 0-6 (Mon-Sun)' });
+    }
+    const opDaysStr = await getSetting('operating_days', '0,1,2,3,4');
+    const opDays = String(opDaysStr).split(',').map(Number);
+    if (!opDays.includes(newDow)) {
+      return res.status(400).json({ error: 'Shifts can only be created on operating days' });
+    }
+
+    // Validate time format
+    const timeRe = /^\d{2}:\d{2}$/;
+    if (!timeRe.test(newStart)) return res.status(400).json({ error: 'startTime must be HH:MM format' });
+    if (!timeRe.test(newEnd)) return res.status(400).json({ error: 'endTime must be HH:MM format' });
+
+    // Check for overlapping shifts on target day for same driver
+    const overlaps = await query(
+      `SELECT id, start_time AS "startTime", end_time AS "endTime"
+       FROM shifts
+       WHERE employee_id = $1 AND day_of_week = $2
+       AND (week_start IS NOT DISTINCT FROM $3)
+       AND start_time < $4 AND end_time > $5`,
+      [src.employee_id, newDow, newWeek || null, newEnd, newStart]
+    );
+
+    if (overlaps.rows.length > 0 && !replaceConflicts) {
+      return res.json({ conflict: true, existingShifts: overlaps.rows });
+    }
+
+    // Delete conflicting shifts if replacing
+    if (overlaps.rows.length > 0 && replaceConflicts) {
+      for (const ov of overlaps.rows) {
+        await query('DELETE FROM shifts WHERE id = $1', [ov.id]);
+      }
+    }
+
+    // Create the duplicated shift
+    const newId = generateId('shift');
+    await query(
+      `INSERT INTO shifts (id, employee_id, day_of_week, start_time, end_time, notes, week_start)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [newId, src.employee_id, newDow, newStart, newEnd, src.notes || '', newWeek || null]
+    );
+
+    res.json({
+      id: newId,
+      employeeId: src.employee_id,
+      dayOfWeek: newDow,
+      startTime: newStart,
+      endTime: newEnd,
+      notes: src.notes || '',
+      weekStart: newWeek,
+    });
+  }));
+
   app.delete('/api/shifts/:id', requireOffice, wrapAsync(async (req, res) => {
     const { id } = req.params;
     const result = await query(`DELETE FROM shifts WHERE id = $1 RETURNING id`, [id]);

@@ -766,6 +766,77 @@ input[type="checkbox"]:disabled {
   background: rgba(239, 68, 68, 0.06);
 }
 
+/* Duplicate shift modal */
+.dup-modal__field { margin-bottom: 14px; }
+.dup-modal__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.dup-modal__value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.dup-modal__value i { font-size: 15px; color: var(--color-text-muted); }
+.dup-modal__value--muted { font-weight: 400; color: var(--color-text-secondary); }
+.dup-modal__input {
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.dup-modal__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.15);
+}
+.dup-modal__time-row { display: flex; align-items: center; gap: 8px; }
+.dup-modal__time-row .dup-modal__input { flex: 1; }
+.dup-modal__time-sep { font-size: 13px; color: var(--color-text-muted); }
+.dup-modal__warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: var(--radius-sm);
+}
+.dup-modal__warning i { font-size: 14px; flex-shrink: 0; }
+.dup-modal__conflict {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--status-no-show);
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+}
+.dup-modal__conflict > i { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.dup-modal__conflict strong { color: var(--color-text); }
+.dup-modal__conflict-list {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+.dup-modal__conflict-list li { margin-bottom: 2px; }
+
 /* ── Section 39: Semester / Wrapped ── */
 .semester-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .semester-period h4 { font-size: 14px; font-weight: 700; margin: 0 0 8px; }

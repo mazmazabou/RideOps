@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useToast } from '../../../contexts/ToastContext';
 import { useModal } from '../../../components/ui/Modal';
 import {
-  fetchShiftsForWeek, createShift, updateShift, deleteShift,
+  fetchShiftsForWeek, createShift, updateShift, deleteShift, duplicateShift,
 } from '../../../api';
 import { getCampusPalette, getCampusSlug } from '../../../utils/campus';
 import {
@@ -79,6 +79,8 @@ export default function ShiftCalendar({ employees, opsConfig }) {
   const [ctxMenu, setCtxMenu] = useState(null);
   // Employee picker state
   const [empPicker, setEmpPicker] = useState(null);
+  // Duplicate modal state
+  const [dupModal, setDupModal] = useState(null);
 
   // Keep refs fresh
   useEffect(() => { employeesRef.current = employees; }, [employees]);
@@ -314,16 +316,19 @@ export default function ShiftCalendar({ employees, opsConfig }) {
   }
 
   // -- Context menu actions --
-  async function handleCtxDuplicate() {
-    const { employeeId, dayOfWeek, startTime, endTime, notes, weekStart } = ctxMenu;
+  function handleCtxDuplicate() {
+    const data = ctxMenu;
     setCtxMenu(null);
-    try {
-      await createShift({ employeeId, dayOfWeek, startTime, endTime, notes, weekStart });
-      showToast('Shift duplicated', 'success');
-      refetchEvents();
-    } catch (err) {
-      showToast(err.message || 'Failed to duplicate shift', 'error');
-    }
+    setDupModal({
+      shiftId: data.shiftId,
+      employeeId: data.employeeId,
+      empName: data.empName,
+      dayOfWeek: data.dayOfWeek,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      notes: data.notes,
+      weekStart: data.weekStart,
+    });
   }
 
   function handleCtxEdit() {
@@ -432,6 +437,19 @@ export default function ShiftCalendar({ employees, opsConfig }) {
         onClose={() => setCtxMenu(null)}
       />}
 
+      {/* Duplicate Shift Modal */}
+      {dupModal && <DuplicateShiftModal
+        data={dupModal}
+        opsConfig={opsConfig}
+        onSuccess={() => {
+          setDupModal(null);
+          showToast('Shift duplicated', 'success');
+          refetchEvents();
+        }}
+        onCancel={() => setDupModal(null)}
+        showToast={showToast}
+      />}
+
       {/* Employee Picker Modal */}
       {empPicker && <EmployeePickerModal
         employees={employees}
@@ -529,6 +547,161 @@ function ShiftContextMenu({ data, onDuplicate, onEdit, onDelete, onClose }) {
       <button className="shift-context-menu__item shift-context-menu__item--danger" onClick={onDelete}>
         <i className="ti ti-trash" /> Delete
       </button>
+    </div>,
+    document.body,
+  );
+}
+
+// -- Duplicate Shift Modal --
+function DuplicateShiftModal({ data, opsConfig, onSuccess, onCancel, showToast }) {
+  const cfg = opsConfig || {};
+  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+
+  // Compute the source shift's actual date for default target calculation
+  const srcMonday = data.weekStart ? new Date(data.weekStart + 'T00:00:00') : getMondayOfWeek(new Date());
+  const srcDate = new Date(srcMonday);
+  srcDate.setDate(srcMonday.getDate() + data.dayOfWeek);
+
+  // Default target: next operating day after source
+  function nextOpDay() {
+    const d = new Date(srcDate);
+    for (let i = 0; i < 7; i++) {
+      d.setDate(d.getDate() + 1);
+      const dow = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      if (opDays.includes(dow)) return formatDateLocal(d);
+    }
+    return formatDateLocal(srcDate);
+  }
+
+  const [targetDate, setTargetDate] = useState(nextOpDay);
+  const [startTime, setStartTime] = useState(data.startTime);
+  const [endTime, setEndTime] = useState(data.endTime);
+  const [conflict, setConflict] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Compute target dayOfWeek and weekStart from the chosen date
+  function targetFields() {
+    const d = new Date(targetDate + 'T00:00:00');
+    const dayOfWeek = d.getDay() === 0 ? 6 : d.getDay() - 1;
+    const weekStart = formatDateLocal(getMondayOfWeek(d));
+    return { dayOfWeek, weekStart };
+  }
+
+  async function handleSubmit(replace) {
+    const { dayOfWeek, weekStart } = targetFields();
+    setLoading(true);
+    setConflict(null);
+    try {
+      const result = await duplicateShift({
+        sourceShiftId: data.shiftId,
+        targetDayOfWeek: dayOfWeek,
+        targetWeekStart: weekStart,
+        startTime,
+        endTime,
+        replaceConflicts: !!replace,
+      });
+      if (result.conflict) {
+        setConflict(result.existingShifts);
+      } else {
+        onSuccess();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to duplicate shift', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Validate: target date must be an operating day
+  const tgt = targetFields();
+  const isOpDay = opDays.includes(tgt.dayOfWeek);
+
+  return createPortal(
+    <div className="ro-modal-overlay open" onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="ro-modal" style={{ maxWidth: 400 }}>
+        <div className="ro-modal__title">Duplicate Shift</div>
+        <div className="ro-modal__body" style={{ marginBottom: 0 }}>
+          {/* Driver name */}
+          <div className="dup-modal__field">
+            <label className="dup-modal__label">Driver</label>
+            <div className="dup-modal__value">
+              <i className="ti ti-user" /> {data.empName}
+            </div>
+          </div>
+
+          {/* Source info */}
+          <div className="dup-modal__field">
+            <label className="dup-modal__label">Source</label>
+            <div className="dup-modal__value dup-modal__value--muted">
+              <i className="ti ti-calendar" /> {DAY_NAMES[data.dayOfWeek]}, {formatTimeAmPm(data.startTime)} {'\u2013'} {formatTimeAmPm(data.endTime)}
+            </div>
+          </div>
+
+          {/* Target date */}
+          <div className="dup-modal__field">
+            <label className="dup-modal__label">Target day</label>
+            <input
+              type="date"
+              className="dup-modal__input"
+              value={targetDate}
+              onChange={e => { setTargetDate(e.target.value); setConflict(null); }}
+            />
+            {!isOpDay && targetDate && (
+              <div className="dup-modal__warning">
+                <i className="ti ti-alert-triangle" /> This is not an operating day.
+              </div>
+            )}
+          </div>
+
+          {/* Time range */}
+          <div className="dup-modal__field">
+            <label className="dup-modal__label">Time</label>
+            <div className="dup-modal__time-row">
+              <input
+                type="time"
+                className="dup-modal__input"
+                value={startTime}
+                onChange={e => { setStartTime(e.target.value); setConflict(null); }}
+              />
+              <span className="dup-modal__time-sep">{'\u2013'}</span>
+              <input
+                type="time"
+                className="dup-modal__input"
+                value={endTime}
+                onChange={e => { setEndTime(e.target.value); setConflict(null); }}
+              />
+            </div>
+          </div>
+
+          {/* Conflict warning */}
+          {conflict && (
+            <div className="dup-modal__conflict">
+              <i className="ti ti-alert-circle" />
+              <div>
+                <strong>{data.empName}</strong> already has {conflict.length > 1 ? conflict.length + ' shifts' : 'a shift'} overlapping on this day:
+                <ul className="dup-modal__conflict-list">
+                  {conflict.map(c => (
+                    <li key={c.id}>{formatTimeAmPm(c.startTime)} {'\u2013'} {formatTimeAmPm(c.endTime)}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="ro-modal__actions" style={{ marginTop: 16 }}>
+          <button className="ro-btn ro-btn--outline" onClick={onCancel} disabled={loading}>Cancel</button>
+          {conflict ? (
+            <button className="ro-btn ro-btn--danger" onClick={() => handleSubmit(true)} disabled={loading}>
+              {loading ? 'Replacing\u2026' : 'Replace existing shift'}
+            </button>
+          ) : (
+            <button className="ro-btn ro-btn--primary" onClick={() => handleSubmit(false)} disabled={loading || !isOpDay}>
+              {loading ? 'Duplicating\u2026' : 'Duplicate'}
+            </button>
+          )}
+        </div>
+      </div>
     </div>,
     document.body,
   );

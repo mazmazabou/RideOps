@@ -447,6 +447,14 @@ export function updateShift(id, data) {
   });
 }
 
+export function duplicateShift(data) {
+  return request('/api/shifts/duplicate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
 export function deleteShift(id) {
   return request('/api/shifts/' + id, { method: 'DELETE' });
 }
