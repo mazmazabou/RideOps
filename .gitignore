@@ -31,3 +31,6 @@ tabler/
 
 # Deprecated styles
 public/styles.css
+
+# Generated screenshots (regenerate with: node scripts/take-screenshots.js)
+screenshots/
