@@ -83,6 +83,27 @@ Default login credentials (password: `demo123`):
 - Drivers: `alex`, `jordan`, `taylor`, `morgan`
 - Riders: `casey`, `riley`
 
+## Marketing Screenshots
+
+Marketing screenshots are NOT committed to git (`screenshots/` is gitignored). Regenerate them with:
+
+```bash
+# 1. Start server with demo data
+DEMO_MODE=true node server.js
+
+# 2. Prep database for marketing-quality data (clean E2E artifacts, seed realistic rides)
+node scripts/prep-screenshot-data.js
+
+# 3. Take all 72 screenshots (18 views × 4 campuses: usc, ucla, stanford, uci)
+node scripts/take-screenshots.js
+# Output: screenshots/{campus}-{view}-{detail}.png
+
+# 4. If grace timer shots were skipped (server restart resets driver_arrived_grace → scheduled):
+node scripts/retake-grace-timer.js
+```
+
+**Key gotcha:** Server startup recovery (`recoverStuckRides`) reverts `driver_arrived_grace` and `driver_on_the_way` rides to `scheduled`. The `retake-grace-timer.js` script handles this by advancing a scheduled ride via the driver API right before capturing the screenshot.
+
 ## Deployment
 
 ### Railway (Production)
