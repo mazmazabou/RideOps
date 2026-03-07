@@ -48,7 +48,7 @@ module.exports = function(app, ctx) {
       if (isDataUri) {
         const base64Part = avatarUrl.split(',')[1] || '';
         const sizeBytes = Math.ceil(base64Part.length * 3 / 4);
-        if (sizeBytes > 500 * 1024) return res.status(400).json({ error: 'Avatar image must be under 500KB' });
+        if (sizeBytes > 2 * 1024 * 1024) return res.status(400).json({ error: 'Avatar image must be under 2MB' });
       }
     }
     // For profile fields: undefined = not sent (keep old), empty string = clear, value = update

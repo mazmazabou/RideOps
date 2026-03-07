@@ -113,7 +113,7 @@ export default function ProfileForm({ idPrefix = 'drawer-', placeholderWho = 'dr
       {!isPanel && (
         <div className="mb-12">
           <label className="ro-label">Avatar</label>
-          <AvatarPicker currentUrl={avatarUrl} userId={profile.id} onSelect={setAvatarUrl} />
+          <AvatarPicker currentUrl={avatarUrl} userId={profile.id} userName={profile.name} onSelect={setAvatarUrl} />
         </div>
       )}
       <button className={`ro-btn ro-btn--primary ro-btn--sm${isPanel ? ' mt-16' : ''}`} id={idPrefix + 'save-btn'} onClick={handleSave}>{isPanel ? 'Save Changes' : 'Save'}</button>

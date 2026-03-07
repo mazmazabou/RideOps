@@ -90,7 +90,7 @@ export default function ProfilePanel() {
 
         {showAvatarPicker && profileData && (
           <div className="mt-16 pt-16" style={{ borderTop: '1px solid var(--color-border)' }}>
-            <AvatarPicker currentUrl={avatarUrl || profileData.avatar_url} userId={profileData.id} onSelect={handleAvatarSelect} />
+            <AvatarPicker currentUrl={avatarUrl || profileData.avatar_url} userId={profileData.id} userName={displayName} onSelect={handleAvatarSelect} />
           </div>
         )}
       </div>
