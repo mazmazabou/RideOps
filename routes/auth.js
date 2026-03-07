@@ -104,7 +104,6 @@ module.exports = function(app, ctx) {
 
   // Change own password
   app.post('/api/auth/change-password', requireAuth, wrapAsync(async (req, res) => {
-    if (DEMO_MODE) return res.status(403).json({ error: 'Password changes are disabled in demo mode' });
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Current password and new password are required' });
