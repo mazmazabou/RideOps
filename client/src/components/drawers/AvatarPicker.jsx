@@ -38,7 +38,10 @@ export default function AvatarPicker({ currentUrl, userId, userName, onSelect })
   const [dragging, setDragging] = useState(false);
 
   const processFile = async (file) => {
-    if (!file) return;
+    if (!file) {
+      showToast('Could not read that file — try the Upload button', 'error');
+      return;
+    }
     const validExts = ['.png', '.jpg', '.jpeg', '.webp'];
     const ext = file.name ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
     const isImage = file.type.startsWith('image/') || validExts.includes(ext);
@@ -72,16 +75,22 @@ export default function AvatarPicker({ currentUrl, userId, userName, onSelect })
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragging(false);
-    processFile(e.dataTransfer.files[0]);
+    const file = e.dataTransfer?.files?.[0];
+    processFile(file);
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragging(true);
   };
 
-  const handleDragLeave = () => setDragging(false);
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDragging(false);
+  };
 
   const handleRemove = () => {
     onSelect(null);
@@ -94,10 +103,10 @@ export default function AvatarPicker({ currentUrl, userId, userName, onSelect })
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
-      <div className="avatar-preview">
+      <div className="avatar-preview" style={dragging ? { pointerEvents: 'none' } : undefined}>
         <img src={displayUrl} alt="Avatar preview" />
       </div>
-      <div className="avatar-actions">
+      <div className="avatar-actions" style={dragging ? { pointerEvents: 'none' } : undefined}>
         <button
           type="button"
           className="ro-btn ro-btn--outline ro-btn--sm"
