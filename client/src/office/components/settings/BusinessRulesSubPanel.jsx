@@ -32,7 +32,7 @@ export default function BusinessRulesSubPanel() {
       const flat = {};
       Object.values(data).flat().forEach(s => { flat[s.key] = s.value; });
       setSettings(flat);
-      const days = (flat.operating_days || '0,1,2,3,4').split(',').map(Number).filter(n => !isNaN(n));
+      const days = (flat.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).filter(n => !isNaN(n));
       setOperatingDays(new Set(days));
     } catch (e) {
       showToast(e.message, 'error');

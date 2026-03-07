@@ -351,7 +351,7 @@ function getOpsConfig() {
         return cfg || {
           service_hours_start: '08:00',
           service_hours_end: '19:00',
-          operating_days: '0,1,2,3,4',
+          operating_days: '0,1,2,3,4,5,6',
           grace_period_minutes: '5'
         };
       })
@@ -359,7 +359,7 @@ function getOpsConfig() {
         return {
           service_hours_start: '08:00',
           service_hours_end: '19:00',
-          operating_days: '0,1,2,3,4',
+          operating_days: '0,1,2,3,4,5,6',
           grace_period_minutes: '5'
         };
       });
@@ -371,7 +371,7 @@ function invalidateOpsConfig() {
 }
 
 function formatServiceHoursText(cfg) {
-  var opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number).sort();
+  var opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).sort();
   var labels = opDays.map(ourDayLabel);
   var dayStr;
   // Check if consecutive

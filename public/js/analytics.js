@@ -829,7 +829,7 @@ async function loadAnalyticsFrequency() {
     const opsConfig = typeof getOpsConfig === 'function' ? await getOpsConfig() : null;
     const opDays = opsConfig && opsConfig.operating_days
       ? String(opsConfig.operating_days).split(',').map(Number)
-      : [0, 1, 2, 3, 4]; // fallback Mon-Fri (our format)
+      : [0, 1, 2, 3, 4, 5, 6]; // fallback all days (our format)
     const dowData = opDays.map(d => {
       const pgDow = (d + 1) % 7; // our 0=Mon → PG DOW 1=Mon
       const row = data.byDayOfWeek.find(r => parseInt(r.dow) === pgDow);
@@ -1036,7 +1036,7 @@ async function renderTardinessDOW(containerId, byDayOfWeek) {
   var opsConfig2 = typeof getOpsConfig === 'function' ? await getOpsConfig() : null;
   var opDays2 = opsConfig2 && opsConfig2.operating_days
     ? String(opsConfig2.operating_days).split(',').map(Number)
-    : [0, 1, 2, 3, 4];
+    : [0, 1, 2, 3, 4, 5, 6];
   var tardyDowData = opDays2.map(function(d) {
     var pgDow = (d + 1) % 7;
     var found = byDayOfWeek.find(function(r) { return r.dayOfWeek === pgDow; });

@@ -1209,6 +1209,11 @@ test.describe('API: Authorization & Validation', () => {
   });
 
   test('ride with Saturday time returns 400', async ({ playwright }) => {
+    // Temporarily set operating_days to exclude Saturday (5 in 0=Mon numbering)
+    const officeCtx = await apiContext(playwright, USERS.office.username);
+    const setRes = await officeCtx.put('/api/settings', { data: [{ key: 'operating_days', value: '0,1,2,3,4' }] });
+    expect(setRes.ok()).toBeTruthy();
+
     const ctx = await apiContext(playwright, USERS.rider1.username);
     // Find the next Saturday
     const d = new Date();
@@ -1224,7 +1229,11 @@ test.describe('API: Authorization & Validation', () => {
     expect(res.status()).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/service hours/i);
+
+    // Restore operating_days to all days
+    await officeCtx.put('/api/settings', { data: [{ key: 'operating_days', value: '0,1,2,3,4,5,6' }] });
     await ctx.dispose();
+    await officeCtx.dispose();
   });
 
   test('ride with 11 PM time returns 400', async ({ playwright }) => {

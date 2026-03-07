@@ -111,7 +111,7 @@ module.exports = function(app, ctx) {
       res.json({
         service_hours_start: '08:00',
         service_hours_end: '19:00',
-        operating_days: '0,1,2,3,4',
+        operating_days: '0,1,2,3,4,5,6',
         grace_period_minutes: '5',
         max_no_show_strikes: '5',
         strikes_enabled: 'true'

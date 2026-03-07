@@ -56,7 +56,7 @@ export function contrastTextColor(hex) {
 }
 
 export function formatServiceHoursText(cfg) {
-  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number).sort();
+  const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).sort();
   const labels = opDays.map(ourDayLabel);
   let dayStr;
   if (labels.length > 2) {

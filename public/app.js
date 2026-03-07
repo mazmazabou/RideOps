@@ -1046,7 +1046,7 @@ async function initShiftCalendar() {
   }
 
   const cfg = await getOpsConfig();
-  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+  const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
   const hiddenDays = [];
   for (let d = 0; d < 7; d++) {
     if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
@@ -1125,7 +1125,7 @@ async function refreshCalendarSettings() {
   try {
     invalidateOpsConfig();
     const cfg = await getOpsConfig();
-    const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+    const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
     const hiddenDays = [];
     for (let d = 0; d < 7; d++) {
       if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
@@ -1220,7 +1220,7 @@ async function onCalendarSelect(info) {
   const jsDay = info.start.getDay();
   const dayOfWeek = jsDateToOurDay(jsDay);
   const cfg = await getOpsConfig();
-  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+  const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
   if (!opDays.includes(dayOfWeek)) return;
 
   const startTime = info.start.toTimeString().substring(0, 8);
@@ -1270,7 +1270,7 @@ async function onShiftEventDrop(info) {
   const jsDay = info.event.start.getDay();
   const dayOfWeek = jsDateToOurDay(jsDay);
   const cfg = await getOpsConfig();
-  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+  const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
   if (!opDays.includes(dayOfWeek)) {
     info.revert();
     showToastNew('Shifts must be on operating days', 'error');
@@ -1562,7 +1562,7 @@ async function renderRideScheduleGrid() {
   if (!grid) return;
 
   const cfg = await getOpsConfig();
-  const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number).sort((a, b) => a - b);
+  const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).sort((a, b) => a - b);
   const startHour = parseInt(String(cfg.service_hours_start || '08:00').split(':')[0], 10);
   const endHour = parseInt(String(cfg.service_hours_end || '19:00').split(':')[0], 10);
 

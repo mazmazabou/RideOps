@@ -4,8 +4,8 @@ import { jsDateToOurDay } from '../../utils/formatters';
 export default function DateChips({ opsConfig, selectedDate, onSelect }) {
   const chips = useMemo(() => {
     const opDays = opsConfig
-      ? String(opsConfig.operating_days || '0,1,2,3,4').split(',').map(Number)
-      : [0, 1, 2, 3, 4];
+      ? String(opsConfig.operating_days || '0,1,2,3,4,5,6').split(',').map(Number)
+      : [0, 1, 2, 3, 4, 5, 6];
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

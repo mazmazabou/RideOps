@@ -42,7 +42,7 @@ export default function AttendanceTab({ dateRange, userId }) {
         try { opsConfig = await fetchOpsConfig(); } catch (e) { /* ignore */ }
         const opDays = opsConfig?.operating_days
           ? String(opsConfig.operating_days).split(',').map(Number)
-          : [0, 1, 2, 3, 4];
+          : [0, 1, 2, 3, 4, 5, 6];
         const transformed = opDays.map(d => {
           const pgDow = (d + 1) % 7;
           const found = tardiness.byDayOfWeek.find(r => r.dayOfWeek === pgDow);

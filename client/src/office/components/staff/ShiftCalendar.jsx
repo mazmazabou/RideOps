@@ -115,7 +115,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
   // -- Calendar select: drag-to-create shift --
   const handleSelect = useCallback((info) => {
     const cfg = opsConfigRef.current || {};
-    const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+    const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
     const dayOfWeek = jsDateToOurDay(info.start.getDay());
     if (!opDays.includes(dayOfWeek)) return;
 
@@ -151,7 +151,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
     const shiftId = info.event.extendedProps.shiftId;
     const dayOfWeek = jsDateToOurDay(info.event.start.getDay());
     const cfg = opsConfigRef.current || {};
-    const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+    const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
     if (!opDays.includes(dayOfWeek)) {
       info.revert();
       showToast('Shifts must be on operating days', 'error');
@@ -213,7 +213,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
     if (calendarRef.current) return; // already initialized
 
     const cfg = opsConfigRef.current || {};
-    const opDays = String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number);
+    const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
     const hiddenDays = [];
     for (let d = 0; d < 7; d++) {
       if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
@@ -278,7 +278,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
   useEffect(() => {
     const cal = calendarRef.current;
     if (!cal || !opsConfig) return;
-    const opDays = String(opsConfig.operating_days || '0,1,2,3,4').split(',').map(Number);
+    const opDays = String(opsConfig.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
     const hiddenDays = [];
     for (let d = 0; d < 7; d++) {
       if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
@@ -574,7 +574,7 @@ function ShiftContextMenu({ data, onDuplicate, onEdit, onDelete, onClose }) {
 function DuplicateShiftModal({ data, opsConfig, onSuccess, onCancel, showToast }) {
   const cfg = opsConfig || {};
   const opDays = useMemo(
-    () => String(cfg.operating_days || '0,1,2,3,4').split(',').map(Number),
+    () => String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number),
     [cfg.operating_days]
   );
 

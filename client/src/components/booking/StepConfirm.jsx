@@ -19,8 +19,8 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
 
   const opDays = useMemo(() => {
     return opsConfig
-      ? String(opsConfig.operating_days || '0,1,2,3,4').split(',').map(Number).sort()
-      : [0, 1, 2, 3, 4];
+      ? String(opsConfig.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).sort()
+      : [0, 1, 2, 3, 4, 5, 6];
   }, [opsConfig]);
 
   const whenDisplay = useMemo(() => {

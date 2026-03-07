@@ -51,7 +51,7 @@ export default function ScheduleGrid({ filteredRides, opsConfig, onRideClick }) 
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
 
   const opDays = useMemo(() => {
-    return String(opsConfig?.operating_days || '0,1,2,3,4').split(',').map(Number).sort((a, b) => a - b);
+    return String(opsConfig?.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).sort((a, b) => a - b);
   }, [opsConfig]);
 
   const startHour = parseInt(String(opsConfig?.service_hours_start || '08:00').split(':')[0], 10);

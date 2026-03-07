@@ -65,7 +65,7 @@ export default function DashboardTab({ dateRange, userId, onSummaryData }) {
     if (results.frequency) {
       const opDays = opsConfig?.operating_days
         ? String(opsConfig.operating_days).split(',').map(Number)
-        : [0, 1, 2, 3, 4];
+        : [0, 1, 2, 3, 4, 5, 6];
       const freq = results.frequency;
 
       if (freq.byDayOfWeek) {

@@ -36,7 +36,7 @@ module.exports = function(app, ctx) {
     if (!Number.isInteger(dow) || dow < 0 || dow > 6) {
       return res.status(400).json({ error: 'dayOfWeek must be 0-6 (Mon-Sun)' });
     }
-    const opDaysStr = await getSetting('operating_days', '0,1,2,3,4');
+    const opDaysStr = await getSetting('operating_days', '0,1,2,3,4,5,6');
     const opDays = String(opDaysStr).split(',').map(Number);
     if (!opDays.includes(dow)) {
       return res.status(400).json({ error: 'Shifts can only be created on operating days' });
@@ -106,7 +106,7 @@ module.exports = function(app, ctx) {
     if (!Number.isInteger(newDow) || newDow < 0 || newDow > 6) {
       return res.status(400).json({ error: 'dayOfWeek must be 0-6 (Mon-Sun)' });
     }
-    const opDaysStr = await getSetting('operating_days', '0,1,2,3,4');
+    const opDaysStr = await getSetting('operating_days', '0,1,2,3,4,5,6');
     const opDays = String(opDaysStr).split(',').map(Number);
     if (!opDays.includes(newDow)) {
       return res.status(400).json({ error: 'Shifts can only be created on operating days' });
@@ -175,7 +175,7 @@ module.exports = function(app, ctx) {
       if (!Number.isInteger(dow) || dow < 0 || dow > 6) {
         return res.status(400).json({ error: 'dayOfWeek must be 0-6 (Mon-Sun)' });
       }
-      const opDaysStr = await getSetting('operating_days', '0,1,2,3,4');
+      const opDaysStr = await getSetting('operating_days', '0,1,2,3,4,5,6');
       const opDays = String(opDaysStr).split(',').map(Number);
       if (!opDays.includes(dow)) {
         return res.status(400).json({ error: 'Shifts can only be created on operating days' });

@@ -302,7 +302,7 @@ users, shifts, rides, ride_events, recurring_rides, rider_miss_counts, vehicles,
 | tardy_threshold_minutes | 1 | number | staff |
 | service_hours_start | 08:00 | time | operations |
 | service_hours_end | 19:00 | time | operations |
-| operating_days | 0,1,2,3,4 | string | operations |
+| operating_days | 0,1,2,3,4,5,6 | string | operations |
 | auto_deny_outside_hours | true | boolean | operations |
 | notify_office_tardy | true | boolean | notifications |
 | notify_rider_no_show | true | boolean | notifications |

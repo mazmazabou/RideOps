@@ -535,7 +535,7 @@ module.exports = function registerAnalyticsRoutes(app, ctx) {
       // Read operating hours from settings
       const startHourRaw = await getSetting('service_hours_start', '08:00');
       const endHourRaw = await getSetting('service_hours_end', '19:00');
-      const operatingDaysRaw = await getSetting('operating_days', '0,1,2,3,4');
+      const operatingDaysRaw = await getSetting('operating_days', '0,1,2,3,4,5,6');
       const startHour = parseInt(startHourRaw.split(':')[0]) || 8;
       const endHour = parseInt(endHourRaw.split(':')[0]) || 19;
       // operating_days uses 0-4 for Mon-Fri; convert to ISODOW 1-5
