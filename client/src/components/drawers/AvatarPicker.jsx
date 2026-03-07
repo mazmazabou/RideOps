@@ -38,7 +38,11 @@ export default function AvatarPicker({ currentUrl, userId, userName, onSelect })
   const [dragging, setDragging] = useState(false);
 
   const processFile = async (file) => {
-    if (!file || !file.type.startsWith('image/')) {
+    if (!file) return;
+    const validExts = ['.png', '.jpg', '.jpeg', '.webp'];
+    const ext = file.name ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
+    const isImage = file.type.startsWith('image/') || validExts.includes(ext);
+    if (!isImage) {
       showToast('Please drop an image file', 'error');
       return;
     }
