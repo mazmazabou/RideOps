@@ -21,6 +21,10 @@ export default function PasswordChange({ variant = 'drawer' }) {
       showToast('Passwords do not match', 'error');
       return;
     }
+    if (newPw === current) {
+      showToast('New password must be different from current', 'error');
+      return;
+    }
     try {
       await changePassword({ currentPassword: current, newPassword: newPw });
       showToast('Password updated', 'success');

@@ -342,6 +342,11 @@
         msg.style.color = 'var(--status-no-show)';
         return;
       }
+      if (newPassword === currentPassword) {
+        msg.textContent = 'New password must be different from your current password.';
+        msg.style.color = 'var(--status-no-show)';
+        return;
+      }
       try {
         const res = await fetch('/api/auth/change-password', {
           method: 'POST',

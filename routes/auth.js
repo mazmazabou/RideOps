@@ -117,6 +117,9 @@ module.exports = function(app, ctx) {
     if (!(await bcrypt.compare(currentPassword, user.password_hash))) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: 'New password must be different from your current password' });
+    }
     const hash = await bcrypt.hash(newPassword, 10);
     await query(
       `UPDATE users SET password_hash = $1, must_change_password = FALSE, password_changed_at = NOW(), updated_at = NOW() WHERE id = $2`,
