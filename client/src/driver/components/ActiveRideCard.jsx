@@ -18,6 +18,26 @@ export default function ActiveRideCard({ ride, vehicles, gracePeriodMinutes, onR
   const phone = ride.riderPhone || '';
 
   const handleStartRide = async () => {
+    if (ride.vehicleId) {
+      // Vehicle already selected via inline selector — simple confirmation
+      const confirmed = await showModal({
+        title: 'Confirm On My Way',
+        body: `Head to ${ride.pickupLocation} in ${vehicleName}?`,
+        confirmLabel: 'Confirm',
+        confirmClass: 'ro-btn--primary',
+      });
+      if (!confirmed) return;
+      try {
+        await rideOnTheWay(ride.id);
+        showToast('On your way!', 'success');
+        onRefresh();
+      } catch (e) {
+        showToast(e.message || 'Failed to start ride', 'error');
+      }
+      return;
+    }
+
+    // No vehicle selected yet — show vehicle selection modal
     const available = vehicles.filter(v => v.status === 'available');
     let selectedVehicleId = null;
 
