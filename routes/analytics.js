@@ -128,13 +128,20 @@ module.exports = function registerAnalyticsRoutes(app, ctx) {
 
   app.get('/api/analytics/milestones', requireOffice, wrapAsync(async (req, res) => {
     const thresholds = [50, 100, 250, 500, 1000];
+    const includeDeleted = req.query.include_deleted === 'true';
+    const deletedFilter = includeDeleted ? '' : 'AND u.deleted_at IS NULL';
     const [driverRes, riderRes] = await Promise.all([
       query(`SELECT u.id, u.name, COUNT(r.id) AS ride_count
              FROM users u LEFT JOIN rides r ON r.assigned_driver_id = u.id AND r.status = 'completed'
-             WHERE u.role = 'driver' GROUP BY u.id, u.name ORDER BY ride_count DESC`),
-      query(`SELECT rider_email, rider_name, COUNT(*) AS ride_count
-             FROM rides WHERE status = 'completed'
-             GROUP BY rider_email, rider_name ORDER BY ride_count DESC`)
+             WHERE u.role = 'driver' ${deletedFilter} GROUP BY u.id, u.name ORDER BY ride_count DESC`),
+      includeDeleted
+        ? query(`SELECT rider_email, rider_name, COUNT(*) AS ride_count
+                 FROM rides WHERE status = 'completed'
+                 GROUP BY rider_email, rider_name ORDER BY ride_count DESC`)
+        : query(`SELECT r.rider_email, r.rider_name, COUNT(*) AS ride_count
+                 FROM rides r INNER JOIN users u ON u.email = r.rider_email AND u.deleted_at IS NULL
+                 WHERE r.status = 'completed'
+                 GROUP BY r.rider_email, r.rider_name ORDER BY ride_count DESC`)
     ]);
     function compute(rows) {
       return rows.map(row => {

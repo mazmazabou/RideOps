@@ -166,7 +166,7 @@ node scripts/retake-grace-timer.js
 - `client/src/components/booking/` — BookPanel, StepWhere, StepWhen, StepConfirm, DateChips, StepIndicator
 - `client/src/components/rides/` — MyRidesPanel, HeroCard, GraceTimer
 - `client/src/components/history/` — HistoryPanel, HistoryRow, RecurringSection
-- `client/src/components/drawers/` — SettingsDrawer, ProfileForm, AvatarPicker, PasswordChange, NotificationDrawer
+- `client/src/components/drawers/` — SettingsDrawer, ProfileForm, AvatarPicker (photo upload with canvas compression, DiceBear initials fallback, no style picker grid), PasswordChange, NotificationDrawer
 - `client/src/components/NotificationToggles.jsx` — Shared notification preference toggle UI for driver and rider views. Grouped toggles, save-on-toggle with optimistic UI. Office uses same toggle switch CSS classes but has its own component (NotifSettingsSubPanel)
 - `client/src/contexts/` — AuthContext, TenantContext, ToastContext
 - `client/src/hooks/` — usePolling, useRides, useLocations, useOpsConfig, useNotifications
@@ -420,7 +420,7 @@ All CSS/JS dependencies are vendored locally in `public/vendor/` for offline rel
 - Quill: `public/vendor/quill/quill.snow.css` + `quill.min.js` (office view only)
 - GridStack: `public/vendor/gridstack/gridstack.min.css` + `gridstack-all.js` (legacy only)
 - Chart.js: `public/vendor/chartjs/chart.min.js` (legacy only — React uses npm)
-- DiceBear API: `https://api.dicebear.com/9.x` — runtime API (stays external), fails gracefully
+- DiceBear API: `https://api.dicebear.com/9.x` — used ONLY for initials fallback avatars (no cartoon styles). Users upload photos with client-side compression (256×256 JPEG). Upload limit: 2MB raw input
 
 ### npm Dependencies in client/ (do NOT load from CDN)
 - `chart.js` + `react-chartjs-2` — Chart.js v4 for React (doughnut, bar, line/area charts). CDN tag removed from `office.html`
