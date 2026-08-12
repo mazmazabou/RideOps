@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- RideOps mark: SteelBlue disc, monoline RO, tan route motif -->
+  <circle cx="64" cy="64" r="64" fill="#4682B4"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/>
+  <!-- R -->
+  <path d="M30 80 V44 H41 a10.5 10.5 0 0 1 0 21 H30 M42 65 L53 80"
+        fill="none" stroke="#FFFFFF" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- O -->
+  <circle cx="79" cy="62" r="18.5" fill="none" stroke="#FFFFFF" stroke-width="7.5"/>
+  <!-- route: pickup dot -> path -> destination ring -->
+  <circle cx="33" cy="98" r="4.5" fill="#D2B48C"/>
+  <path d="M38 98 C 54 106, 72 90, 88 97" fill="none" stroke="#D2B48C" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="94" cy="98" r="5" fill="none" stroke="#D2B48C" stroke-width="4"/>
+</svg>
