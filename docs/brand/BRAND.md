@@ -2,18 +2,34 @@
 
 ## Logo
 
-Three assets in `docs/brand/`:
+Official logos (AI-generated set, approved 2026-08-12) in `docs/brand/`:
 
 | File | Use |
 |---|---|
-| `rideops-mark.svg` | Standalone mark (avatars, slide corners, app icons ≥64px) |
-| `rideops-logo.svg` | Horizontal wordmark on light backgrounds |
-| `rideops-logo-dark.svg` | Horizontal wordmark on dark backgrounds |
+| `rideops-mark.png` | Standalone circular badge (golf cart + route pin), square — avatars, app icons |
+| `rideops-logo.png` | Horizontal badge + wordmark on light/white backgrounds |
+| `rideops-logo-dark.png` | Horizontal badge + wordmark on dark navy `#1E2B3A` |
 
 Raw URLs for remote use (Canva upload, email signatures):
-- `https://raw.githubusercontent.com/mazmazabou/RideOps/main/docs/brand/rideops-mark.svg`
-- `https://raw.githubusercontent.com/mazmazabou/RideOps/main/docs/brand/rideops-logo.svg`
-- `https://raw.githubusercontent.com/mazmazabou/RideOps/main/docs/brand/rideops-logo-dark.svg`
+- `https://raw.githubusercontent.com/mazmazabou/RideOps/main/docs/brand/rideops-mark.png`
+- `https://raw.githubusercontent.com/mazmazabou/RideOps/main/docs/brand/rideops-logo.png`
+- `https://raw.githubusercontent.com/mazmazabou/RideOps/main/docs/brand/rideops-logo-dark.png`
+
+The `.svg` files with the same basenames are the earlier geometric drafts — superseded, kept only as vector fallbacks.
+
+### Extended asset set (docs/brand/)
+
+| File | Use |
+|---|---|
+| `rideops-mark-dark.png` | Badge mark on dark navy — dark UI avatars |
+| `app-icon.png` | Rounded-square iOS-style app icon (mark on SteelBlue) |
+| `bg-hero-dark.png` | 16:9 dark navy title-slide background, route pattern lower-right, clean upper-left for text |
+| `bg-content-light.png` | 16:9 light content-slide background, whisper pattern bottom-right |
+| `pattern-tile.png` | Scattered cart/pin/route pattern on white — collateral texture |
+| `icon-sheet.png` | 3×3 flat icon grid: cart, pin, headset, calendar, phone-route, clipboard, chart, wheel, cycle |
+| `banner-social.png` | Wide dark banner with logo + tagline — LinkedIn cover / email header |
+
+All raw URLs follow the same pattern: `https://raw.githubusercontent.com/mazmazabou/RideOps/main/docs/brand/<file>`
 
 Rules: don't recolor the mark; don't set the wordmark in another font; keep clear space equal to the mark's radius; below 48px use the plain favicon (`public/favicon.svg`) instead of the mark (the route motif muddies at tiny sizes).
 

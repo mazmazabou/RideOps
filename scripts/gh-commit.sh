@@ -10,9 +10,15 @@ BASE_TREE=$(gh api "repos/$REPO/git/commits/$PARENT" --jq .tree.sha)
 
 TREE_ITEMS="["
 SEP=""
+BLOBTMP=$(mktemp)
+trap 'rm -f "$BLOBTMP"' EXIT
 for f in "$@"; do
-  BLOB=$(gh api "repos/$REPO/git/blobs" -X POST \
-    -f content="$(base64 -i "$f")" -f encoding="base64" --jq .sha)
+  python3 - "$f" > "$BLOBTMP" <<'PYEOF'
+import base64, json, sys
+with open(sys.argv[1], 'rb') as fh:
+    print(json.dumps({"content": base64.b64encode(fh.read()).decode(), "encoding": "base64"}))
+PYEOF
+  BLOB=$(gh api "repos/$REPO/git/blobs" -X POST --input "$BLOBTMP" --jq .sha)
   TREE_ITEMS+="$SEP{\"path\":\"$f\",\"mode\":\"100644\",\"type\":\"blob\",\"sha\":\"$BLOB\"}"
   SEP=","
 done
