@@ -38,3 +38,7 @@ Research basis for RideOps pricing. Two parallel research passes: named competit
 All candidates: unlimited riders/drivers/vehicles, all features, email support. No per-ride or per-vehicle meters (differentiator vs. Bambi/Spare, and Royal Ride's fleet is tiny anyway).
 
 **Objection answers ("what does it cost?"):** lead with pilot-free, then the flat annual number, then the competitive frame: "the platforms built for city transit agencies start around $50k/yr — RideOps is built for programs exactly your size."
+
+## DECISION (Mazen, 2026-08-11)
+
+**No number in the deck.** Pricing slide says: free 3-month pilot, then flat annual pricing scoped to the program — quoted after discovery. If asked directly on the call, the verbal quote guidance is Candidate B ($4,800/yr) with the competitive frame above. This goes in the demo runbook, not the slides.
