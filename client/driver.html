@@ -26,9 +26,9 @@
         return ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255);
       }
       var parts = window.location.pathname.split('/').filter(Boolean);
-      var slug = ['usc','stanford','ucla','uci'].indexOf(parts[0]) !== -1 ? parts[0] : null;
+      var slug = ['usc','stanford','ucla','uci','scranton'].indexOf(parts[0]) !== -1 ? parts[0] : null;
       window.__RIDEOPS_CAMPUS_SLUG__ = slug;
-      var titles = { usc: 'USC DART', stanford: 'Stanford ATS', ucla: 'UCLA BruinAccess', uci: 'UCI AnteaterExpress' };
+      var titles = { usc: 'USC DART', stanford: 'Stanford ATS', ucla: 'UCLA BruinAccess', uci: 'UCI AnteaterExpress', scranton: 'Royal Ride' };
       var campusName = (slug && titles[slug]) ? titles[slug] : 'RideOps';
       document.title = campusName + ' \u00b7 Driver';
       if (slug && typeof CAMPUS_THEMES !== 'undefined' && CAMPUS_THEMES[slug]) {

@@ -55,6 +55,7 @@ try { allCampusLocations.usc = require('./tenants/usc-buildings'); } catch {}
 try { allCampusLocations.stanford = require('./tenants/stanford-locations'); } catch {}
 try { allCampusLocations.ucla = require('./tenants/ucla-locations'); } catch {}
 try { allCampusLocations.uci = require('./tenants/uci-locations'); } catch {}
+try { allCampusLocations.scranton = require('./tenants/scranton-locations'); } catch {}
 
 const campusConfigs = require('./tenants/campus-configs');
 

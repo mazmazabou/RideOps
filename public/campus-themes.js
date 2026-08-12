@@ -44,6 +44,16 @@ var CAMPUS_THEMES = {
     sidebarActiveBg: 'rgba(0,100,164,0.25)', sidebarHover: 'rgba(255,255,255,0.06)',
     sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://map.uci.edu/', campusKey: 'uci',
     headerBg: '#D0DEF0'  // UCI Blue 20% tint — richer blue, better contrast
+  },
+  scranton: {
+    orgName: 'Royal Ride', orgShortName: 'Royal Ride',
+    orgTagline: 'University of Scranton Campus Transportation', orgInitials: 'RR',
+    primaryColor: '#512D6D', primaryLight: '#6B4390', primaryDark: '#3E2159',
+    secondaryColor: '#EA7A59', secondaryTextColor: '#512D6D',
+    sidebarBg: '#1C1129', sidebarText: '#A99BC4',
+    sidebarActiveBg: 'rgba(81,45,109,0.35)', sidebarHover: 'rgba(255,255,255,0.06)',
+    sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://admissions.scranton.edu/our-campus/campus-maps.shtml', campusKey: 'scranton',
+    headerBg: '#EBE3F2'  // Scranton Purple (PMS 269) 15% tint
   }
 };
 
@@ -53,11 +63,28 @@ var CAMPUS_THEMES = {
  * Status colors (pending/approved/completed/no_show etc.) are handled
  * separately by CSS variables and are NOT part of this palette.
  *
- * @param {string} campusKey  — 'usc' | 'stanford' | 'ucla' | 'uci' | null
+ * @param {string} campusKey  — 'usc' | 'stanford' | 'ucla' | 'uci' | 'scranton' | null
  * @returns {string[]}        — array of hex color strings, 6–10 colors
  */
 function getCampusPalette(campusKey) {
   switch (campusKey) {
+
+    case 'scranton':
+      // Scranton purple (PMS 269) family with warm orange web-accent.
+      // Dark → light purples for schedule columns; orange/coral for warm
+      // accents; cool gray and plum for outliers.
+      return [
+        '#2A1740',  // Darkest Purple
+        '#3E2159',  // Dark Purple
+        '#512D6D',  // Scranton Purple (PMS 269)
+        '#6B4390',  // Medium Purple
+        '#8A65AD',  // Light Purple
+        '#B79BD1',  // Lighter Purple
+        '#EA7A59',  // Orange (web accent)
+        '#C4552F',  // Dark Orange
+        '#8E9BAE',  // Cool Gray
+        '#4A3A5E',  // Muted Plum
+      ];
 
     case 'usc':
       // Darkened tertiary palette — washed-out lime, peach, yellow replaced.
