@@ -56,9 +56,9 @@ Three principles, distilled from how RideOps actually wins trust (see the Scrant
 
 **One sentence:** RideOps is an operations platform for campus accessible-ride programs — student booking, dispatch, driver workflow, and reporting in one system.
 
-**One paragraph:** RideOps runs the daily operations of campus accessible transportation programs: students book rides from real campus locations, dispatchers approve and assign from a live queue, drivers work rides on their phones, and the office gets attendance, no-show, and utilization reporting automatically. It's multi-tenant — each campus gets its own branding, locations, and rules — and it was built from the inside: by someone who supervised one of these programs, for the people who run them.
+**One paragraph:** RideOps runs the daily operations of campus accessible transportation programs: students book rides from real campus locations, dispatchers approve and assign from a live queue, drivers work rides on their phones, and the office gets attendance, no-show, and utilization reporting automatically. It's multi-tenant — each campus gets its own branding, locations, and rules — and it was built from the inside: by someone who supervised one of these programs, for the people who run them. All materials sign as "the RideOps team" — no individual names, ever.
 
-**Founder bio:** Mazen Abouelela built RideOps while supervising USC's campus accessible transportation program (DART) as a student — dispatching golf carts by radio and tracking rides on paper. He's now a technology consultant, and RideOps is the tool he wishes his office had.
+**Origin story (anonymous — never name the founder in any material):** RideOps was built by someone who supervised a campus accessible transportation program — dispatching golf carts by radio and tracking rides on paper. It's the tool that office needed.
 
 **Gap disclosure (standard language):** "I'd rather you know exactly where RideOps lines up with what you need and where it doesn't — [gaps] aren't there today. Here's how the current system covers that need, and here's what's on the roadmap."
 

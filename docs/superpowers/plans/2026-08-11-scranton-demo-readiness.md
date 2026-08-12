@@ -315,7 +315,7 @@ Use `generate-design-structured` (preferred, per-slide control) with the spec's 
 
 - [ ] **Step 4: Save as brand template and hand off**
 
-`create-brand-template-draft` → `publish-brand-template` (if the account plan allows; otherwise keep as a master design and use `copy-design` for instancing). Record the template/design ID + share URL, add both to `~/.claude/skills/rideops-brand/SKILL.md`, and give Mazen the link for a look in Canva itself (rendering check from the spec's risk list).
+`create-brand-template-draft` → `publish-brand-template` (if the account plan allows; otherwise keep as a master design and use `copy-design` for instancing). Record the template/design ID + share URL, add both to `~/.claude/skills/rideops-brand/SKILL.md`, and give the owner the link for a look in Canva itself (rendering check from the spec's risk list).
 
 ---
 
@@ -325,7 +325,7 @@ Use `generate-design-structured` (preferred, per-slide control) with the spec's 
 - Create: `docs/brand/pricing-research.md`
 
 **Interfaces:**
-- Produces: approved pricing structure + numbers for Task 9's pricing slide. **Nothing enters any deck until Mazen approves via explicit question.**
+- Produces: approved pricing structure + numbers for Task 9's pricing slide. **Nothing enters any deck until the owner approves via explicit question.**
 
 - [ ] **Step 1: Dispatch web research agents (parallel)**
 
@@ -337,7 +337,7 @@ Structure fixed by spec: free 3-month pilot → flat annual per-campus. Produce 
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>" docs/brand/pricing-research.md`.
 
-- [ ] **Step 3: Present to Mazen for approval**
+- [ ] **Step 3: Present to the owner for approval**
 
 AskUserQuestion with the candidate numbers (labels = the price points, descriptions = rationale). The approved number — and only it — goes into decks. If none approved, iterate.
 
@@ -345,7 +345,7 @@ AskUserQuestion with the candidate numbers (labels = the price points, descripti
 
 ### Task 9: Friday's Scranton deck
 
-**Files:** none in repo (Canva instance + exported PDF in scratchpad → emailed/kept by Mazen)
+**Files:** none in repo (Canva instance + exported PDF in scratchpad → emailed/kept by the owner)
 
 **Interfaces:**
 - Consumes: Task 7 template, Task 8 approved pricing, Task 4 production environment (for fresh screenshots), spec's requirements-mapping table.
@@ -361,7 +361,7 @@ Requirements-mapping slide: the spec's exact 6-row table (✅ real-time requests
 
 - [ ] **Step 3: Review, export, deliver**
 
-Full-slide visual review via export PNGs; then `export-design` PDF + PPTX. Give Mazen the Canva link + files Thursday with time to react.
+Full-slide visual review via export PNGs; then `export-design` PDF + PPTX. Give the owner the Canva link + files Thursday with time to react.
 
 ---
 
@@ -373,7 +373,7 @@ Full-slide visual review via export PNGs; then `export-design` PDF + PPTX. Give 
 
 **Interfaces:**
 - Consumes: Task 4 production env, Task 9 deck, spec's timing plan.
-- Produces: one-page script Mazen can glance at during the call + a full screenshot set of every demo beat.
+- Produces: one-page script the owner can glance at during the call + a full screenshot set of every demo beat.
 
 - [ ] **Step 1: Write the runbook**
 
