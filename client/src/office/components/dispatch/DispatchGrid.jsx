@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { useToast } from '../../../contexts/ToastContext';
 import { assignRide, reassignRide, unassignRide } from '../../../api';
 import { getCampusPalette, getCampusSlug } from '../../../utils/campus';
-import { currentServiceDay, serviceDayOf } from '../../../utils/tz';
+import { currentServiceDay, serviceDayOf, campusTimeParts } from '../../../utils/tz';
 import DriverRow from './DriverRow';
 import RideStrip from './RideStrip';
 import NowLine from './NowLine';
@@ -278,11 +278,10 @@ export default function DispatchGrid({
               Unassigned
             </div>
             {Array.from({ length: cols }, (_, i) => {
-              const h = startHour + i;
-              const ridesInHour = unassignedRides.filter(r => {
-                const rideHour = new Date(r.requestedTime).getHours();
-                return rideHour === h;
-              });
+              const h = (startHour + i) % 24;
+              const ridesInHour = unassignedRides.filter(r =>
+                campusTimeParts(r.requestedTime).h === h
+              );
               return (
                 <div key={h} className="relative" style={{ borderRight: '1px solid var(--color-border-light)' }}>
                   {ridesInHour.map(r => (
