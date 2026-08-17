@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import RideStrip from './RideStrip';
 import { hexToRgb } from '../../../utils/campus';
+import { campusTimeParts } from '../../../utils/tz';
 
 export default function DriverRow({
   driver, driverRides, driverShifts, paletteColor,
-  cols, startHour, gridColStyle, isActive,
+  cols, startHour, overnight, gridColStyle, isActive,
   isTardy, tardyMinutes, onRideClick,
 }) {
   const dotClass = isActive ? 'time-grid__driver-dot--online' : 'time-grid__driver-dot--offline';
@@ -13,16 +14,17 @@ export default function DriverRow({
 
   const bandColor = paletteColor ? hexToRgb(paletteColor) : 'var(--color-secondary-rgb, 210,180,140)';
 
-  // Build hour cells with rides
+  // Build hour cells with rides — hours in campus time, axis wraps mod-24
+  // when the service window crosses midnight.
   const hourCells = useMemo(() => {
     const cells = [];
-    for (let h = startHour; h < startHour + cols; h++) {
-      const ridesInHour = driverRides.filter(r => {
-        const rideHour = new Date(r.requestedTime).getHours();
-        return rideHour === h;
-      });
+    for (let i = 0; i < cols; i++) {
+      const h = (startHour + i) % 24;
+      const ridesInHour = driverRides.filter(r =>
+        campusTimeParts(r.requestedTime).h === h
+      );
       cells.push(
-        <div key={h} className="relative" style={{ borderRight: '1px solid var(--color-border-light)' }}>
+        <div key={i} className="relative" style={{ borderRight: '1px solid var(--color-border-light)' }}>
           {ridesInHour.map(r => (
             <RideStrip key={r.id} ride={r} driverColor={paletteColor} onClick={onRideClick} />
           ))}
@@ -40,11 +42,22 @@ export default function DriverRow({
       const startFrac = sh + sm / 60;
       const endFrac = eh + em / 60;
 
-      const visStart = Math.max(startFrac, startHour);
-      const visEnd = Math.min(endFrac, startHour + cols);
+      // Map wall-clock hours onto axis offsets (wrapping past midnight when
+      // the board shows an overnight window).
+      const toOffset = (frac) => {
+        let o = frac - startHour;
+        if (overnight && o < 0) o += 24;
+        return o;
+      };
+      let startOff = toOffset(startFrac);
+      let endOff = toOffset(endFrac);
+      if (endOff < startOff) endOff = cols; // shift itself crosses the wrap
+
+      const visStart = Math.max(startOff, 0);
+      const visEnd = Math.min(endOff, cols);
       if (visEnd <= visStart) return null;
 
-      const leftFrac = ((visStart - startHour) / cols).toFixed(6);
+      const leftFrac = (visStart / cols).toFixed(6);
       const widthFrac = ((visEnd - visStart) / cols).toFixed(6);
 
       return (
@@ -60,7 +73,7 @@ export default function DriverRow({
         />
       );
     }).filter(Boolean),
-    [driverShifts, startHour, cols, bandColor]
+    [driverShifts, startHour, cols, overnight, bandColor]
   );
 
   return (

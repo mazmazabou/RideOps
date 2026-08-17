@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { campusTimeParts } from '../../../utils/tz';
 
 const STATUS_COLORS = {
   approved: 'var(--status-approved)',
@@ -11,8 +12,7 @@ const STATUS_COLORS = {
 };
 
 export default function RideStrip({ ride, driverColor, onClick }) {
-  const rideTime = new Date(ride.requestedTime);
-  const mins = rideTime.getMinutes();
+  const mins = campusTimeParts(ride.requestedTime).min;
   const left = (mins / 60 * 100) + '%';
   const bg = STATUS_COLORS[ride.status] || 'var(--status-pending)';
   const lastName = (ride.riderName || '').split(' ').pop();

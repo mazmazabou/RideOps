@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { usePolling } from '../../hooks/usePolling';
 import { fetchEmployees, fetchAllRides, fetchVehicles } from '../../api';
+import { currentServiceDay, addDays } from '../../utils/tz';
 
 export function useDriverData() {
   const [employees, setEmployees] = useState([]);
@@ -10,10 +11,10 @@ export function useDriverData() {
 
   const loadData = useCallback(async () => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = currentServiceDay();
       const [emp, rds, veh] = await Promise.all([
         fetchEmployees(),
-        fetchAllRides({ from: today, to: today }),
+        fetchAllRides({ from: today, to: addDays(today, 1) }),
         fetchVehicles(),
       ]);
       setEmployees(emp);

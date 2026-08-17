@@ -1,14 +1,16 @@
+import { currentServiceDay, serviceDayOf } from '../../../utils/tz';
+
 export default function KPIBar({ rides, todayStatus, employees, shifts }) {
-  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const today = currentServiceDay();
 
   const activeDrivers = todayStatus.filter(e => e.active).length;
   const pendingRides = rides.filter(r => r.status === 'pending').length;
   const inProgress = rides.filter(r =>
     ['scheduled', 'driver_on_the_way', 'driver_arrived_grace'].includes(r.status) &&
-    r.requestedTime?.startsWith(today)
+    r.requestedTime && serviceDayOf(r.requestedTime) === today
   ).length;
   const completedToday = rides.filter(r =>
-    r.status === 'completed' && r.requestedTime?.startsWith(today)
+    r.status === 'completed' && r.requestedTime && serviceDayOf(r.requestedTime) === today
   ).length;
 
   const tardyToday = todayStatus.filter(d =>

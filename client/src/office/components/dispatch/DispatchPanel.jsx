@@ -5,6 +5,7 @@ import {
   fetchAllRides, fetchTodayDriverStatus, fetchShifts,
   fetchOpsConfig, fetchEmployees, fetchLocations, fetchVehicles,
 } from '../../../api';
+import { setServiceWindow, currentServiceDay, addDays } from '../../../utils/tz';
 import KPIBar from './KPIBar';
 import PendingQueue from './PendingQueue';
 import DispatchGrid from './DispatchGrid';
@@ -35,7 +36,10 @@ export default function DispatchPanel() {
     if (loadedOnce.current) return;
     loadedOnce.current = true;
     fetchShifts().then(setShifts).catch(() => {});
-    fetchOpsConfig().then(setOpsConfig).catch(() => {});
+    fetchOpsConfig().then(config => {
+      setServiceWindow(config?.service_hours_start, config?.service_hours_end);
+      setOpsConfig(config);
+    }).catch(() => {});
     fetchEmployees().then(setEmployees).catch(() => {});
     fetchVehicles().then(setVehicles).catch(() => {});
     fetchLocations().then(setLocations).catch(() => {});
@@ -44,9 +48,11 @@ export default function DispatchPanel() {
   // 5s polling for rides + today driver status
   const pollData = useCallback(async () => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      // Fetch the current service day plus the next calendar day so the
+      // early-morning tail of an overnight window is always included.
+      const today = currentServiceDay();
       const [ridesData, statusData] = await Promise.all([
-        fetchAllRides({ from: today, to: today }),
+        fetchAllRides({ from: today, to: addDays(today, 1) }),
         fetchTodayDriverStatus(),
       ]);
       setRides(ridesData);
@@ -61,9 +67,11 @@ export default function DispatchPanel() {
   // Refresh handler — called after actions
   const refresh = useCallback(async () => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      // Fetch the current service day plus the next calendar day so the
+      // early-morning tail of an overnight window is always included.
+      const today = currentServiceDay();
       const [ridesData, statusData] = await Promise.all([
-        fetchAllRides({ from: today, to: today }),
+        fetchAllRides({ from: today, to: addDays(today, 1) }),
         fetchTodayDriverStatus(),
       ]);
       setRides(ridesData);

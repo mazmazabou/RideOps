@@ -42,7 +42,7 @@ module.exports = function(app, ctx) {
     await query(
       `INSERT INTO recurring_rides (id, rider_id, pickup_location, dropoff_location, time_of_day, days_of_week, start_date, end_date, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')`,
-      [recurId, req.session.userId, pickupLocation, dropoffLocation, `${hourStr.padStart(2, '0')}:${String(minute).padStart(2, '0')}`, days, start, end]
+      [recurId, req.session.userId, pickupLocation, dropoffLocation, `${hourStr.padStart(2, '0')}:${String(minute).padStart(2, '0')}`, days, String(startDate).slice(0, 10), String(endDate).slice(0, 10)]
     );
 
     // Anchor each occurrence's wall-clock time to the campus timezone so the
@@ -50,9 +50,17 @@ module.exports = function(app, ctx) {
     const tz = resolveTimezone(req.session.campus);
     const dates = generateRecurringDates(startDate, endDate, days);
     const autoDenyRecurring = await getSetting('auto_deny_outside_hours', true);
+    // In an overnight window, a time in the early-morning segment (e.g. 01:00
+    // with 22:00-03:00 hours) means "the night of" the selected service day —
+    // the actual instant lands on the NEXT calendar day.
+    const dayShift = windowSegment(minutesTotal, svcStart, svcEnd) === 'previous-day' ? 1 : 0;
     let created = 0;
     for (const cal of dates) {
-      const requestedTime = zonedTimeToUtc(cal.y, cal.m, cal.d, hour, minute, tz).toISOString();
+      const calDate = new Date(Date.UTC(cal.y, cal.m - 1, cal.d) + dayShift * 86400000);
+      const requestedTime = zonedTimeToUtc(
+        calDate.getUTCFullYear(), calDate.getUTCMonth() + 1, calDate.getUTCDate(),
+        hour, minute, tz
+      ).toISOString();
       if (autoDenyRecurring && !(await isWithinServiceHours(requestedTime, tz))) continue;
       const rideId = generateId('ride');
       const missCount = await getRiderMissCount(req.session.userId);

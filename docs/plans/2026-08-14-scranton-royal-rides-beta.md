@@ -42,6 +42,40 @@
 | 8 | **SSO via My Scranton portal** | Required before go-live — university-members-only access. Needs meetings with their IT; the schedule risk. RideOps has no SSO/SAML today. |
 | 9 | Email notification on ride denial | Mentioned as a nice-to-have alongside the outside-hours auto-deny. |
 
+## Feasibility Assessment (2026-08-16, verified against codebase)
+
+Effort tiers: **S** = an evening, **M** = 1–2 focused days, **L** = multi-day + external dependencies. Ordered by suggested build sequence.
+
+### 1. Rider count (party size) — **S**
+No passenger concept exists anywhere. One idempotent migration (`ALTER TABLE rides ADD COLUMN party_size INT NOT NULL DEFAULT 1` appended to `runMigrations` in lib/db.js), then thread through `mapRide` (lib/helpers.js — an explicit whitelist, new columns don't flow automatically) and ~10 explicit RETURNING/SELECT column lists in routes/rides.js + driver-actions.js, a number input in booking StepWhere/StepConfirm, and display in RideStrip/RideDrawer/driver ActiveRideCard. Ride *combining* stays navigator judgment for the beta — no algorithm needed, the count on each request is what they asked for.
+
+### 2. Service closure toggle — **S/M**
+Settings infrastructure fits: `getSetting()` falls back to defaults so enforcement code works before seeding; `GET /api/settings/public/operations` is already unauthenticated and returns the whole `operations` category — a `service_closed` + `service_closed_message` key pair seeded there reaches the rider app through the existing `useOpsConfig` hook. Enforcement = one check in `POST /api/rides` returning the admin's message. Rider banner mirrors the existing 21-line `TerminationBanner` (rider/App.jsx already has the slot above the booking panel). Gotchas found: `PUT /api/settings` only UPDATEs existing rows (never inserts) so the keys must be seeded first, and `BusinessRulesSubPanel` is a hardcoded card layout with a hardcoded 8-key save array — the office UI needs explicit edits, nothing auto-appears.
+
+### 3. Scranton logo swap — **S**
+No per-campus logo mechanism exists — `/logoWithoutBackground.png` is hardcoded in the React sidebar, login.html, signup.html, and OG tags. Add a `logoUrl` field to campus-configs + DEFAULT_TENANT, wire the Sidebar img and the login/signup pages (including the synchronous FOUC script + `public/campus-themes.js`, which duplicates campus config client-side — must stay in sync or the login page flashes the wrong logo). Need the Scranton "S" seal as an asset from Tyler/Kathy (and their OK to use the university mark).
+
+### 4. Van tracker embed — **S** (risk: external)
+The whole mechanism exists: per-campus `mapUrl`/`mapEmbeddable`/`mapTitle` → iframe MapPanel, already shared by office and driver (driver's map tab shows unconditionally; deferred-mount pattern in place). Scranton is currently `mapEmbeddable: false`. Work: set their tracker link as `mapUrl`, and add a rider map tab — the rider app has exactly 3 tabs (BottomTabs TABS array + a tab-panel div in rider/App.jsx) and is already wrapped in TenantProvider, so the driver MapPanel is directly reusable. **Risk:** if their tracker provider sends `X-Frame-Options: DENY` the iframe is dead — the existing external-link fallback covers it, but test with their real link before promising the embedded version.
+
+### 5. Student-facing notices/rules — **S/M**
+`program_content` is a single-row (`id='default'`), single-column (`rules_html`) table; `GET /api/program-rules` is already fully public and the office Quill editor + server-side sanitizer (script/onclick/javascript: stripping) exist. Add a `student_rules_html` column (or `id='student'` row), a second editor sub-tab in the office Guidelines panel, and a rider-side surface (info button → modal). Rendering office-authored HTML in the rider app rides on the existing sanitizer — acceptable for office-only authors.
+
+### 6. Google Maps address autocomplete — **M**
+Surprise finding: the server never validates pickup/dropoff against the locations list — all three write paths insert free text already, so **no server change is needed to accept addresses**. The work is client-side: Places Autocomplete on StepWhere (session-token pattern), biased/restricted to the Scranton area, hybrid with the 25 campus locations (campus buildings ranked first, addresses after). Needs a Google Cloud billing account + API key with referrer restrictions — ~$0 at Royal Rides volume (Autocomplete has monthly free credit), but it's a new external account to own. Analytics hotspots keep working because Google returns standardized formatted addresses (solves the "Backyard vs Backyard Ale House" problem they raised). Jurisdiction-zone enforcement (campus/hill/downtown polygons) is possible later via place geometry — don't scope it into the beta.
+
+### 7. "Arrived at destination" status — **M** (the deceptively big one)
+There is **no state machine** — statuses are scattered string literals with no DB constraint and no server-side constants module. `driver_arrived_grace` appears in ~20 non-legacy files; routes/analytics.js alone has 43 hardcoded `'completed'` literals in inline SQL, each needing a case-by-case active/terminal decision for the new status. Realistic touch list is 15–20 files (driver-actions transition + new button, rides.js allowlists, status.js labels, badge CSS, dispatch/rides/driver components, analytics queries). Recommend modeling it as: "Rider boarded" → new `in_transit` status, "Arrived at destination" → `completed` — same touch count but cleaner semantics than a post-completion status. Do this one carefully with the full test suite; budget 1–2 focused days.
+
+### 8. My Scranton SSO — **L** (the long pole, start the IT conversation NOW)
+Architecture is friendlier than feared: all auth guards are password-agnostic (they key off session userId/role), so an IdP callback route that provisions/looks-up the user, calls `setSessionFromUser`, and sets `req.session.campus` slots in cleanly. Real work: find out what My Scranton speaks (university portals are usually CAS or SAML/Shibboleth — ask IT for metadata), add an `external_id` column + provisioning logic (default new SSO users to `rider`; office/driver accounts stay locally provisioned), pick `passport-saml`/CAS client, and handle the callback-sets-no-campus gap (`req.session.campus` is currently set only by the org-slug page routes — an IdP callback bypasses them, which would silently break timezone/locations/theming; must set it explicitly). `users.password_hash` is NOT NULL so SSO users need a placeholder. Recommend **hybrid auth for the beta**: SSO for riders, local login for staff — keeps the password endpoints and admin provisioning untouched. Dev effort ~2–4 days; the schedule risk is entirely IT coordination latency, which is why it can slip Oct 16.
+
+### 9. Email on auto-denied requests — **S** (mostly exists)
+`rider_ride_denied` notification type + office-denial emails already exist. Auto-denied requests (outside hours/closure) return an immediate error in the UI without creating a ride row, so the rider already gets instant feedback; an email adds little. Fold into #2's closure message instead of building separately.
+
+### Suggested sequence vs Oct 16
+Week 1–2: #1 + #2 + #3 + #4 (all S — visible wins for the re-demo), start #8 IT conversation in parallel. Week 3: #6 (autocomplete). Week 4: #7 (new status) + #5. SSO lands whenever IT does; everything else works with local logins in the meantime.
+
 ## Product/Positioning Notes
 
 - Navigator ↔ rider **call/text buttons** and **status updates** (on the way / arrived / grace timer) were confirmed strong fits — these directly answer their top pain points.
@@ -50,7 +84,24 @@
 - They were deciding iPhone vs iPad for navigators; iPhone view passed live, decision resolved.
 - Admin-provisioned accounts story landed well with Kathy (security): platform ships with one admin, admin creates drivers/admins, only riders self-signup — and post-SSO even that funnels through the university portal.
 
-## Work State (updated 2026-08-16 — TZ fix implemented, tests NOT yet run)
+## Work State (updated 2026-08-16 evening — TZ fix COMMITTED as 9dec00d, full suite green)
+
+**Status:** Timezone fix committed locally (`9dec00d`, NOT pushed — pushing auto-deploys Railway production). Full Playwright suite: 102 passed / 0 failed / 4 pre-existing skips, including 3 new timezone regression tests (per-campus validation verdicts, overnight 22:00–03:00 window with previous-day attribution, recurring rides stored as campus-tz instants). Also fixed along the way: the settings API rejected overnight windows outright ("start must be earlier than end") — now only zero-length windows are rejected. Repo cleanup done: 85 root PNGs archived to screenshots/archive-worklog/, pixel-agents repo relocated out, scaffolding dirs gitignored. Feasibility assessment below.
+
+### Round 2 (same day): adversarial bug hunt → 14 findings → demo-critical ones fixed (suite now 103 green)
+
+An adversarial review of the fix plus a sweep of time-sensitive code found the "today" views were still broken: dispatch + driver computed "today" in UTC/browser time, so an evening Eastern ride vanished from the board (the demo-killer class of bug, one layer deeper), and the dispatch grid rendered a negative column count with 22:00–03:00 hours. **Fixed in round 2:**
+- **Service-day concept** (`client/src/utils/tz.js`): a 1 AM ride belongs to the previous day's overnight service. Dispatch fetch/filtering, driver home, and KPIs all use campus-time service days; fetch spans service day + next calendar day to catch the overnight tail.
+- **Dispatch grid wraps past midnight** (axis 9 PM→4 AM for Royal Rides hours), hour cells/ride strips/shift bands/now-line all campus-time + mod-24.
+- **Server date filters campus-local** (`GET /api/rides?from/to` day bounds were DB-tz midnight → UTC end-of-day mixed; now campus-tz day bounds).
+- **DateChips**: campus-time "today"; overnight windows offer the day after each operating day (Sunday 1 AM = Saturday night's tail was unbookable); "Today" label no longer weekday-only.
+- **Campus-less sessions hardened**: login POST now carries the campus slug (bare `/login` used to delete session campus → validation silently fell back to the server clock); stanford/ucla/uci got explicit timezones (they were falling back to server tz, displaying UTC times post-fix).
+- **Recurring overnight semantics**: "Friday 1:00 AM" now means Friday *night* (instant lands Saturday calendar) instead of silently creating zero rides; recurring start/end dates insert as strings (no more off-by-one from Date serialization).
+- 4th regression test: evening rides don't vanish from date-filtered lists.
+
+**Deferred (documented, mitigated for the beta by setting `TENANT_TIMEZONE=America/New_York` on Railway — DO THIS BEFORE THE RE-DEMO):** analytics `DATE(requested_time)` groups by DB-session tz (Friday-night rides report as Saturday on a UTC server — poisons daily-volume charts + Excel export until per-campus SQL work); shift-matching/tardiness/missed-shift day rolls at 8 PM ET on a UTC server; background notification emails format times in TENANT tz. All three are correct once TENANT_TIMEZONE is set for the single-campus beta. Also noted: DST fall-back lands Sat night Oct 31→Nov 1 inside Royal Rides hours (times resolve deterministically; board shows a 5-hour night).
+
+### Original implementation notes (for reference)
 
 **Done (uncommitted, built successfully):** Campus timezone is now the single authority for parse → validate → store → display.
 - `lib/tz.js` (new): `getZonedParts`, `zonedTimeToUtc` (Intl-based, no deps; DST-safe, verified manually incl. DST boundaries + midnight).

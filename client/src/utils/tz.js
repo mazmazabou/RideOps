@@ -61,6 +61,73 @@ export function zonedTimeToUtcISO(dateStr, timeStr, tz = displayTimeZone) {
   return new Date(guess).toISOString();
 }
 
+// ── Service-day helpers ─────────────────────────────────────────────────────
+// With an overnight service window (e.g. 22:00-03:00), an early-morning ride
+// belongs to the PREVIOUS calendar day's service. "Service day" is the day a
+// ride (or the current moment) counts toward on dispatch/driver "today" views.
+
+let serviceWindow = null; // { startMin, endMin, overnight }
+
+export function setServiceWindow(startStr, endStr) {
+  if (!startStr || !endStr) { serviceWindow = null; return; }
+  const [sH, sM] = String(startStr).split(':').map(Number);
+  const [eH, eM] = String(endStr).split(':').map(Number);
+  const startMin = sH * 60 + (sM || 0);
+  const endMin = eH * 60 + (eM || 0);
+  serviceWindow = { startMin, endMin, overnight: endMin < startMin };
+}
+
+export function isOvernightWindow() {
+  return !!serviceWindow?.overnight;
+}
+
+function partsOf(date, tz = displayTimeZone) {
+  if (tz) return getZonedParts(date, tz);
+  return {
+    y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate(),
+    h: date.getHours(), min: date.getMinutes(), dow: date.getDay(),
+  };
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+
+export function addDays(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d) + n * 86400000);
+  return `${t.getUTCFullYear()}-${pad2(t.getUTCMonth() + 1)}-${pad2(t.getUTCDate())}`;
+}
+
+/** Calendar date ('YYYY-MM-DD') of an instant in campus time. */
+export function campusDateStr(dateOrIso = new Date()) {
+  const p = partsOf(dateOrIso instanceof Date ? dateOrIso : new Date(dateOrIso));
+  return `${p.y}-${pad2(p.m)}-${pad2(p.d)}`;
+}
+
+export function campusToday() {
+  return campusDateStr(new Date());
+}
+
+/** Campus-time {h, min, dow} of an instant. */
+export function campusTimeParts(dateOrIso = new Date()) {
+  return partsOf(dateOrIso instanceof Date ? dateOrIso : new Date(dateOrIso));
+}
+
+/** The service day an instant counts toward (early-morning overnight rides
+ *  attribute to the previous calendar day). */
+export function serviceDayOf(dateOrIso) {
+  const date = dateOrIso instanceof Date ? dateOrIso : new Date(dateOrIso);
+  const p = partsOf(date);
+  const dayStr = `${p.y}-${pad2(p.m)}-${pad2(p.d)}`;
+  if (serviceWindow?.overnight && p.h * 60 + p.min <= serviceWindow.endMin) {
+    return addDays(dayStr, -1);
+  }
+  return dayStr;
+}
+
+export function currentServiceDay() {
+  return serviceDayOf(new Date());
+}
+
 /** 'YYYY-MM-DDTHH:MM' (datetime-local input value) showing the instant in campus time. */
 export function isoToZonedInputValue(iso, tz = displayTimeZone) {
   const date = new Date(iso);

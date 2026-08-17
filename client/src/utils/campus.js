@@ -1,4 +1,4 @@
-const VALID_SLUGS = ['usc', 'stanford', 'ucla', 'uci'];
+const VALID_SLUGS = ['usc', 'stanford', 'ucla', 'uci', 'scranton'];
 
 export function getCampusSlug() {
   return window.__RIDEOPS_CAMPUS_SLUG__ || null;

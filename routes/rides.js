@@ -19,6 +19,7 @@ module.exports = function(app, ctx) {
     isWithinServiceHours,
     getServiceHoursMessage,
     resolveTimezone,
+    zonedTimeToUtc,
     TENANT,
     dispatchNotification,
     sendRiderEmail,
@@ -58,14 +59,30 @@ module.exports = function(app, ctx) {
       }
     }
 
-    // Date range on requested_time
+    // Date range on requested_time. Date-only values are campus-local calendar
+    // days — resolve their bounds in the campus timezone, not the DB session
+    // timezone (>= from-midnight) mixed with UTC (<= to-end-of-day) as before.
+    const tz = resolveTimezone(req.session.campus);
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
     if (from) {
-      params.push(from);
-      conditions.push(`r.requested_time >= $${params.length}::date`);
+      if (dateOnly.test(from)) {
+        const [y, m, d] = from.split('-').map(Number);
+        params.push(zonedTimeToUtc(y, m, d, 0, 0, tz).toISOString());
+      } else {
+        params.push(from);
+      }
+      conditions.push(`r.requested_time >= $${params.length}::timestamptz`);
     }
     if (to) {
-      params.push(to + 'T23:59:59.999Z');
-      conditions.push(`r.requested_time <= $${params.length}::timestamptz`);
+      if (dateOnly.test(to)) {
+        const [y, m, d] = to.split('-').map(Number);
+        const nextDay = new Date(Date.UTC(y, m - 1, d) + 86400000);
+        params.push(zonedTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), 0, 0, tz).toISOString());
+        conditions.push(`r.requested_time < $${params.length}::timestamptz`);
+      } else {
+        params.push(to);
+        conditions.push(`r.requested_time <= $${params.length}::timestamptz`);
+      }
     }
 
     // Text search

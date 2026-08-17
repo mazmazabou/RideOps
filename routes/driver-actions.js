@@ -16,6 +16,7 @@ module.exports = function(app, ctx) {
     incrementRiderMissCount,
     setRiderMissCount,
     TENANT,
+    resolveTimezone,
     dispatchNotification,
     sendRiderEmail,
     createRiderNotification,
@@ -82,7 +83,7 @@ module.exports = function(app, ctx) {
         riderName: ride.rider_name,
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location,
-        time: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone, hour: 'numeric', minute: '2-digit' })
+        time: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: resolveTimezone(req.session.campus), hour: 'numeric', minute: '2-digit' })
       }, query).catch(() => {});
     }
   }));
@@ -273,7 +274,7 @@ module.exports = function(app, ctx) {
           riderName: ride.rider_name,
           pickup: ride.pickup_location,
           dropoff: ride.dropoff_location,
-          requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone }),
+          requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: resolveTimezone(req.session.campus) }),
           driverName,
           consecutiveMisses: newCount
         }, query);
@@ -302,7 +303,7 @@ module.exports = function(app, ctx) {
           riderEmail: ride.rider_email,
           pickup: ride.pickup_location,
           dropoff: ride.dropoff_location,
-          requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone }),
+          requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: resolveTimezone(req.session.campus) }),
           consecutiveMisses: newCount,
           maxStrikes: maxStrikes,
           missesRemaining: maxStrikes - newCount
@@ -335,7 +336,7 @@ module.exports = function(app, ctx) {
             riderName: ride.rider_name,
             pickup: ride.pickup_location,
             dropoff: ride.dropoff_location,
-            requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone }),
+            requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: resolveTimezone(req.session.campus) }),
             consecutiveMisses: newCount,
             maxStrikes,
             missesRemaining: maxStrikes - newCount

@@ -7,8 +7,13 @@ export default function StepWhen({ data, onChange, onNext, onBack, opsConfig }) 
     return opsConfig ? formatServiceHoursText(opsConfig) : 'Mon\u2013Fri, 8:00 AM \u2013 7:00 PM';
   }, [opsConfig]);
 
-  const timeMin = opsConfig?.service_hours_start || '08:00';
-  const timeMax = opsConfig?.service_hours_end || '19:00';
+  // A reversed min/max (overnight window like 22:00-03:00) is meaningless to
+  // the browser's time input — omit the bounds and let the server validate.
+  const svcStart = opsConfig?.service_hours_start || '08:00';
+  const svcEnd = opsConfig?.service_hours_end || '19:00';
+  const overnight = svcEnd < svcStart;
+  const timeMin = overnight ? undefined : svcStart;
+  const timeMax = overnight ? undefined : svcEnd;
   const canProceed = data.date && data.time;
 
   return (

@@ -114,3 +114,11 @@ module.exports = {
     timezone: 'America/New_York',
   },
 };
+
+// All Pacific campuses share the USC timezone; keep every campus explicit so
+// server-side validation never falls back to the host machine's clock.
+for (const slug of ['stanford', 'ucla', 'uci']) {
+  if (module.exports?.[slug] && !module.exports[slug].timezone) {
+    module.exports[slug].timezone = 'America/Los_Angeles';
+  }
+}

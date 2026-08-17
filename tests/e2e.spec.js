@@ -1596,3 +1596,45 @@ test.describe.serial('API: Timezone Handling', () => {
     await scranton.dispose();
   });
 });
+
+test.describe.serial('API: Campus-day ride window', () => {
+  test('date-filtered rides list uses campus-local day bounds (evening rides do not vanish)', async ({ playwright }) => {
+    const office = await apiContext(playwright, 'office');
+    // Widen hours so a late-evening ride is valid, then restore the prior value.
+    const beforeSettings = await (await office.get('/api/settings')).json();
+    const priorEnd = Object.values(beforeSettings).flat().find((s) => s.key === 'service_hours_end')?.value || '19:00';
+    await office.put('/api/settings', {
+      data: [{ key: 'service_hours_end', value: '23:30' }],
+    });
+    try {
+      const scranton = await campusApiContext(playwright, 'casey', 'scranton');
+      const wed = nextWeekdayParts(3);
+      const pad = (n) => String(n).padStart(2, '0');
+      const wedStr = `${wed.y}-${pad(wed.m)}-${pad(wed.d)}`;
+      // 22:00 New York = next-day UTC — the old UTC/DB-tz day bounds dropped it.
+      const evening = zonedTimeToUtc(wed.y, wed.m, wed.d, 22, 0, 'America/New_York').toISOString();
+      const createRes = await scranton.post('/api/rides', {
+        data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: evening, riderName: 'Casey Rivera' },
+      });
+      expect(createRes.ok()).toBeTruthy();
+      const ride = await createRes.json();
+
+      // Riders can't list all rides — query as an office session that also
+      // carries the scranton campus (so day bounds resolve in campus tz).
+      const scrantonOffice = await campusApiContext(playwright, 'office', 'scranton');
+      const listRes = await scrantonOffice.get(`/api/rides?limit=200&from=${wedStr}&to=${wedStr}`);
+      expect(listRes.ok()).toBeTruthy();
+      const { rides } = await listRes.json();
+      expect(rides.some((r) => r.id === ride.id)).toBeTruthy();
+      await scrantonOffice.dispose();
+
+      await scranton.post(`/api/rides/${ride.id}/cancel`);
+      await scranton.dispose();
+    } finally {
+      await office.put('/api/settings', {
+        data: [{ key: 'service_hours_end', value: priorEnd }],
+      });
+      await office.dispose();
+    }
+  });
+});

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
+import { campusTimeParts } from '../../../utils/tz';
 
-export default function NowLine({ startHour, cols }) {
+export default function NowLine({ startHour, cols, overnight }) {
   const [nowFraction, setNowFraction] = useState(null);
 
   useEffect(() => {
     const update = () => {
-      const now = new Date();
-      const nowHours = now.getHours() + now.getMinutes() / 60;
-      if (nowHours >= startHour && nowHours < startHour + cols) {
-        setNowFraction((nowHours - startHour) / cols);
+      const p = campusTimeParts(new Date());
+      let offset = p.h + p.min / 60 - startHour;
+      if (overnight && offset < 0) offset += 24;
+      if (offset >= 0 && offset < cols) {
+        setNowFraction(offset / cols);
       } else {
         setNowFraction(null);
       }
@@ -16,7 +18,7 @@ export default function NowLine({ startHour, cols }) {
     update();
     const timer = setInterval(update, 60000);
     return () => clearInterval(timer);
-  }, [startHour, cols]);
+  }, [startHour, cols, overnight]);
 
   if (nowFraction === null) return null;
 

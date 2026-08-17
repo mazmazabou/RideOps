@@ -313,7 +313,7 @@
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value })
+          body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value, campus: window._detectedSlug || undefined })
         });
         if (!res.ok) { const data = await res.json(); errorEl.textContent = data.error || 'Login failed'; errorEl.classList.add('show'); return; }
         const user = await res.json();

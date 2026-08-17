@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { jsDateToOurDay } from '../../utils/formatters';
+import { campusToday, addDays } from '../../utils/tz';
 
 export default function DateChips({ opsConfig, selectedDate, onSelect }) {
   const chips = useMemo(() => {
@@ -7,32 +8,30 @@ export default function DateChips({ opsConfig, selectedDate, onSelect }) {
       ? String(opsConfig.operating_days || '0,1,2,3,4,5,6').split(',').map(Number)
       : [0, 1, 2, 3, 4, 5, 6];
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Overnight windows (e.g. 22:00-03:00) spill into the NEXT calendar day:
+    // a Sunday 1 AM ride is the tail of Saturday-night service, so the day
+    // after an operating day must also be offered.
+    const [sH, sM] = String(opsConfig?.service_hours_start || '08:00').split(':').map(Number);
+    const [eH, eM] = String(opsConfig?.service_hours_end || '19:00').split(':').map(Number);
+    const overnight = (eH * 60 + (eM || 0)) < (sH * 60 + (sM || 0));
+
+    const today = campusToday();
     const result = [];
     let count = 0;
 
     for (let i = 0; i < 30 && count < 7; i++) {
-      const test = new Date(today);
-      test.setDate(test.getDate() + i);
-      const dow = test.getDay();
-      if (!opDays.includes(jsDateToOurDay(dow))) continue;
+      const iso = addDays(today, i);
+      const [y, m, d] = iso.split('-').map(Number);
+      const asDate = new Date(Date.UTC(y, m - 1, d));
+      const ourDay = jsDateToOurDay(asDate.getUTCDay());
+      const prevDay = (ourDay + 6) % 7;
+      const bookable = opDays.includes(ourDay) || (overnight && opDays.includes(prevDay));
+      if (!bookable) continue;
 
       let label;
-      if (count === 0 && test.getTime() === today.getTime() && dow >= 1 && dow <= 5) {
-        label = 'Today';
-      } else if (count <= 1) {
-        const tmrw = new Date(today);
-        tmrw.setDate(tmrw.getDate() + 1);
-        if (test.getTime() === tmrw.getTime()) label = 'Tomorrow';
-        else label = test.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      } else {
-        label = test.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      }
-
-      const iso = test.getFullYear() + '-' +
-        String(test.getMonth() + 1).padStart(2, '0') + '-' +
-        String(test.getDate()).padStart(2, '0');
+      if (iso === today) label = 'Today';
+      else if (iso === addDays(today, 1)) label = 'Tomorrow';
+      else label = asDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 
       result.push({ label, value: iso });
       count++;

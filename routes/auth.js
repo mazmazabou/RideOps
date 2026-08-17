@@ -24,13 +24,17 @@ module.exports = function(app, ctx) {
 
   // ----- Auth endpoints -----
   app.post('/api/auth/login', loginLimiter, wrapAsync(async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, campus } = req.body;
     const userRes = await query('SELECT * FROM users WHERE username = $1 AND deleted_at IS NULL', [username.toLowerCase()]);
     const user = userRes.rows[0];
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
     setSessionFromUser(req, user);
+    // Campus-branded login pages send their slug so the session keeps its
+    // campus (timezone, locations, theming) even when the org page route that
+    // normally sets it was bypassed (bookmarks, expired sessions).
+    if (campus && campusConfigs[campus]) req.session.campus = campus;
     const responseData = { id: user.id, username: user.username, name: user.name, email: user.email, role: user.role, campus: req.session.campus || null };
     if (user.must_change_password) responseData.mustChangePassword = true;
     res.json(responseData);

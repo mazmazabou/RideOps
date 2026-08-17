@@ -4,6 +4,7 @@ import StepWhere from './StepWhere';
 import StepWhen from './StepWhen';
 import StepConfirm from './StepConfirm';
 import { useOpsConfig } from '../../hooks/useOpsConfig';
+import { campusTimeParts } from '../../utils/tz';
 
 export default function BookPanel({ onSubmitSuccess }) {
   const { opsConfig } = useOpsConfig();
@@ -15,18 +16,26 @@ export default function BookPanel({ onSubmitSuccess }) {
     time: '',
   });
 
-  // Set default time based on service hours
+  // Set default time based on service hours (campus clock, overnight-aware)
   useMemo(() => {
     if (!opsConfig || formData.time) return;
     const svcStart = String(opsConfig.service_hours_start || '08:00').split(':').map(Number);
     const svcEnd = String(opsConfig.service_hours_end || '19:00').split(':').map(Number);
-    const now = new Date();
-    let h = now.getHours();
-    let m = now.getMinutes();
+    const overnight = (svcEnd[0] * 60 + (svcEnd[1] || 0)) < (svcStart[0] * 60 + (svcStart[1] || 0));
+    const now = campusTimeParts();
+    let h = now.h;
+    let m = now.min;
     m = m > 30 ? 0 : 30;
-    if (m === 0) h++;
-    if (h < svcStart[0]) h = svcStart[0];
-    if (h >= svcEnd[0]) h = svcStart[0];
+    if (m === 0) h = (h + 1) % 24;
+    if (overnight) {
+      // Inside the window (>= start, or in the early-morning tail) keep the
+      // rounded now; otherwise default to opening time.
+      const inWindow = h >= svcStart[0] || h <= svcEnd[0];
+      if (!inWindow) h = svcStart[0];
+    } else {
+      if (h < svcStart[0]) h = svcStart[0];
+      if (h >= svcEnd[0]) h = svcStart[0];
+    }
     const defaultTime = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
     setFormData(prev => ({ ...prev, time: defaultTime }));
   }, [opsConfig]);

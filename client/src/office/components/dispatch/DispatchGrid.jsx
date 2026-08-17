@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { useToast } from '../../../contexts/ToastContext';
 import { assignRide, reassignRide, unassignRide } from '../../../api';
 import { getCampusPalette, getCampusSlug } from '../../../utils/campus';
+import { currentServiceDay, serviceDayOf } from '../../../utils/tz';
 import DriverRow from './DriverRow';
 import RideStrip from './RideStrip';
 import NowLine from './NowLine';
@@ -13,7 +14,7 @@ export default function DispatchGrid({
   const { showToast } = useToast();
   const isDragging = useRef(false);
 
-  const today = new Date().toLocaleDateString('en-CA');
+  const today = currentServiceDay();
   const [selectedDate, setSelectedDate] = useState(today);
 
   const isToday = selectedDate === today;
@@ -22,17 +23,22 @@ export default function DispatchGrid({
     return new Date(y, m - 1, d);
   }, [selectedDate]);
 
-  // Time axis
+  // Time axis. An overnight window (e.g. 22:00-03:00) wraps past midnight:
+  // the axis runs start-1h .. end+1h crossing 24, and hour cells use mod-24.
   const sH = parseInt(String(opsConfig?.service_hours_start || '08:00').split(':')[0], 10);
   const eH = parseInt(String(opsConfig?.service_hours_end || '19:00').split(':')[0], 10);
+  const overnight = eH < sH;
   const startHour = Math.max(0, sH - 1);
-  const cols = Math.min(24, eH + 1) - startHour;
+  const cols = overnight
+    ? (24 - startHour) + Math.min(23, eH + 1)
+    : Math.min(24, eH + 1) - startHour;
   const gridColStyle = `100px repeat(${cols}, 1fr)`;
 
   // Hour labels
   const hourLabels = useMemo(() => {
     const labels = [];
-    for (let h = startHour; h < startHour + cols; h++) {
+    for (let i = 0; i < cols; i++) {
+      const h = (startHour + i) % 24;
       if (h === 0) labels.push('12a');
       else if (h < 12) labels.push(h + 'a');
       else if (h === 12) labels.push('12p');
@@ -51,11 +57,12 @@ export default function DispatchGrid({
     return map;
   }, [employees]);
 
-  // Day rides (filter for selected date, exclude denied/cancelled)
+  // Day rides — matched by SERVICE day in campus time, so the early-morning
+  // tail of an overnight window shows on the night it belongs to.
   const dateStr = selectedDate;
   const dayRides = useMemo(() =>
     rides.filter(r =>
-      r.requestedTime?.startsWith(dateStr) &&
+      r.requestedTime && serviceDayOf(r.requestedTime) === dateStr &&
       !['denied', 'cancelled'].includes(r.status)
     ),
     [rides, dateStr]
@@ -247,6 +254,7 @@ export default function DispatchGrid({
                 paletteColor={driverColorMap[driver.id] || '#94A3B8'}
                 cols={cols}
                 startHour={startHour}
+                overnight={overnight}
                 gridColStyle={gridColStyle}
                 isActive={true}
                 isTardy={isTardy}
@@ -307,6 +315,7 @@ export default function DispatchGrid({
                     paletteColor={driverColorMap[driver.id] || '#94A3B8'}
                     cols={cols}
                     startHour={startHour}
+                overnight={overnight}
                     gridColStyle={gridColStyle}
                     isActive={false}
                     isTardy={isTardy}
@@ -319,7 +328,7 @@ export default function DispatchGrid({
           )}
 
           {/* Now line */}
-          {isToday && <NowLine startHour={startHour} cols={cols} />}
+          {isToday && <NowLine startHour={startHour} overnight={overnight} cols={cols} />}
         </div>
       )}
     </div>
