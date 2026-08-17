@@ -79,6 +79,29 @@ function computeSlotWindow(cfg) {
   };
 }
 
+/** Per-day service windows as FullCalendar businessHours entries — hours
+ *  outside each day's own window render shaded, so a week where every day
+ *  has different hours stays legible on the shared (union) axis. Overnight
+ *  windows use endTime > 24:00, matching the extended slot range. */
+function computeBusinessHours(cfg) {
+  const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
+  let overrides = {};
+  try {
+    overrides = cfg.service_hours_overrides ? JSON.parse(cfg.service_hours_overrides) : {};
+  } catch { /* fall back to global hours */ }
+  const defStart = String(cfg.service_hours_start || '08:00');
+  const defEnd = String(cfg.service_hours_end || '19:00');
+  return opDays.map(d => {
+    const w = overrides[d] || { start: defStart, end: defEnd };
+    let end = String(w.end);
+    if (end < String(w.start)) {
+      const [eH, eM] = end.split(':').map(Number);
+      end = `${24 + eH}:${String(eM || 0).padStart(2, '0')}`;
+    }
+    return { daysOfWeek: [ourDayToFCDay(d)], startTime: String(w.start), endTime: end };
+  });
+}
+
 function mapShiftsToCalEvents(shiftList, viewStart, employees, colorMap) {
   const monday = getMondayOfWeek(viewStart || new Date());
   return shiftList.map(s => {
@@ -254,6 +277,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
       if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
     }
     const { slotMin, slotMax } = computeSlotWindow(cfg);
+    const businessHours = computeBusinessHours(cfg);
 
     const emps = employeesRef.current;
     const colorMap = buildDriverColorMap(emps);
@@ -263,6 +287,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
       headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
       slotMinTime: slotMin,
       slotMaxTime: slotMax,
+      businessHours,
       allDaySlot: false,
       hiddenDays,
       height: 'auto',
@@ -316,6 +341,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
       if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
     }
     const { slotMin, slotMax } = computeSlotWindow(opsConfig);
+    cal.setOption('businessHours', computeBusinessHours(opsConfig));
     cal.setOption('slotMinTime', slotMin);
     cal.setOption('slotMaxTime', slotMax);
     cal.setOption('hiddenDays', hiddenDays);
