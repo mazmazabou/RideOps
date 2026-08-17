@@ -489,3 +489,8 @@ All resolved items documented in `docs/reference/AUDIT_REPORT.md`.
 - **Rate limiting disabled in dev:** Login allows 1000 req/15min in development (10 in production). Intentional.
 - **Inline styles in React components:** Resolved — 419→239 occurrences (43% reduction). Utility classes in rideops-theme.css Section 22. Remaining 239 are genuinely dynamic (computed values, conditional logic, CSS variable colors).
 - **No SSO/SAML:** Auth is session-based only. SSO integration is a potential future enhancement for enterprise campus deployments.
+
+## Life OS Wiki
+Pending goals and notes tracked at:
+`/Users/mazenabouelela/Documents/Projects/orchestrator/wiki/projects/rideops.md`
+Check this file when asked to execute pending items or review goals.

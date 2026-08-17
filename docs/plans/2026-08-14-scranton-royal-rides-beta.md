@@ -5,7 +5,7 @@
 
 ## Outcome
 
-- **Deal: free beta for the full fall semester.** They report bugs/edge cases; annual subscription discussed after. Bug fixes are free; net-new feature work Mazen stated would be chargeable.
+- **Deal: free beta for the full fall semester.** They report bugs/edge cases; annual subscription discussed after. Bug fixes are free; net-new feature work the owner stated would be chargeable.
 - **Timeline:** Royal Rides season starts **Sept 4** (Tyler's Google Form stopgap covers the start). Target go-live **end of Sept / early Oct**; hard useful date is **Oct 16** (first run after fall break). SSO coordination with university IT may push the timeline.
 - **Follow-ups:** Kathy available next week or early the week after, then swamped with parking permits. Tyler is the working liaison — coordinate requirements directly with him, CC Kathy. Send updated demo link + schedule a re-demo once bugs are fixed. Demo credentials (demo123 accounts) were shared in the meeting chat.
 
@@ -23,10 +23,10 @@
 
 ## Bugs (fix first — these sank the demo)
 
-1. **Time zone bug (root cause of nearly everything):** server/service-hours logic assumes East Coast; Mazen demoed from Pacific. Symptoms during the demo: requested times displayed wrong (12:30 PM showed as 5:30 AM), false "requested time outside service hours" rejections, driver self-claim couldn't be shown, ride edit blocked. **Fix: per-tenant time zone setting** applied to service-hours validation and all time display, then re-test the full flow end-to-end on `/scranton`.
+1. **Time zone bug (root cause of nearly everything):** server/service-hours logic assumes East Coast; the demo was presented from Pacific time. Symptoms during the demo: requested times displayed wrong (12:30 PM showed as 5:30 AM), false "requested time outside service hours" rejections, driver self-claim couldn't be shown, ride edit blocked. **Fix: per-tenant time zone setting** applied to service-hours validation and all time display, then re-test the full flow end-to-end on `/scranton`.
 2. Sweep every flow that failed or looked off during the demo after the TZ fix: booking → approve → claim → on-the-way → here → boarded, ride edit, driver self-claim.
 3. **Service window crosses midnight:** their hours are 10 PM–3 AM. Current `service_hours_start`/`service_hours_end` model assumes start < end within one day, and `operating_days` can't express "Friday 10 PM through Saturday 3 AM." This will falsely reject 12 AM–3 AM requests — treat as part of the bug pass, it's a launch blocker for them.
-4. Mazen also floated **per-day service hours** (Fri/Sat differing from weekdays) as a settings enhancement.
+4. Also floated: **per-day service hours** (Fri/Sat differing from weekdays) as a settings enhancement.
 
 ## Custom Features (scoped in the meeting)
 
