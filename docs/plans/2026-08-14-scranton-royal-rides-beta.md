@@ -42,6 +42,23 @@
 | 8 | **SSO via My Scranton portal** | Required before go-live — university-members-only access. Needs meetings with their IT; the schedule risk. RideOps has no SSO/SAML today. |
 | 9 | Email notification on ride denial | Mentioned as a nice-to-have alongside the outside-hours auto-deny. |
 
+## CURRENT BACKLOG (paused 2026-08-17 — resume here)
+
+**Everything buildable from the call has shipped** (through `347a21d`, all deployed): TZ fix + overnight windows, per-day hours (+ Royal Rides Fri/Sat 22:00–03:00 configured live), closure toggle, party size, student notices, Scranton "S" logo (per-campus logoUrl), Google Places autocomplete (key set on Railway + local .env, verified live), sanitize-html hardening, shift-calendar fixes (CSP data: font, per-day/overnight axis, per-day businessHours shading, select/eventConstraint blocking shifts outside service hours).
+
+### Remaining items, in priority order
+1. **Send the Tyler/Kathy recap email** — sitting in Gmail drafts (to tyler.zepp, CC catherine.sanderson). OWNER ACTION: switch From to hello@ride-ops.com, send. Unblocks #4 and #7.
+2. **Book the re-demo** — Kathy free week of Aug 17–21 only, then parking-permit season.
+3. **Beta launch readiness (dedicated Scranton instance)** — the biggest remaining chunk before real students: clone Railway project with DEMO_MODE off (currently a public demo123 password grants OFFICE access + "Switch Role" banner), own DB (fixes global-settings sharing + analytics/shift-day TZ via TENANT_TIMEZONE), fix/remove seed users (passwords reset to demo123 on every restart — `seedDefaultUsers` ON CONFLICT DO UPDATE), working SMTP (Zoho creds dead since Google Workspace migration — use Workspace SMTP or Resend), rider signup rules (Royal Card / member ID pattern). ~One evening of provisioning.
+4. **SSO (My Scranton)** — needs IT contact from the recap email. ~2–4 dev days once we know CAS vs Shibboleth. THE go-live gate per Kathy; longest external lead.
+5. **Van tracker embed** — blocked on Tyler sending the tracker URL; ~1 hour once received (mapUrl mechanism exists; riders need a map tab added, driver tab exists).
+6. **"Arrived at destination" status** — 1–2 careful days, own session (no state machine; ~20 files incl. 43 analytics SQL literals to classify). Recommended shape: boarded → `in_transit`, arrived → `completed`.
+7. **Server-side shift-hours validation** — drag/resize is now constrained client-side, but the shift popover's manual time fields and the shifts API can still create out-of-window shifts. Small.
+8. **Vehicle capacity soft indicator** — vehicles.capacity + "6/8 seats" driver load + warn-but-allow on claim (see 7b below).
+9. Deferred hardening: per-campus analytics SQL (moot on a dedicated instance), DST note (fall-back lands inside Royal Rides hours Sat night Oct 31→Nov 1).
+
+**Key dates:** season starts Sept 4 (stopgap covers it); hard target **Oct 16** (first run after fall break).
+
 ## Feasibility Assessment (2026-08-16, verified against codebase)
 
 Effort tiers: **S** = an evening, **M** = 1–2 focused days, **L** = multi-day + external dependencies. Ordered by suggested build sequence.
