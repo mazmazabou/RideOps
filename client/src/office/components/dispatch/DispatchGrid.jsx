@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { useToast } from '../../../contexts/ToastContext';
 import { assignRide, reassignRide, unassignRide } from '../../../api';
 import { getCampusPalette, getCampusSlug } from '../../../utils/campus';
-import { currentServiceDay, serviceDayOf, campusTimeParts } from '../../../utils/tz';
+import { currentServiceDay, serviceDayOf, campusTimeParts, windowForOurDay } from '../../../utils/tz';
 import DriverRow from './DriverRow';
 import RideStrip from './RideStrip';
 import NowLine from './NowLine';
@@ -25,8 +25,14 @@ export default function DispatchGrid({
 
   // Time axis. An overnight window (e.g. 22:00-03:00) wraps past midnight:
   // the axis runs start-1h .. end+1h crossing 24, and hour cells use mod-24.
-  const sH = parseInt(String(opsConfig?.service_hours_start || '08:00').split(':')[0], 10);
-  const eH = parseInt(String(opsConfig?.service_hours_end || '19:00').split(':')[0], 10);
+  // Per-day hours: the axis follows the SELECTED day's service window.
+  const selOurDay = useMemo(() => {
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+  }, [selectedDate]);
+  const dayWindow = windowForOurDay(selOurDay);
+  const sH = dayWindow ? Math.floor(dayWindow.startMin / 60) : parseInt(String(opsConfig?.service_hours_start || '08:00').split(':')[0], 10);
+  const eH = dayWindow ? Math.floor(dayWindow.endMin / 60) : parseInt(String(opsConfig?.service_hours_end || '19:00').split(':')[0], 10);
   const overnight = eH < sH;
   const startHour = Math.max(0, sH - 1);
   const cols = overnight

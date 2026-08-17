@@ -14,7 +14,8 @@ module.exports = function(app, ctx) {
     getRiderMissCount,
     resolveTimezone,
     zonedTimeToUtc,
-    windowSegment
+    windowSegment,
+    getServiceWindows
   } = ctx;
 
   // ----- Recurring rides -----
@@ -32,10 +33,16 @@ module.exports = function(app, ctx) {
     const hour = Number(hourStr);
     const minute = Number(minuteStr || 0);
     const minutesTotal = hour * 60 + minute;
-    const svcStart = await getSetting('service_hours_start', '08:00');
-    const svcEnd = await getSetting('service_hours_end', '19:00');
-    if (!windowSegment(minutesTotal, svcStart, svcEnd)) {
-      return res.status(400).json({ error: `Time must be between ${svcStart} and ${svcEnd}` });
+    // With per-day hours, the time must fit at least one selected day's window;
+    // days it doesn't fit are skipped during occurrence generation.
+    const windows = await getServiceWindows();
+    const segmentFor = (day) => {
+      const w = windows.hoursFor(day);
+      return windowSegment(minutesTotal, w.start, w.end);
+    };
+    if (!days.some(segmentFor)) {
+      const w = windows.hoursFor(days[0]);
+      return res.status(400).json({ error: `Time must be within service hours (e.g. ${w.start}-${w.end})` });
     }
 
     const recurId = generateId('recur');
@@ -52,10 +59,13 @@ module.exports = function(app, ctx) {
     const autoDenyRecurring = await getSetting('auto_deny_outside_hours', true);
     // In an overnight window, a time in the early-morning segment (e.g. 01:00
     // with 22:00-03:00 hours) means "the night of" the selected service day —
-    // the actual instant lands on the NEXT calendar day.
-    const dayShift = windowSegment(minutesTotal, svcStart, svcEnd) === 'previous-day' ? 1 : 0;
+    // the actual instant lands on the NEXT calendar day. Windows are per-day.
     let created = 0;
     for (const cal of dates) {
+      const calOurDay = ((new Date(Date.UTC(cal.y, cal.m - 1, cal.d)).getUTCDay()) + 6) % 7;
+      const segment = segmentFor(calOurDay);
+      if (!segment) continue; // this day's window doesn't include the chosen time
+      const dayShift = segment === 'previous-day' ? 1 : 0;
       const calDate = new Date(Date.UTC(cal.y, cal.m - 1, cal.d) + dayShift * 86400000);
       const requestedTime = zonedTimeToUtc(
         calDate.getUTCFullYear(), calDate.getUTCMonth() + 1, calDate.getUTCDate(),

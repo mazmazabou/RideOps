@@ -4,7 +4,7 @@ import StepWhere from './StepWhere';
 import StepWhen from './StepWhen';
 import StepConfirm from './StepConfirm';
 import { useOpsConfig } from '../../hooks/useOpsConfig';
-import { campusTimeParts } from '../../utils/tz';
+import { campusTimeParts, windowForOurDay } from '../../utils/tz';
 
 export default function BookPanel({ onSubmitSuccess }) {
   const { opsConfig } = useOpsConfig();
@@ -16,11 +16,13 @@ export default function BookPanel({ onSubmitSuccess }) {
     time: '',
   });
 
-  // Set default time based on service hours (campus clock, overnight-aware)
+  // Set default time based on service hours (campus clock, per-day + overnight-aware)
   useMemo(() => {
     if (!opsConfig || formData.time) return;
-    const svcStart = String(opsConfig.service_hours_start || '08:00').split(':').map(Number);
-    const svcEnd = String(opsConfig.service_hours_end || '19:00').split(':').map(Number);
+    const todayOurDay = (campusTimeParts().dow + 6) % 7;
+    const w = windowForOurDay(todayOurDay);
+    const svcStart = String(w?.start || opsConfig.service_hours_start || '08:00').split(':').map(Number);
+    const svcEnd = String(w?.end || opsConfig.service_hours_end || '19:00').split(':').map(Number);
     const overnight = (svcEnd[0] * 60 + (svcEnd[1] || 0)) < (svcStart[0] * 60 + (svcStart[1] || 0));
     const now = campusTimeParts();
     let h = now.h;

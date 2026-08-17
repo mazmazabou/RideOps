@@ -70,6 +70,23 @@ module.exports = function(app, ctx) {
         if (timeRe.test(s) && timeRe.test(e) && s === e) errors.push('Service hours start and end cannot be the same');
       }
 
+      // Per-day hour overrides: JSON object keyed 0-6, values {start,end} in HH:MM
+      if ('service_hours_overrides' in incoming && incoming.service_hours_overrides !== '') {
+        const timeRe = /^\d{2}:\d{2}$/;
+        try {
+          const overrides = JSON.parse(incoming.service_hours_overrides);
+          if (!overrides || typeof overrides !== 'object' || Array.isArray(overrides)) throw new Error('bad shape');
+          for (const [day, w] of Object.entries(overrides)) {
+            const d = Number(day);
+            if (!(d >= 0 && d <= 6)) { errors.push('Per-day hours: day keys must be 0-6 (0=Mon)'); break; }
+            if (!w || !timeRe.test(w.start) || !timeRe.test(w.end)) { errors.push(`Per-day hours for day ${day} must have start and end as HH:MM`); break; }
+            if (w.start === w.end) { errors.push(`Per-day hours for day ${day}: start and end cannot be the same`); break; }
+          }
+        } catch {
+          errors.push('Per-day hours must be valid JSON');
+        }
+      }
+
       // Numeric minimums
       for (const [key, label, min] of [['grace_period_minutes','Grace period',0],['max_no_show_strikes','Max no-show strikes',1],['tardy_threshold_minutes','Tardy threshold',1]]) {
         if (key in incoming) {

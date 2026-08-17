@@ -1,19 +1,12 @@
 import { useMemo } from 'react';
 import { jsDateToOurDay } from '../../utils/formatters';
-import { campusToday, addDays } from '../../utils/tz';
+import { campusToday, addDays, isOvernightWindow } from '../../utils/tz';
 
 export default function DateChips({ opsConfig, selectedDate, onSelect }) {
   const chips = useMemo(() => {
     const opDays = opsConfig
       ? String(opsConfig.operating_days || '0,1,2,3,4,5,6').split(',').map(Number)
       : [0, 1, 2, 3, 4, 5, 6];
-
-    // Overnight windows (e.g. 22:00-03:00) spill into the NEXT calendar day:
-    // a Sunday 1 AM ride is the tail of Saturday-night service, so the day
-    // after an operating day must also be offered.
-    const [sH, sM] = String(opsConfig?.service_hours_start || '08:00').split(':').map(Number);
-    const [eH, eM] = String(opsConfig?.service_hours_end || '19:00').split(':').map(Number);
-    const overnight = (eH * 60 + (eM || 0)) < (sH * 60 + (sM || 0));
 
     const today = campusToday();
     const result = [];
@@ -23,9 +16,13 @@ export default function DateChips({ opsConfig, selectedDate, onSelect }) {
       const iso = addDays(today, i);
       const [y, m, d] = iso.split('-').map(Number);
       const asDate = new Date(Date.UTC(y, m - 1, d));
+      // Overnight windows (e.g. Friday 22:00-03:00) spill into the NEXT
+      // calendar day: a Saturday 1 AM ride is the tail of Friday-night
+      // service, so the day after an operating day is offered too.
       const ourDay = jsDateToOurDay(asDate.getUTCDay());
       const prevDay = (ourDay + 6) % 7;
-      const bookable = opDays.includes(ourDay) || (overnight && opDays.includes(prevDay));
+      const bookable = opDays.includes(ourDay)
+        || (opDays.includes(prevDay) && isOvernightWindow(prevDay));
       if (!bookable) continue;
 
       let label;

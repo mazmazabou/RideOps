@@ -1638,3 +1638,61 @@ test.describe.serial('API: Campus-day ride window', () => {
     }
   });
 });
+
+test.describe.serial('API: Per-day service hours', () => {
+  test('Royal Rides config: Fri+Sat 22:00-03:00 via per-day overrides', async ({ playwright }) => {
+    const office = await apiContext(playwright, 'office');
+    const before = await (await office.get('/api/settings')).json();
+    const flat = Object.values(before).flat();
+    const prior = {};
+    for (const key of ['operating_days', 'service_hours_overrides']) {
+      prior[key] = flat.find((s) => s.key === key)?.value ?? '';
+    }
+    await office.put('/api/settings', {
+      data: [
+        { key: 'operating_days', value: '4,5' },
+        { key: 'service_hours_overrides', value: JSON.stringify({ 4: { start: '22:00', end: '03:00' }, 5: { start: '22:00', end: '03:00' } }) },
+      ],
+    });
+
+    try {
+      const scranton = await campusApiContext(playwright, 'casey', 'scranton');
+      const post = (instant) => scranton.post('/api/rides', {
+        data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: instant, riderName: 'Casey Rivera' },
+      });
+      const fri = nextWeekdayParts(5); // next Friday (calendar)
+      const sat = nextWeekdayParts(6);
+      const sun = nextWeekdayParts(0);
+      const wed = nextWeekdayParts(3);
+
+      // Friday 23:00 NY — inside Friday's window
+      const ok1 = await post(zonedTimeToUtc(fri.y, fri.m, fri.d, 23, 0, 'America/New_York').toISOString());
+      expect(ok1.ok()).toBeTruthy();
+      await scranton.post(`/api/rides/${(await ok1.json()).id}/cancel`);
+
+      // Sunday 01:30 NY — the tail of SATURDAY-night service
+      const ok2 = await post(zonedTimeToUtc(sun.y, sun.m, sun.d, 1, 30, 'America/New_York').toISOString());
+      expect(ok2.ok()).toBeTruthy();
+      await scranton.post(`/api/rides/${(await ok2.json()).id}/cancel`);
+
+      // Saturday 04:00 NY — past the 03:00 cutoff
+      const deny1 = await post(zonedTimeToUtc(sat.y, sat.m, sat.d, 4, 0, 'America/New_York').toISOString());
+      expect(deny1.status()).toBe(400);
+
+      // Wednesday 23:00 NY — not an operating day
+      const deny2 = await post(zonedTimeToUtc(wed.y, wed.m, wed.d, 23, 0, 'America/New_York').toISOString());
+      expect(deny2.status()).toBe(400);
+      const body = await deny2.json();
+      expect(body.error).toContain('Fri 22:00-03:00');
+      await scranton.dispose();
+    } finally {
+      await office.put('/api/settings', {
+        data: [
+          { key: 'operating_days', value: prior.operating_days || '0,1,2,3,4,5,6' },
+          { key: 'service_hours_overrides', value: prior.service_hours_overrides || '' },
+        ],
+      });
+      await office.dispose();
+    }
+  });
+});

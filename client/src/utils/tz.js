@@ -66,19 +66,41 @@ export function zonedTimeToUtcISO(dateStr, timeStr, tz = displayTimeZone) {
 // belongs to the PREVIOUS calendar day's service. "Service day" is the day a
 // ride (or the current moment) counts toward on dispatch/driver "today" views.
 
-let serviceWindow = null; // { startMin, endMin, overnight }
+let serviceWindow = null;    // default window { startMin, endMin, overnight }
+let dayWindows = {};         // per-day overrides keyed by our-day (0=Mon..6=Sun)
 
-export function setServiceWindow(startStr, endStr) {
-  if (!startStr || !endStr) { serviceWindow = null; return; }
+function parseWindow(startStr, endStr) {
+  if (!startStr || !endStr) return null;
   const [sH, sM] = String(startStr).split(':').map(Number);
   const [eH, eM] = String(endStr).split(':').map(Number);
   const startMin = sH * 60 + (sM || 0);
   const endMin = eH * 60 + (eM || 0);
-  serviceWindow = { startMin, endMin, overnight: endMin < startMin };
+  return { startMin, endMin, overnight: endMin < startMin, start: startStr, end: endStr };
 }
 
-export function isOvernightWindow() {
-  return !!serviceWindow?.overnight;
+export function setServiceWindow(startStr, endStr, overridesRaw) {
+  serviceWindow = parseWindow(startStr, endStr);
+  dayWindows = {};
+  if (overridesRaw) {
+    try {
+      const obj = typeof overridesRaw === 'string' ? JSON.parse(overridesRaw) : overridesRaw;
+      for (const [day, w] of Object.entries(obj || {})) {
+        const parsed = parseWindow(w?.start, w?.end);
+        const d = Number(day);
+        if (parsed && d >= 0 && d <= 6) dayWindows[d] = parsed;
+      }
+    } catch { /* malformed overrides degrade to the default window */ }
+  }
+}
+
+/** The service window for a given our-day (0=Mon..6=Sun), override or default. */
+export function windowForOurDay(ourDay) {
+  return dayWindows[ourDay] || serviceWindow;
+}
+
+export function isOvernightWindow(ourDay) {
+  const w = ourDay === undefined ? serviceWindow : windowForOurDay(ourDay);
+  return !!w?.overnight;
 }
 
 function partsOf(date, tz = displayTimeZone) {
@@ -112,13 +134,15 @@ export function campusTimeParts(dateOrIso = new Date()) {
   return partsOf(dateOrIso instanceof Date ? dateOrIso : new Date(dateOrIso));
 }
 
-/** The service day an instant counts toward (early-morning overnight rides
- *  attribute to the previous calendar day). */
+/** The service day an instant counts toward (early-morning hours during the
+ *  PREVIOUS day's overnight window attribute to that previous day). */
 export function serviceDayOf(dateOrIso) {
   const date = dateOrIso instanceof Date ? dateOrIso : new Date(dateOrIso);
   const p = partsOf(date);
   const dayStr = `${p.y}-${pad2(p.m)}-${pad2(p.d)}`;
-  if (serviceWindow?.overnight && p.h * 60 + p.min <= serviceWindow.endMin) {
+  const ourDay = (p.dow + 6) % 7;
+  const prev = windowForOurDay((ourDay + 6) % 7);
+  if (prev?.overnight && p.h * 60 + p.min <= prev.endMin) {
     return addDays(dayStr, -1);
   }
   return dayStr;

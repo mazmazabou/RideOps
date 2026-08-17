@@ -9,7 +9,7 @@ export function useOpsConfig() {
   useEffect(() => {
     fetchOpsConfig()
       .then(config => {
-        setServiceWindow(config?.service_hours_start, config?.service_hours_end);
+        setServiceWindow(config?.service_hours_start, config?.service_hours_end, config?.service_hours_overrides);
         setOpsConfig(config);
       })
       .finally(() => setLoading(false));

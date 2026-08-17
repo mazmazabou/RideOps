@@ -67,6 +67,23 @@ export function contrastTextColor(hex) {
 export function formatServiceHoursText(cfg) {
   const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).sort();
   const labels = opDays.map(ourDayLabel);
+
+  // Per-day hours: list each operating day with its own window.
+  let overrides = {};
+  try {
+    overrides = cfg.service_hours_overrides ? JSON.parse(cfg.service_hours_overrides) : {};
+  } catch { /* fall through to uniform hours */ }
+  if (overrides && Object.keys(overrides).length) {
+    function fmt(t) {
+      const [h, m] = String(t).split(':');
+      const hh = parseInt(h);
+      return (hh % 12 || 12) + ':' + (m || '00') + ' ' + (hh >= 12 ? 'PM' : 'AM');
+    }
+    return opDays.map(d => {
+      const w = overrides[d] || { start: cfg.service_hours_start || '08:00', end: cfg.service_hours_end || '19:00' };
+      return ourDayLabel(d) + ' ' + fmt(w.start) + '–' + fmt(w.end);
+    }).join(' · ');
+  }
   let dayStr;
   if (labels.length > 2) {
     let consecutive = true;

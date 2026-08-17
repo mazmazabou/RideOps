@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchSettings, saveSettings } from '../../../api';
 import { useToast } from '../../../contexts/ToastContext';
+import { useTenant } from '../../../contexts/TenantContext';
 import './settings.css';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -19,10 +20,25 @@ function Toggle({ checked, onChange, id }) {
   );
 }
 
+function formatTimezone(tz) {
+  if (!tz) return '\u2014';
+  try {
+    const name = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'long' })
+      .formatToParts(new Date())
+      .find(part => part.type === 'timeZoneName')?.value;
+    return name ? `${tz} \u00b7 ${name}` : tz;
+  } catch {
+    return tz;
+  }
+}
+
 export default function BusinessRulesSubPanel() {
   const { showToast } = useToast();
+  const { tenantConfig } = useTenant();
   const [settings, setSettings] = useState({});
   const [operatingDays, setOperatingDays] = useState(new Set());
+  const [perDayHours, setPerDayHours] = useState(false);
+  const [dayHours, setDayHours] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -34,6 +50,13 @@ export default function BusinessRulesSubPanel() {
       setSettings(flat);
       const days = (flat.operating_days || '0,1,2,3,4,5,6').split(',').map(Number).filter(n => !isNaN(n));
       setOperatingDays(new Set(days));
+      try {
+        const overrides = flat.service_hours_overrides ? JSON.parse(flat.service_hours_overrides) : {};
+        if (overrides && Object.keys(overrides).length) {
+          setPerDayHours(true);
+          setDayHours(overrides);
+        }
+      } catch { /* malformed overrides — start fresh */ }
     } catch (e) {
       showToast(e.message, 'error');
     } finally {
@@ -45,6 +68,18 @@ export default function BusinessRulesSubPanel() {
 
   const updateSetting = (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateDayHours = (day, field, value) => {
+    setDayHours(prev => ({
+      ...prev,
+      [day]: {
+        start: settings.service_hours_start || '08:00',
+        end: settings.service_hours_end || '19:00',
+        ...prev[day],
+        [field]: value,
+      },
+    }));
   };
 
   const toggleDay = (dayIndex) => {
@@ -62,6 +97,17 @@ export default function BusinessRulesSubPanel() {
         { key: 'service_hours_start', value: settings.service_hours_start || '08:00' },
         { key: 'service_hours_end', value: settings.service_hours_end || '19:00' },
         { key: 'operating_days', value: Array.from(operatingDays).sort().join(',') },
+        {
+          key: 'service_hours_overrides',
+          value: perDayHours
+            ? JSON.stringify(Object.fromEntries(
+                Array.from(operatingDays).sort().map(d => [d, {
+                  start: dayHours[d]?.start || settings.service_hours_start || '08:00',
+                  end: dayHours[d]?.end || settings.service_hours_end || '19:00',
+                }])
+              ))
+            : '',
+        },
         { key: 'auto_deny_outside_hours', value: String(settings.auto_deny_outside_hours ?? 'true') },
         { key: 'grace_period_minutes', value: String(settings.grace_period_minutes ?? '5') },
         { key: 'max_no_show_strikes', value: String(settings.max_no_show_strikes ?? '5') },
@@ -151,6 +197,65 @@ export default function BusinessRulesSubPanel() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Per-Day Hours */}
+          <div className="settings-field">
+            <div className="settings-field__info">
+              <div className="settings-field__label">Custom Hours Per Day</div>
+              <p className="settings-field__help">Give each operating day its own window — e.g. late-night weekend service. Overnight windows (10:00 PM to 3:00 AM) are supported.</p>
+            </div>
+            <div className="settings-field__control">
+              <Toggle
+                id="toggle-per-day-hours"
+                checked={perDayHours}
+                onChange={setPerDayHours}
+              />
+            </div>
+          </div>
+
+          {perDayHours && (
+            <div className="settings-field settings-field--stacked">
+              <div className="settings-field__info">
+                <div className="settings-field__label">Hours by Day</div>
+                <p className="settings-field__help">Days without custom hours use the default Service Hours above.</p>
+              </div>
+              <div className="settings-field__control">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {Array.from(operatingDays).sort().map(d => (
+                    <div key={d} className="settings-time-range" style={{ alignItems: 'center' }}>
+                      <span style={{ width: 42, fontWeight: 600, fontSize: 13 }}>{DAY_LABELS[d]}</span>
+                      <input
+                        type="time"
+                        className="ro-input"
+                        value={dayHours[d]?.start || settings.service_hours_start || '08:00'}
+                        onChange={e => updateDayHours(d, 'start', e.target.value)}
+                      />
+                      <span className="settings-time-range__sep">to</span>
+                      <input
+                        type="time"
+                        className="ro-input"
+                        value={dayHours[d]?.end || settings.service_hours_end || '19:00'}
+                        onChange={e => updateDayHours(d, 'end', e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Time Zone (read-only — a provisioning fact, not an operational dial) */}
+          <div className="settings-field">
+            <div className="settings-field__info">
+              <div className="settings-field__label">Time Zone</div>
+              <p className="settings-field__help">All ride times are interpreted in the campus time zone. Set during provisioning.</p>
+            </div>
+            <div className="settings-field__control">
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                {formatTimezone(tenantConfig?.timezone)}
+              </span>
             </div>
           </div>
 

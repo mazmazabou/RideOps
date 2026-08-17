@@ -37,7 +37,7 @@ export default function DispatchPanel() {
     loadedOnce.current = true;
     fetchShifts().then(setShifts).catch(() => {});
     fetchOpsConfig().then(config => {
-      setServiceWindow(config?.service_hours_start, config?.service_hours_end);
+      setServiceWindow(config?.service_hours_start, config?.service_hours_end, config?.service_hours_overrides);
       setOpsConfig(config);
     }).catch(() => {});
     fetchEmployees().then(setEmployees).catch(() => {});
