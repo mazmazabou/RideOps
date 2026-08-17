@@ -34,7 +34,7 @@ module.exports = function(app, ctx) {
     const { status, from, to, search, limit: limitParam, cursor, offset: offsetParam } = req.query;
     const baseCols = `
       r.id, r.rider_id, r.rider_name, r.rider_email, r.rider_phone, r.pickup_location, r.dropoff_location, r.notes,
-      r.requested_time, r.status, r.assigned_driver_id, r.grace_start_time, r.consecutive_misses, r.recurring_id, r.cancelled_by, r.vehicle_id,
+      r.requested_time, r.status, r.assigned_driver_id, r.grace_start_time, r.consecutive_misses, r.recurring_id, r.cancelled_by, r.vehicle_id, r.party_size,
       d.name AS driver_name, d.phone AS driver_phone,
       ru.preferred_name AS rider_preferred_name, ru.avatar_url AS rider_avatar_url, ru.major AS rider_major, ru.graduation_year AS rider_graduation_year, ru.bio AS rider_bio,
       d.preferred_name AS driver_preferred_name, d.avatar_url AS driver_avatar_url, d.bio AS driver_bio`;
@@ -191,6 +191,14 @@ module.exports = function(app, ctx) {
     if (!pickupLocation || !dropoffLocation || !requestedTime) {
       return res.status(400).json({ error: 'Pickup, dropoff, and requested time are required' });
     }
+    // Party size: how many riders board together (clamped 1-10)
+    const partySize = Math.min(Math.max(parseInt(req.body.partySize) || 1, 1), 10);
+    // Temporary closure (weather, breakdowns, early shutdown) — riders are
+    // declined with the admin's message; office can still create rides.
+    if (req.session.role === 'rider' && (await getSetting('service_closed', false)) === true) {
+      const closedMsg = await getSetting('service_closed_message', '');
+      return res.status(400).json({ error: closedMsg || 'Service is temporarily closed. Please check back later.' });
+    }
     const autoDeny = await getSetting('auto_deny_outside_hours', true);
     if (autoDeny && !(await isWithinServiceHours(requestedTime, resolveTimezone(req.session.campus)))) {
       return res.status(400).json({ error: await getServiceHoursMessage() });
@@ -211,14 +219,14 @@ module.exports = function(app, ctx) {
     const missCount = await getRiderMissCount(req.session.userId);
     const rideId = generateId('ride');
     await query(
-      `INSERT INTO rides (id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes, requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NULL, NULL, $10, NULL)`,
-      [rideId, req.session.userId, name, email, phone, pickupLocation, dropoffLocation, stripHtml(notes || ''), requestedTime, missCount]
+      `INSERT INTO rides (id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes, requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id, party_size)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NULL, NULL, $10, NULL, $11)`,
+      [rideId, req.session.userId, name, email, phone, pickupLocation, dropoffLocation, stripHtml(notes || ''), requestedTime, missCount, partySize]
     );
     await addRideEvent(rideId, req.session.userId, 'requested');
     const ride = await query(
       `SELECT id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-              requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id
+              requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id, party_size
        FROM rides WHERE id = $1`,
       [rideId]
     );
@@ -257,7 +265,7 @@ module.exports = function(app, ctx) {
       result = await client.query(
         `UPDATE rides SET status = 'approved', updated_at = NOW() WHERE id = $1
          RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-                   requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id`,
+                   requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id, party_size`,
         [ride.id]
       );
       await addRideEvent(ride.id, req.session.userId, 'approved', null, null, client);
@@ -295,7 +303,7 @@ module.exports = function(app, ctx) {
     const result = await query(
       `UPDATE rides SET status = 'denied', updated_at = NOW() WHERE id = $1
        RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id`,
+                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, vehicle_id, party_size`,
       [ride.id]
     );
     await addRideEvent(ride.id, req.session.userId, 'denied');
@@ -320,7 +328,7 @@ module.exports = function(app, ctx) {
   app.get('/api/my-rides', requireRider, wrapAsync(async (req, res) => {
     const result = await query(
       `SELECT r.id, r.rider_name, r.rider_email, r.rider_phone, r.pickup_location, r.dropoff_location, r.notes,
-              r.requested_time, r.status, r.assigned_driver_id, r.grace_start_time, r.consecutive_misses, r.recurring_id, r.rider_id, r.vehicle_id,
+              r.requested_time, r.status, r.assigned_driver_id, r.grace_start_time, r.consecutive_misses, r.recurring_id, r.rider_id, r.vehicle_id, r.party_size,
               u.name AS driver_name, u.phone AS driver_phone,
               u.preferred_name AS driver_preferred_name, u.avatar_url AS driver_avatar_url, u.bio AS driver_bio
        FROM rides r
@@ -371,7 +379,7 @@ module.exports = function(app, ctx) {
          SET status = 'cancelled', assigned_driver_id = NULL, grace_start_time = NULL, cancelled_by = $2, updated_at = NOW()
          WHERE id = $1
          RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-                   requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, cancelled_by, vehicle_id`,
+                   requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, cancelled_by, vehicle_id, party_size`,
         [ride.id, isOffice ? 'office' : 'rider']
       );
       await addRideEvent(ride.id, req.session.userId, isOffice ? 'cancelled_by_office' : 'cancelled', null, null, client);
@@ -444,7 +452,7 @@ module.exports = function(app, ctx) {
        SET assigned_driver_id = NULL, vehicle_id = NULL, status = 'approved', grace_start_time = NULL, updated_at = NOW()
        WHERE id = $1
        RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, vehicle_id`,
+                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, vehicle_id, party_size`,
       [ride.id]
     );
     await addRideEvent(ride.id, req.session.userId, 'unassigned');
@@ -482,7 +490,7 @@ module.exports = function(app, ctx) {
        SET assigned_driver_id = $1, status = 'scheduled', grace_start_time = NULL, updated_at = NOW()
        WHERE id = $2
        RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, vehicle_id`,
+                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, vehicle_id, party_size`,
       [driverId, ride.id]
     );
     await addRideEvent(ride.id, req.session.userId, 'reassigned');
@@ -513,6 +521,7 @@ module.exports = function(app, ctx) {
     if (dropoffLocation !== undefined) { updates.push(`dropoff_location = $${idx++}`); values.push(dropoffLocation); }
     if (requestedTime !== undefined) { updates.push(`requested_time = $${idx++}`); values.push(requestedTime); }
     if (notes !== undefined) { updates.push(`notes = $${idx++}`); values.push(stripHtml(notes)); }
+    if (req.body.partySize !== undefined) { updates.push(`party_size = $${idx++}`); values.push(Math.min(Math.max(parseInt(req.body.partySize) || 1, 1), 10)); }
     updates.push(`updated_at = NOW()`);
 
     if (!updates.length) return res.status(400).json({ error: 'No fields to update' });
@@ -521,7 +530,7 @@ module.exports = function(app, ctx) {
     const result = await query(
       `UPDATE rides SET ${updates.join(', ')} WHERE id = $${idx}
        RETURNING id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes,
-                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, cancelled_by, vehicle_id`,
+                 requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, cancelled_by, vehicle_id, party_size`,
       values
     );
     await addRideEvent(ride.id, req.session.userId, 'edited', changeNotes.trim(), initials.trim());

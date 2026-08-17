@@ -61,7 +61,10 @@ export default function AvailableRidesList({ rides, onRefresh }) {
                 <div className="fw-600 text-sm text-nowrap overflow-hidden" style={{ textOverflow: 'ellipsis' }}>
                   {ride.pickupLocation} → {ride.dropoffLocation}
                 </div>
-                <div className="text-xs text-muted">{ride.riderName}</div>
+                <div className="text-xs text-muted">
+                  {ride.riderName}
+                  {ride.partySize > 1 && <span> · {ride.partySize} riders</span>}
+                </div>
               </div>
               <button className="ro-btn ro-btn--primary ro-btn--sm" onClick={() => handleClaim(ride.id)}>CLAIM</button>
             </div>

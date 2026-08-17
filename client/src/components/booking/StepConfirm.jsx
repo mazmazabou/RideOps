@@ -9,6 +9,7 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [notes, setNotes] = useState('');
+  const [partySize, setPartySize] = useState(1);
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringDays, setRecurringDays] = useState(() => {
     if (!data.date) return [];
@@ -60,6 +61,7 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
           endDate,
           notes,
           riderPhone: user.phone || null,
+          partySize,
         });
         showToast(result.createdRides + ' recurring ride' + (result.createdRides !== 1 ? 's' : '') + ' created!', 'success');
       } else {
@@ -70,6 +72,7 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
           requestedTime,
           riderName: user.name,
           notes,
+          partySize,
         });
         showToast('Ride requested!', 'success');
       }
@@ -100,6 +103,20 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
           <span className="confirm-label">When</span>
           <span className="confirm-value" id="confirm-when">{whenDisplay}</span>
         </div>
+      </div>
+
+      <div className="mb-16">
+        <label className="ro-label">Riders</label>
+        <select
+          id="party-size"
+          className="ro-input"
+          value={partySize}
+          onChange={e => setPartySize(Number(e.target.value))}
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(n => (
+            <option key={n} value={n}>{n === 1 ? 'Just me' : `${n} riders`}</option>
+          ))}
+        </select>
       </div>
 
       <div className="mb-16">

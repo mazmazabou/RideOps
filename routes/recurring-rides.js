@@ -21,6 +21,7 @@ module.exports = function(app, ctx) {
   // ----- Recurring rides -----
   app.post('/api/recurring-rides', requireRider, wrapAsync(async (req, res) => {
     const { pickupLocation, dropoffLocation, timeOfDay, startDate, endDate, daysOfWeek, notes, riderPhone } = req.body;
+    const partySize = Math.min(Math.max(parseInt(req.body.partySize) || 1, 1), 10);
     if (!pickupLocation || !dropoffLocation || !timeOfDay || !startDate || !endDate) {
       return res.status(400).json({ error: 'Pickup, dropoff, start/end date, and time are required' });
     }
@@ -32,6 +33,10 @@ module.exports = function(app, ctx) {
     const [hourStr, minuteStr] = String(timeOfDay).split(':');
     const hour = Number(hourStr);
     const minute = Number(minuteStr || 0);
+    if ((await getSetting('service_closed', false)) === true) {
+      const closedMsg = await getSetting('service_closed_message', '');
+      return res.status(400).json({ error: closedMsg || 'Service is temporarily closed. Please check back later.' });
+    }
     const minutesTotal = hour * 60 + minute;
     // With per-day hours, the time must fit at least one selected day's window;
     // days it doesn't fit are skipped during occurrence generation.
@@ -75,9 +80,9 @@ module.exports = function(app, ctx) {
       const rideId = generateId('ride');
       const missCount = await getRiderMissCount(req.session.userId);
       await query(
-        `INSERT INTO rides (id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes, requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, vehicle_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NULL, NULL, $10, $11, NULL)`,
-        [rideId, req.session.userId, req.session.name, req.session.email, riderPhone || null, pickupLocation, dropoffLocation, notes || '', requestedTime, missCount, recurId]
+        `INSERT INTO rides (id, rider_id, rider_name, rider_email, rider_phone, pickup_location, dropoff_location, notes, requested_time, status, assigned_driver_id, grace_start_time, consecutive_misses, recurring_id, vehicle_id, party_size)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NULL, NULL, $10, $11, NULL, $12)`,
+        [rideId, req.session.userId, req.session.name, req.session.email, riderPhone || null, pickupLocation, dropoffLocation, notes || '', requestedTime, missCount, recurId, partySize]
       );
       await addRideEvent(rideId, req.session.userId, 'requested');
       created++;

@@ -188,6 +188,9 @@ export default function ActiveRideCard({ ride, vehicles, gracePeriodMinutes, onR
       <div className="text-sm text-secondary" style={{ margin: '8px 0' }}>
         <i className="ti ti-map-pin text-14" style={{ verticalAlign: 'middle' }} />
         {' '}{ride.pickupLocation} → {ride.dropoffLocation}
+        {ride.partySize > 1 && (
+          <span className="text-muted"> · <i className="ti ti-users text-14" style={{ verticalAlign: 'middle' }} /> {ride.partySize}</span>
+        )}
       </div>
       {phone && (
         <div className="mb-8">

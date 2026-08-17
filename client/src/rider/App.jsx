@@ -8,6 +8,7 @@ import { useOpsConfig } from '../hooks/useOpsConfig';
 import Header from '../components/Header';
 import BottomTabs from '../components/BottomTabs';
 import TerminationBanner from '../components/TerminationBanner';
+import ClosureBanner from '../components/ClosureBanner';
 import BookPanel from '../components/booking/BookPanel';
 import MyRidesPanel from '../components/rides/MyRidesPanel';
 import HistoryPanel from '../components/history/HistoryPanel';
@@ -45,6 +46,10 @@ function RiderApp() {
       <Header />
       <main className="rider-main">
         <TerminationBanner visible={isTerminated} />
+        <ClosureBanner
+          visible={opsConfig?.service_closed === 'true'}
+          message={opsConfig?.service_closed_message}
+        />
         <div id="book-panel" className={`tab-panel${activeTab === 'book-panel' ? ' active' : ''}`}>
           <BookPanel onSubmitSuccess={handleBookSuccess} />
         </div>

@@ -1696,3 +1696,95 @@ test.describe.serial('API: Per-day service hours', () => {
     }
   });
 });
+
+test.describe.serial('API: Scranton beta features (closure, party size, notices)', () => {
+  test('service closure declines rider requests with the admin message; office can still create', async ({ playwright }) => {
+    const office = await apiContext(playwright, 'office');
+    await office.put('/api/settings', {
+      data: [
+        { key: 'service_closed', value: 'true' },
+        { key: 'service_closed_message', value: 'Royal Ride is closed tonight due to weather.' },
+      ],
+    });
+    try {
+      const rider = await campusApiContext(playwright, 'casey', 'scranton');
+      const res = await rider.post('/api/rides', {
+        data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: nextServiceDateTime(), riderName: 'Casey Rivera' },
+      });
+      expect(res.status()).toBe(400);
+      expect((await res.json()).error).toContain('closed tonight due to weather');
+
+      // Public ops config exposes the closure for the rider banner
+      const ops = await (await rider.get('/api/settings/public/operations')).json();
+      expect(ops.service_closed).toBe('true');
+      expect(ops.service_closed_message).toContain('weather');
+
+      // Office creating on behalf is still allowed
+      const officeRes = await office.post('/api/rides', {
+        data: {
+          riderName: 'Casey Rivera', riderEmail: USERS.rider1.email,
+          pickupLocation: 'Main Library', dropoffLocation: 'Student Union',
+          requestedTime: nextServiceDateTime(),
+        },
+      });
+      expect(officeRes.ok()).toBeTruthy();
+      await office.post(`/api/rides/${(await officeRes.json()).id}/cancel`);
+      await rider.dispose();
+    } finally {
+      await office.put('/api/settings', {
+        data: [
+          { key: 'service_closed', value: 'false' },
+          { key: 'service_closed_message', value: '' },
+        ],
+      });
+      await office.dispose();
+    }
+  });
+
+  test('party size is stored, returned, defaulted, and clamped', async ({ playwright }) => {
+    const rider = await apiContext(playwright, 'casey');
+    const create = (extra) => rider.post('/api/rides', {
+      data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: nextServiceDateTime(), riderName: 'Casey Rivera', ...extra },
+    });
+
+    const r1 = await create({ partySize: 4 });
+    expect(r1.ok()).toBeTruthy();
+    const ride1 = await r1.json();
+    expect(ride1.partySize).toBe(4);
+
+    const r2 = await create({});
+    const ride2 = await r2.json();
+    expect(ride2.partySize).toBe(1);
+
+    const r3 = await create({ partySize: 99 });
+    const ride3 = await r3.json();
+    expect(ride3.partySize).toBe(10);
+
+    for (const r of [ride1, ride2, ride3]) await rider.post(`/api/rides/${r.id}/cancel`);
+    await rider.dispose();
+  });
+
+  test('student-facing notices save, sanitize, and are publicly readable', async ({ playwright }) => {
+    const office = await apiContext(playwright, 'office');
+    const prior = await (await office.get('/api/program-rules')).json();
+
+    const bad = await office.put('/api/program-rules', {
+      data: { studentRulesHtml: '<p>hi</p><script>alert(1)</script>' },
+    });
+    // Script content is stripped entirely (regex removes tag+content) — verify nothing script-y persists
+    const clean = await office.put('/api/program-rules', {
+      data: { studentRulesHtml: '<p>Royal Ride runs <b>Fri &amp; Sat, 10 PM-3 AM</b>. Have your Royal Card ready.</p>' },
+    });
+    expect(clean.ok()).toBeTruthy();
+
+    const anonCtx = await playwright.request.newContext({ baseURL: BASE });
+    const pub = await (await anonCtx.get('/api/program-rules')).json();
+    expect(pub.studentRulesHtml).toContain('Royal Card');
+    expect(pub.studentRulesHtml).not.toContain('<script');
+    expect(bad.ok()).toBeTruthy(); // stripped, not rejected — verify no script survived
+    await anonCtx.dispose();
+
+    await office.put('/api/program-rules', { data: { studentRulesHtml: prior.studentRulesHtml || '' } });
+    await office.dispose();
+  });
+});

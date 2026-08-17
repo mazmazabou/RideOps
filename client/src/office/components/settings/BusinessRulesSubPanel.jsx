@@ -109,6 +109,8 @@ export default function BusinessRulesSubPanel() {
             : '',
         },
         { key: 'auto_deny_outside_hours', value: String(settings.auto_deny_outside_hours ?? 'true') },
+        { key: 'service_closed', value: String(settings.service_closed ?? 'false') },
+        { key: 'service_closed_message', value: settings.service_closed_message ?? '' },
         { key: 'grace_period_minutes', value: String(settings.grace_period_minutes ?? '5') },
         { key: 'max_no_show_strikes', value: String(settings.max_no_show_strikes ?? '5') },
         { key: 'strikes_enabled', value: String(settings.strikes_enabled ?? 'true') },
@@ -273,6 +275,54 @@ export default function BusinessRulesSubPanel() {
               />
             </div>
           </div>
+        </div>
+
+        {/* ── Service Closure ───────────────────────────────────────── */}
+        <div className="settings-card">
+          <div className="settings-card__header">
+            <div className="settings-card__icon">
+              <i className="ti ti-cloud-storm" />
+            </div>
+            <div className="settings-card__text">
+              <h3 className="settings-card__title">Service Closure</h3>
+              <p className="settings-card__desc">
+                Temporarily close the service (weather, vehicle breakdown, ending early). Riders see your message and new requests are declined until you reopen.
+              </p>
+            </div>
+          </div>
+
+          <div className="settings-field">
+            <div className="settings-field__info">
+              <div className="settings-field__label">Service Temporarily Closed</div>
+              <p className="settings-field__help">Turn off again to resume accepting ride requests.</p>
+            </div>
+            <div className="settings-field__control">
+              <Toggle
+                id="toggle-service-closed"
+                checked={settings.service_closed === 'true'}
+                onChange={v => updateSetting('service_closed', String(v))}
+              />
+            </div>
+          </div>
+
+          {settings.service_closed === 'true' && (
+            <div className="settings-field settings-field--stacked">
+              <div className="settings-field__info">
+                <div className="settings-field__label">Closure Message</div>
+                <p className="settings-field__help">Shown to riders in the app and when a request is declined.</p>
+              </div>
+              <div className="settings-field__control">
+                <textarea
+                  className="ro-input"
+                  rows={3}
+                  style={{ width: '100%', maxWidth: 520, resize: 'vertical' }}
+                  placeholder="e.g. Royal Ride is not running tonight due to inclement weather. Stay safe!"
+                  value={settings.service_closed_message ?? ''}
+                  onChange={e => updateSetting('service_closed_message', e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Ride Policies ─────────────────────────────────────────── */}

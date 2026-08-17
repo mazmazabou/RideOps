@@ -57,6 +57,9 @@ export default function PendingQueue({ rides, onRideClick, onRefresh }) {
               <div>
                 <span className="status-badge status-badge--pending">Pending</span>{' '}
                 <span className="fw-600">{ride.riderName}</span>
+                {ride.partySize > 1 && (
+                  <span className="text-xs text-muted"> · <i className="ti ti-users" /> {ride.partySize} riders</span>
+                )}
               </div>
               <div className="text-sm text-muted mt-2">
                 {ride.pickupLocation} &rarr; {ride.dropoffLocation} &middot; {formatDateTime(ride.requestedTime)}

@@ -151,7 +151,12 @@ export default function RideDrawer({
         {/* Rider */}
         <div className="ro-label mt-8">Rider</div>
         <div className="profile-card profile-card--compact mb-8">
-          <div className="fw-600">{ride.riderName || '\u2014'}</div>
+          <div className="fw-600">
+            {ride.riderName || '\u2014'}
+            {ride.partySize > 1 && (
+              <span className="text-xs text-muted"> · <i className="ti ti-users" /> {ride.partySize} riders</span>
+            )}
+          </div>
           {ride.riderEmail && <div className="text-sm text-muted">{ride.riderEmail}</div>}
           {ride.riderPhone && <div className="text-sm text-muted">{ride.riderPhone}</div>}
         </div>
