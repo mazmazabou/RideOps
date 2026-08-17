@@ -33,11 +33,14 @@ export default function Sidebar({ activePanel, onPanelChange, user, tenantConfig
     <aside className="ro-sidebar">
       <div className="ro-sidebar-brand">
         <img
-          src="/logoWithoutBackground.png"
+          src={tenantConfig?.logoUrl || '/logoWithoutBackground.png'}
           alt={tenantConfig?.orgShortName || 'RideOps'}
           className="ro-brand-icon"
           id="org-initials"
-          style={{ objectFit: 'cover' }}
+          style={tenantConfig?.logoUrl
+            // Campus marks arrive with their own colors — white tile, no crop
+            ? { objectFit: 'contain', background: '#fff', padding: 3 }
+            : { objectFit: 'cover' }}
           onClick={toggleSidebar}
         />
         <div className="ro-brand-text">

@@ -53,7 +53,8 @@ var CAMPUS_THEMES = {
     sidebarBg: '#1C1129', sidebarText: '#A99BC4',
     sidebarActiveBg: 'rgba(81,45,109,0.35)', sidebarHover: 'rgba(255,255,255,0.06)',
     sidebarBorder: 'rgba(255,255,255,0.08)', mapUrl: 'https://admissions.scranton.edu/our-campus/campus-maps.shtml', campusKey: 'scranton',
-    headerBg: '#EBE3F2'  // Scranton Purple (PMS 269) 15% tint
+    headerBg: '#EBE3F2',  // Scranton Purple (PMS 269) 15% tint
+    logoUrl: '/campus-logos/scranton.png'  // University of Scranton "S" mark
   }
 };
 

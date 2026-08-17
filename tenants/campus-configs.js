@@ -117,6 +117,7 @@ module.exports = {
     addressAutocomplete: true,
     placesCenter: { lat: 41.4044, lng: -75.6552 }, // University of Scranton
     placesRadiusMeters: 8000,
+    logoUrl: '/campus-logos/scranton.png', // University of Scranton "S" mark
   },
 };
 
