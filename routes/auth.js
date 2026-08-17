@@ -92,6 +92,9 @@ module.exports = function(app, ctx) {
     if (campus && campusConfigs[campus]) {
       config = { ...config, ...campusConfigs[campus] };
     }
+    // Google Maps browser key (referrer-restricted; safe to expose client-side).
+    // Address autocomplete activates only when a campus opts in AND a key is set.
+    config.mapsApiKey = process.env.GOOGLE_MAPS_API_KEY || null;
     try {
       const settingsRes = await query(
         `SELECT setting_key, setting_value FROM tenant_settings WHERE setting_key IN ('grace_period_minutes', 'academic_period_label')`

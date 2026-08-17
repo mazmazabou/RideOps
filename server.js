@@ -113,12 +113,12 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
-    "img-src 'self' data: https://api.dicebear.com",
+    "img-src 'self' data: https://api.dicebear.com https://maps.gstatic.com https://maps.googleapis.com",
     "frame-src https://maps.usc.edu https://campus-map.stanford.edu https://map.ucla.edu https://map.uci.edu",
-    "connect-src 'self'",
+    "connect-src 'self' https://maps.googleapis.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
