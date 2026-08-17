@@ -48,6 +48,37 @@ function buildDriverColorMap(employees) {
   return map;
 }
 
+/** Calendar hour range from ops config — per-day hour overrides and overnight
+ *  windows included. Overnight windows extend past midnight (FullCalendar
+ *  accepts slotMaxTime > 24:00, e.g. "28:00:00" = 4 AM next day). */
+function computeSlotWindow(cfg) {
+  const opDays = String(cfg.operating_days || '0,1,2,3,4,5,6').split(',').map(Number);
+  let overrides = {};
+  try {
+    overrides = cfg.service_hours_overrides ? JSON.parse(cfg.service_hours_overrides) : {};
+  } catch { /* fall back to global hours */ }
+  const defStart = String(cfg.service_hours_start || '08:00');
+  const defEnd = String(cfg.service_hours_end || '19:00');
+  let minStart = Infinity;
+  let maxEnd = -Infinity;
+  for (const d of opDays) {
+    const w = overrides[d] || { start: defStart, end: defEnd };
+    const [sH, sM] = String(w.start).split(':').map(Number);
+    const [eH, eM] = String(w.end).split(':').map(Number);
+    const start = sH * 60 + (sM || 0);
+    let end = eH * 60 + (eM || 0);
+    if (end < start) end += 24 * 60; // overnight
+    minStart = Math.min(minStart, start);
+    maxEnd = Math.max(maxEnd, end);
+  }
+  if (!isFinite(minStart)) { minStart = 8 * 60; maxEnd = 19 * 60; }
+  const fmt = (mins) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}:00`;
+  return {
+    slotMin: fmt(Math.max(0, minStart - 60)),
+    slotMax: fmt(Math.min(30 * 60, maxEnd + 60)),
+  };
+}
+
 function mapShiftsToCalEvents(shiftList, viewStart, employees, colorMap) {
   const monday = getMondayOfWeek(viewStart || new Date());
   return shiftList.map(s => {
@@ -57,11 +88,15 @@ function mapShiftsToCalEvents(shiftList, viewStart, employees, colorMap) {
     const eventDate = new Date(monday);
     eventDate.setDate(monday.getDate() + s.dayOfWeek);
     const dateStr = formatDateLocal(eventDate);
+    // Overnight shifts (22:00-03:00) end on the next calendar day
+    const overnight = s.endTime <= s.startTime;
+    const endDate = new Date(eventDate);
+    if (overnight) endDate.setDate(endDate.getDate() + 1);
     return {
       id: s.id,
       title: name,
       start: dateStr + 'T' + s.startTime,
-      end: dateStr + 'T' + s.endTime,
+      end: formatDateLocal(endDate) + 'T' + s.endTime,
       backgroundColor: color,
       borderColor: color,
       textColor: contrastTextColor(color),
@@ -218,10 +253,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
     for (let d = 0; d < 7; d++) {
       if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
     }
-    const [startH] = String(cfg.service_hours_start || '08:00').split(':').map(Number);
-    const [endH] = String(cfg.service_hours_end || '19:00').split(':').map(Number);
-    const slotMin = String(Math.max(0, startH - 1)).padStart(2, '0') + ':00:00';
-    const slotMax = String(Math.min(24, endH + 1)).padStart(2, '0') + ':00:00';
+    const { slotMin, slotMax } = computeSlotWindow(cfg);
 
     const emps = employeesRef.current;
     const colorMap = buildDriverColorMap(emps);
@@ -283,10 +315,7 @@ export default function ShiftCalendar({ employees, opsConfig }) {
     for (let d = 0; d < 7; d++) {
       if (!opDays.includes(d)) hiddenDays.push(ourDayToFCDay(d));
     }
-    const [startH] = String(opsConfig.service_hours_start || '08:00').split(':').map(Number);
-    const [endH] = String(opsConfig.service_hours_end || '19:00').split(':').map(Number);
-    const slotMin = String(Math.max(0, startH - 1)).padStart(2, '0') + ':00:00';
-    const slotMax = String(Math.min(24, endH + 1)).padStart(2, '0') + ':00:00';
+    const { slotMin, slotMax } = computeSlotWindow(opsConfig);
     cal.setOption('slotMinTime', slotMin);
     cal.setOption('slotMaxTime', slotMax);
     cal.setOption('hiddenDays', hiddenDays);

@@ -115,7 +115,7 @@ app.use((req, res, next) => {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com",
     "style-src 'self' 'unsafe-inline'",
-    "font-src 'self'",
+    "font-src 'self' data:", // FullCalendar embeds its icon font as a data: URI
     "img-src 'self' data: https://api.dicebear.com https://maps.gstatic.com https://maps.googleapis.com",
     "frame-src https://maps.usc.edu https://campus-map.stanford.edu https://map.ucla.edu https://map.uci.edu",
     "connect-src 'self' https://maps.googleapis.com",
