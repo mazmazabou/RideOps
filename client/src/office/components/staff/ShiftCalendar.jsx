@@ -288,6 +288,10 @@ export default function ShiftCalendar({ employees, opsConfig }) {
       slotMinTime: slotMin,
       slotMaxTime: slotMax,
       businessHours,
+      // Shifts can only be created/dragged/resized inside each day's own
+      // service window (the unshaded region)
+      selectConstraint: 'businessHours',
+      eventConstraint: 'businessHours',
       allDaySlot: false,
       hiddenDays,
       height: 'auto',
