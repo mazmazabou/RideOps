@@ -7,7 +7,8 @@ module.exports = defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL: process.env.BASE_URL || "http://localhost:3000",
-    headless: false,               // set true in CI
+    headless: !!process.env.PW_HEADLESS,  // default headed locally; PW_HEADLESS=1 (or CI) for headless
+
     viewport: { width: 1280, height: 800 },
     screenshot: "only-on-failure",
     video: "retain-on-failure",

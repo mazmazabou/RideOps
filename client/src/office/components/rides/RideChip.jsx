@@ -1,7 +1,7 @@
+import { formatTime } from '../../../utils/formatters';
+
 export default function RideChip({ ride, offset, onClick }) {
-  const time = ride.requestedTime
-    ? new Date(ride.requestedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '';
+  const time = ride.requestedTime ? formatTime(ride.requestedTime) : '';
 
   const pickup = ride.pickupLocation
     ? ride.pickupLocation.trim().toUpperCase()

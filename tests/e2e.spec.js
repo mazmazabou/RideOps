@@ -1455,3 +1455,144 @@ test.describe('API: Clock Events & Tardiness Auth Guards', () => {
     await ctx.dispose();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Timezone Handling (campus tz is authoritative — regression for Scranton demo bug)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const { zonedTimeToUtc, getZonedParts } = require('../lib/tz');
+
+/** Logged-in API context with an org campus in the session (visits /:slug first). */
+async function campusApiContext(playwright, username, slug) {
+  const ctx = await playwright.request.newContext({ baseURL: BASE });
+  const pageRes = await ctx.get(`/${slug}`);
+  expect(pageRes.ok()).toBeTruthy();
+  const res = await ctx.post('/api/auth/login', { data: { username, password: PASSWORD } });
+  expect(res.ok()).toBeTruthy();
+  return ctx;
+}
+
+/** Next occurrence of a JS weekday (0=Sun..6=Sat) as calendar parts, >= 2 days out. */
+function nextWeekdayParts(jsDow) {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  while (d.getDay() !== jsDow) d.setDate(d.getDate() + 1);
+  return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+}
+
+test.describe.serial('API: Timezone Handling', () => {
+  test('same instant validates per campus timezone, not server timezone', async ({ playwright }) => {
+    // Next Wednesday 09:00 in New York = 06:00 in Los Angeles.
+    // Inside 08:00-19:00 service hours for scranton (NY), outside for usc (LA).
+    const wed = nextWeekdayParts(3);
+    const instant = zonedTimeToUtc(wed.y, wed.m, wed.d, 9, 0, 'America/New_York').toISOString();
+
+    const scrantonCtx = await campusApiContext(playwright, 'casey', 'scranton');
+    const okRes = await scrantonCtx.post('/api/rides', {
+      data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: instant, riderName: 'Casey Rivera' },
+    });
+    expect(okRes.ok()).toBeTruthy();
+    const ride = await okRes.json();
+    await scrantonCtx.post(`/api/rides/${ride.id}/cancel`);
+    await scrantonCtx.dispose();
+
+    const uscCtx = await campusApiContext(playwright, 'casey', 'usc');
+    const denyRes = await uscCtx.post('/api/rides', {
+      data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: instant, riderName: 'Casey Rivera' },
+    });
+    expect(denyRes.status()).toBe(400);
+    const body = await denyRes.json();
+    expect(body.error).toContain('service hours');
+    await uscCtx.dispose();
+  });
+
+  test('overnight service window (22:00-03:00) accepts wrapped hours and attributes early-morning to previous day', async ({ playwright }) => {
+    const office = await apiContext(playwright, 'office');
+    // GET /api/settings returns settings grouped by category — flatten to find priors
+    const before = await (await office.get('/api/settings')).json();
+    const flat = Object.values(before).flat();
+    const prior = {};
+    for (const key of ['service_hours_start', 'service_hours_end', 'operating_days']) {
+      prior[key] = flat.find((s) => s.key === key)?.value ?? null;
+    }
+    // Royal Rides config: Fri+Sat nights, 10 PM - 3 AM (our-day convention: 4=Fri, 5=Sat)
+    await office.put('/api/settings', {
+      data: [
+        { key: 'service_hours_start', value: '22:00' },
+        { key: 'service_hours_end', value: '03:00' },
+        { key: 'operating_days', value: '4,5' },
+      ],
+    });
+
+    try {
+      const scranton = await campusApiContext(playwright, 'casey', 'scranton');
+      const sat = nextWeekdayParts(6); // next Saturday (calendar)
+
+      // Saturday 01:30 NY = the tail of Friday-night service -> accepted
+      const lateNight = zonedTimeToUtc(sat.y, sat.m, sat.d, 1, 30, 'America/New_York').toISOString();
+      const okRes = await scranton.post('/api/rides', {
+        data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: lateNight, riderName: 'Casey Rivera' },
+      });
+      expect(okRes.ok()).toBeTruthy();
+      const ride = await okRes.json();
+      await scranton.post(`/api/rides/${ride.id}/cancel`);
+
+      // Saturday 04:00 NY -> past the 03:00 cutoff -> rejected
+      const tooLate = zonedTimeToUtc(sat.y, sat.m, sat.d, 4, 0, 'America/New_York').toISOString();
+      const denyRes = await scranton.post('/api/rides', {
+        data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: tooLate, riderName: 'Casey Rivera' },
+      });
+      expect(denyRes.status()).toBe(400);
+
+      // Wednesday 23:00 NY -> right hours, non-operating day -> rejected
+      const wed = nextWeekdayParts(3);
+      const wrongDay = zonedTimeToUtc(wed.y, wed.m, wed.d, 23, 0, 'America/New_York').toISOString();
+      const denyRes2 = await scranton.post('/api/rides', {
+        data: { pickupLocation: 'Main Library', dropoffLocation: 'Student Union', requestedTime: wrongDay, riderName: 'Casey Rivera' },
+      });
+      expect(denyRes2.status()).toBe(400);
+      await scranton.dispose();
+    } finally {
+      await office.put('/api/settings', {
+        data: [
+          { key: 'service_hours_start', value: prior.service_hours_start || '08:00' },
+          { key: 'service_hours_end', value: prior.service_hours_end || '19:00' },
+          { key: 'operating_days', value: prior.operating_days || '0,1,2,3,4,5,6' },
+        ],
+      });
+      await office.dispose();
+    }
+  });
+
+  test('recurring rides store instants anchored to campus timezone', async ({ playwright }) => {
+    const scranton = await campusApiContext(playwright, 'riley', 'scranton');
+    const start = nextWeekdayParts(2); // next Tuesday
+    const pad = (n) => String(n).padStart(2, '0');
+    const dateStr = `${start.y}-${pad(start.m)}-${pad(start.d)}`;
+
+    const res = await scranton.post('/api/recurring-rides', {
+      data: {
+        pickupLocation: 'Main Library',
+        dropoffLocation: 'Student Union',
+        timeOfDay: '10:00',
+        startDate: dateStr,
+        endDate: dateStr,
+        daysOfWeek: [1], // Tue in 0=Mon convention
+      },
+    });
+    expect(res.ok()).toBeTruthy();
+    const { recurringId, createdRides } = await res.json();
+    expect(createdRides).toBe(1);
+
+    const myRides = await (await scranton.get('/api/my-rides')).json();
+    const created = myRides.find((r) => r.recurringId === recurringId);
+    expect(created).toBeTruthy();
+    // The stored instant must read as 10:00 on the requested calendar date in New York
+    const p = getZonedParts(new Date(created.requestedTime), 'America/New_York');
+    expect(`${p.h}:${pad(p.min)}`).toBe('10:00');
+    expect(p.d).toBe(start.d);
+
+    await scranton.patch(`/api/recurring-rides/${recurringId}`, { data: { status: 'cancelled' } });
+    await scranton.dispose();
+  });
+});

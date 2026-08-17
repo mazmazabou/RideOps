@@ -18,6 +18,7 @@ module.exports = function(app, ctx) {
     isValidEmail,
     isWithinServiceHours,
     getServiceHoursMessage,
+    resolveTimezone,
     TENANT,
     dispatchNotification,
     sendRiderEmail,
@@ -174,7 +175,7 @@ module.exports = function(app, ctx) {
       return res.status(400).json({ error: 'Pickup, dropoff, and requested time are required' });
     }
     const autoDeny = await getSetting('auto_deny_outside_hours', true);
-    if (autoDeny && !(await isWithinServiceHours(requestedTime))) {
+    if (autoDeny && !(await isWithinServiceHours(requestedTime, resolveTimezone(req.session.campus)))) {
       return res.status(400).json({ error: await getServiceHoursMessage() });
     }
 
@@ -211,7 +212,7 @@ module.exports = function(app, ctx) {
       riderName: name,
       pickup: pickupLocation,
       dropoff: dropoffLocation,
-      requestedTime: new Date(requestedTime).toLocaleString('en-US', { timeZone: TENANT.timezone })
+      requestedTime: new Date(requestedTime).toLocaleString('en-US', { timeZone: resolveTimezone(req.session.campus) })
     }, query).catch(() => {});
   }));
 
@@ -228,7 +229,7 @@ module.exports = function(app, ctx) {
       return res.status(400).json({ error: `SERVICE TERMINATED: rider has ${maxStrikes} consecutive no-shows` });
     }
     const autoDenyApproval = await getSetting('auto_deny_outside_hours', true);
-    if (autoDenyApproval && !(await isWithinServiceHours(ride.requested_time))) {
+    if (autoDenyApproval && !(await isWithinServiceHours(ride.requested_time, resolveTimezone(req.session.campus)))) {
       return res.status(400).json({ error: await getServiceHoursMessage() });
     }
 
@@ -264,7 +265,7 @@ module.exports = function(app, ctx) {
         riderName: ride.rider_name,
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location,
-        requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone })
+        requestedTime: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: resolveTimezone(req.session.campus) })
       }, query).catch(() => {});
     }
   }));
@@ -382,7 +383,7 @@ module.exports = function(app, ctx) {
         riderName: ride.rider_name,
         pickup: ride.pickup_location,
         dropoff: ride.dropoff_location,
-        time: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: TENANT.timezone, hour: 'numeric', minute: '2-digit' })
+        time: new Date(ride.requested_time).toLocaleString('en-US', { timeZone: resolveTimezone(req.session.campus), hour: 'numeric', minute: '2-digit' })
       }, query).catch(() => {});
     }
 
@@ -484,7 +485,7 @@ module.exports = function(app, ctx) {
       return res.status(400).json({ error: 'Cannot edit a ride that is completed, no-show, cancelled, or denied' });
     }
     const autoDenyEdit = await getSetting('auto_deny_outside_hours', true);
-    if (requestedTime && autoDenyEdit && !(await isWithinServiceHours(requestedTime))) {
+    if (requestedTime && autoDenyEdit && !(await isWithinServiceHours(requestedTime, resolveTimezone(req.session.campus)))) {
       return res.status(400).json({ error: await getServiceHoursMessage() });
     }
 

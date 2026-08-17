@@ -3,6 +3,7 @@ import { fetchRidesPaginated, fetchEmployees, fetchLocations, fetchOpsConfig, bu
 import { useToast } from '../../../contexts/ToastContext';
 import { useModal } from '../../../components/ui/Modal';
 import { usePolling } from '../../../hooks/usePolling';
+import { zonedTimeToUtcISO } from '../../../utils/tz';
 import FilterBar from './FilterBar';
 import Toolbar from './Toolbar';
 import RidesTable from './RidesTable';
@@ -302,7 +303,7 @@ export default function RidesPanel() {
       showToast('Name, email, pickup, dropoff, date, and time are required.', 'error');
       return;
     }
-    const requestedTime = new Date(`${date}T${time}`).toISOString();
+    const requestedTime = zonedTimeToUtcISO(date, time);
     try {
       await submitRide({
         riderName: riderName.trim(),

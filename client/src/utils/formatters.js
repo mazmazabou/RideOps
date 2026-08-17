@@ -1,16 +1,25 @@
+import { getDisplayTimeZone } from './tz';
+
+// Ride times always render in the campus timezone (tenant config), not the
+// viewer's browser timezone \u2014 see utils/tz.js.
+function tzOpt() {
+  const tz = getDisplayTimeZone();
+  return tz ? { timeZone: tz } : {};
+}
+
 export function formatTime(iso) {
   if (!iso) return '\u2014';
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', ...tzOpt() });
 }
 
 export function formatDate(iso) {
   if (!iso) return '\u2014';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...tzOpt() });
 }
 
 export function formatDateTime(iso) {
   if (!iso) return '\u2014';
-  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', ...tzOpt() });
 }
 
 export function timeAgo(iso) {

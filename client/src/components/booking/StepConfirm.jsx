@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { submitRide, createRecurringRides } from '../../api';
 import { jsDateToOurDay, ourDayLabel } from '../../utils/formatters';
+import { zonedTimeToUtcISO } from '../../utils/tz';
 
 export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
   const { user } = useAuth();
@@ -62,7 +63,7 @@ export default function StepConfirm({ data, onBack, onSuccess, opsConfig }) {
         });
         showToast(result.createdRides + ' recurring ride' + (result.createdRides !== 1 ? 's' : '') + ' created!', 'success');
       } else {
-        const requestedTime = new Date(data.date + 'T' + data.time + ':00').toISOString();
+        const requestedTime = zonedTimeToUtcISO(data.date, data.time);
         await submitRide({
           pickupLocation: data.pickup,
           dropoffLocation: data.dropoff,

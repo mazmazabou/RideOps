@@ -11,7 +11,10 @@ module.exports = function(app, ctx) {
     addRideEvent,
     getSetting,
     isWithinServiceHours,
-    getRiderMissCount
+    getRiderMissCount,
+    resolveTimezone,
+    zonedTimeToUtc,
+    windowSegment
   } = ctx;
 
   // ----- Recurring rides -----
@@ -31,9 +34,7 @@ module.exports = function(app, ctx) {
     const minutesTotal = hour * 60 + minute;
     const svcStart = await getSetting('service_hours_start', '08:00');
     const svcEnd = await getSetting('service_hours_end', '19:00');
-    const [sH, sM] = String(svcStart).split(':').map(Number);
-    const [eH, eM] = String(svcEnd).split(':').map(Number);
-    if (minutesTotal < (sH * 60 + (sM || 0)) || minutesTotal > (eH * 60 + (eM || 0))) {
+    if (!windowSegment(minutesTotal, svcStart, svcEnd)) {
       return res.status(400).json({ error: `Time must be between ${svcStart} and ${svcEnd}` });
     }
 
@@ -44,15 +45,15 @@ module.exports = function(app, ctx) {
       [recurId, req.session.userId, pickupLocation, dropoffLocation, `${hourStr.padStart(2, '0')}:${String(minute).padStart(2, '0')}`, days, start, end]
     );
 
-    const dates = generateRecurringDates(start, end, days);
+    // Anchor each occurrence's wall-clock time to the campus timezone so the
+    // stored instant is correct regardless of the server's own clock.
+    const tz = resolveTimezone(req.session.campus);
+    const dates = generateRecurringDates(startDate, endDate, days);
     const autoDenyRecurring = await getSetting('auto_deny_outside_hours', true);
     let created = 0;
-    for (const date of dates) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, '0');
-      const d = String(date.getDate()).padStart(2, '0');
-      const requestedTime = `${y}-${m}-${d}T${hourStr.padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-      if (autoDenyRecurring && !(await isWithinServiceHours(requestedTime))) continue;
+    for (const cal of dates) {
+      const requestedTime = zonedTimeToUtc(cal.y, cal.m, cal.d, hour, minute, tz).toISOString();
+      if (autoDenyRecurring && !(await isWithinServiceHours(requestedTime, tz))) continue;
       const rideId = generateId('ride');
       const missCount = await getRiderMissCount(req.session.userId);
       await query(

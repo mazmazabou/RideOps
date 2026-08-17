@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { fetchTenantConfig } from '../api';
 import { getCampusSlug, hexToRgb, shadeHex } from '../utils/campus';
+import { setDisplayTimeZone } from '../utils/tz';
 
 const TenantContext = createContext(null);
 
@@ -11,6 +12,7 @@ export function TenantProvider({ children, roleLabel = 'Rider' }) {
   useEffect(() => {
     fetchTenantConfig().then(config => {
       applyTheme(config, roleLabel);
+      setDisplayTimeZone(config.timezone);
       setTenantConfig(config);
     }).catch(() => {});
   }, [roleLabel]);

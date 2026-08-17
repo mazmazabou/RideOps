@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { editRide } from '../../../api';
 import { useToast } from '../../../contexts/ToastContext';
+import { zonedTimeToUtcISO, isoToZonedInputValue } from '../../../utils/tz';
 
 export default function RideEditModal({ ride, locations, onClose, onSaved }) {
   const { showToast } = useToast();
@@ -9,7 +10,7 @@ export default function RideEditModal({ ride, locations, onClose, onSaved }) {
   const [dropoff, setDropoff] = useState(ride?.dropoffLocation || '');
   const [time, setTime] = useState(() => {
     if (!ride?.requestedTime) return '';
-    return new Date(ride.requestedTime).toISOString().slice(0, 16);
+    return isoToZonedInputValue(ride.requestedTime);
   });
   const [notes, setNotes] = useState(ride?.notes || '');
   const [changeNotes, setChangeNotes] = useState('');
@@ -38,7 +39,7 @@ export default function RideEditModal({ ride, locations, onClose, onSaved }) {
       await editRide(ride.id, {
         pickupLocation: pickup,
         dropoffLocation: dropoff,
-        requestedTime: time ? new Date(time).toISOString() : ride.requestedTime,
+        requestedTime: time ? zonedTimeToUtcISO(...time.split('T')) : ride.requestedTime,
         notes,
         changeNotes: changeNotes.trim(),
         initials: initials.trim(),

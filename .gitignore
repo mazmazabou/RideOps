@@ -34,3 +34,14 @@ public/styles.css
 
 # Generated screenshots (regenerate with: node scripts/take-screenshots.js)
 screenshots/
+
+# Work-log screenshots dropped at repo root during dev sessions (archived under screenshots/)
+/*.png
+
+# AI-tool scaffolding & generated output (local state, not project source)
+.ab-method/
+.simone/
+.tasks/
+/context/
+graphify-out/
+client/.claude/

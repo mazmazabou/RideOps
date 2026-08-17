@@ -65,7 +65,9 @@ module.exports = function(app, ctx) {
         const timeRe = /^\d{2}:\d{2}$/;
         if (s && !timeRe.test(s)) errors.push('Service hours start must be HH:MM');
         if (e && !timeRe.test(e)) errors.push('Service hours end must be HH:MM');
-        if (timeRe.test(s) && timeRe.test(e) && s >= e) errors.push('Service hours start must be earlier than end');
+        // start > end is a valid overnight window (e.g. 22:00-03:00 late-night service);
+        // only identical start/end is rejected as a zero-length window.
+        if (timeRe.test(s) && timeRe.test(e) && s === e) errors.push('Service hours start and end cannot be the same');
       }
 
       // Numeric minimums
