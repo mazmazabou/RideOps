@@ -7,14 +7,16 @@ module.exports = function(app, ctx) {
     requireOffice
   } = ctx;
 
-  // Sanitize office-authored HTML: strip script tags, on* handlers, javascript: URLs.
-  // Returns null when a script tag survives stripping (reject the payload).
+  // Sanitize office-authored HTML with a strict allowlist matching what the
+  // Quill toolbar can produce. This content renders via dangerouslySetInnerHTML
+  // in rider browsers, so regex stripping is not enough — use a real parser.
+  const sanitizeHtmlLib = require('sanitize-html');
   function sanitizeHtml(html) {
-    let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    if (/<script/i.test(sanitized)) return null;
-    sanitized = sanitized.replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
-    sanitized = sanitized.replace(/href\s*=\s*(?:"javascript:[^"]*"|'javascript:[^']*')/gi, '');
-    return sanitized;
+    return sanitizeHtmlLib(html, {
+      allowedTags: ['p', 'br', 'strong', 'em', 'u', 'b', 'i', 's', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'span', 'blockquote'],
+      allowedAttributes: { '*': ['class'] }, // Quill uses classes (e.g. ql-indent-*)
+      disallowedTagsMode: 'discard',
+    });
   }
 
   app.get('/api/program-rules', wrapAsync(async (req, res) => {
